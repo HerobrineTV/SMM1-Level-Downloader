@@ -20,9 +20,9 @@ After that u need to run "node SMM1LevelDownloader.js"
 And when it Prompts u to insert a link paste it there
 
 It should then try to get that level and decompile it for you.
-Once done your level iis in a Folder given the Name the downloaded file was called + _Extracted
+Once done your level is in a Folder given the Name the downloaded file was called + _Extracted
 Now u just need to copy the contents of that folder and Replace them with one of your existing courses (can also be courses which u just created)
 
 # How does this work?
-It just downloads the Level wia Archive.org since theres alot or almost every level stored mentioned in this Post
+It just downloads the Level via Archive.org since theres alot or almost every level stored mentioned in this Post
 https://archive.org/details/super_mario_maker_courses_202105
