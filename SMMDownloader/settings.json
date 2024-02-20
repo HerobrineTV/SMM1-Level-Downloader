@@ -1,0 +1,7 @@
+{
+    "useCemuDir" : false,
+    "CemuDirPath" : "",
+    "useAPILink" : true,
+    "APILink" : "https://api.bobac-analytics.com/smm1/",
+    
+}

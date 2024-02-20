@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Mario Maker 1 Level Downloader</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+
+<body>
+    <div id="main-content">
+        <h1 style="font-family: 'Times New Roman', Times, serif;">Search Level</h1>
+        <h2>Select Search Options:</h2>
+        <div class="checkbox-item">
+            <input type="checkbox" id="usesearchLevelbyLevelName" name="search-option" onclick="searchCheckBoxesChanged('LevelName')">
+            <label class="checkbox-label" for="usesearchLevelbyLevelName">Level Name</label>
+            <input type="checkbox" id="usesearchLevelbyLevelID" name="search-option" onclick="searchCheckBoxesChanged('LevelID')">
+            <label class="checkbox-label" for="usesearchLevelbyLevelID">Level ID</label>
+        </div>
+        <br><br>
+        <div id="searchLevel-item"></div>
+        <br><br>
+    </div>
+</body>
+
+</html>

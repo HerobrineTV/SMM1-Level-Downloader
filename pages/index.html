@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Mario Maker 1 Level Downloader</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+
+<body>
+    <div class="toolbar">
+        <button onclick="loadPage('../pages/main.html')">Main</button>
+        <button onclick="loadPage(`../pages/Info.html`)">Info</button>
+        <button onclick="loadPage('../pages/settings.html')">Settings</button>
+    </div>
+    <div id="values">
+        <div id="settings">
+            <div id="selectedFolderValue" value=""></div>
+            <div id="useCEMUfolderValue" value="false"></div>
+        </div>
+        <div id="main">
+            <div id="searchLevelbyLevelName" value="false"></div>
+            <div id="searchLevelbyLevelID" value="false"></div>
+            <div id="searchLevelbyCreatorName" value="false"></div>
+            <div id="searchLevelbyCreatorID" value="false"></div>
+            <div id="searchLevelValue" value=""></div>
+        </div>
+    </div>
+    <div id="main-content">
+        <h2>Welcome to the SMM1 Level Downloader</h2>
+    </div>
+
+    <script src="../scripts/frontendScipt.js"></script>
+</body>
+
+</html>
