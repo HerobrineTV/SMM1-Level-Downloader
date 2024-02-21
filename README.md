@@ -1,3 +1,7 @@
+# Announcement
+I am currently createing a whole UI System with Settings and Level Search using ElectronJS
+If u got any feature requests Dm me on Discord: nintendo_switch
+
 # SMM1-Level-Downloader
 A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection
 
