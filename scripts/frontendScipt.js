@@ -115,8 +115,38 @@ function searchCheckBoxesChanged(searchType){
 }
 
 function searchLevel() {
-    setSetting("lastSearchPhrase", document.getElementById('searchLevelText').value.trim())
-    window.api.send("toMain", {action:"search-level", searchTypes:SettingsData.searchParams, searchPhrase:document.getElementById('searchLevelText').value.trim()});
+    // Get the search phrase from the input field
+    const searchPhrase = document.getElementById('searchLevelText').value.trim();
+    
+    // Set the last search phrase in settings
+    setSetting("lastSearchPhrase", searchPhrase);
+    
+    // Check if the API link should be used
+    if (SettingsData.useAPILink) {
+        // Construct the API URL with the search phrase
+        const apiUrl = `${SettingsData.APILink}/smm1/searchLevelsByName/${encodeURIComponent(searchPhrase)}`;
+        
+        // Make a GET request to the API
+        fetch(apiUrl)
+            .then(response => {
+                // Check if the response is successful
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Parse the JSON response
+                return response.json();
+            })
+            .then(data => {
+                // Handle the JSON data from the API
+                console.log(data); // You can process the data here
+                setSetting("recentFoundLevels", data);
+                displayLevels(data);
+            })
+            .catch(error => {
+                // Handle errors that occur during the fetch
+                console.error('There was a problem with the fetch operation:', error);
+            });
+    }
 }
 
 function selectFolder() {
