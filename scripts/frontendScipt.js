@@ -17,7 +17,7 @@ function CEMUcheckBoxChanged() {
 }
 
 function searchTextInputChanged() {
-    if (document.getElementById('searchLevel-item').textContent.trim() != "") {
+    if (document.getElementById('searchLevelText').value.trim() != "") {
         document.getElementById('searchLevel-button').innerHTML = `<br><button onclick="searchLevel()">Search Level</button><br><br>`
     } else {
         document.getElementById('searchLevel-button').innerHTML = ``
@@ -87,8 +87,8 @@ function searchCheckBoxesChanged(searchType){
 }
 
 function searchLevel() {
-    setSetting("lastSearchPhrase", document.getElementById('searchLevel-item').textContent.trim())
-    window.api.send("toMain", {action:"search-level", searchTypes:SettingsData.searchParams, searchPhrase:document.getElementById('searchLevel-item').textContent.trim()});
+    setSetting("lastSearchPhrase", document.getElementById('searchLevelText').value.trim())
+    window.api.send("toMain", {action:"search-level", searchTypes:SettingsData.searchParams, searchPhrase:document.getElementById('searchLevelText').value.trim()});
 }
 
 function selectFolder() {
