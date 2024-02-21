@@ -4,10 +4,12 @@
   "description": "A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection",
   "main": "Main.js",
   "devDependencies": {
-    "electron": "./node_modules/electron"
+    "axios": "^1.6.7",
+    "electron": "^29.0.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
   },
   "keywords": [],
   "author": "",

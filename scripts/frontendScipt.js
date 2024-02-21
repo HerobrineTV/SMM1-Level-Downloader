@@ -1,5 +1,6 @@
 const { ipcRenderer } = window; // Use provided ipcRenderer in Electron apps
-const settingsFile = ('../SMMDownloader/data.json');
+const settingsFile = ('../SMMDownloader/Data/data.json');
+const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 let SettingsData;
 
 
@@ -24,13 +25,77 @@ function searchTextInputChanged() {
     }
 }
 
-function loadFileInWindow(html, levelName, stars, creator, clearRate){
-    console.log(levelName, stars, creator, clearRate);
+function formatTime(milliseconds) {
+    const hours = Math.floor(milliseconds / 3600000);
+    const minutes = Math.floor((milliseconds % 3600000) / 60000);
+    const seconds = Math.floor((milliseconds % 60000) / 1000);
+    const ms = milliseconds % 1000;
+
+    return `${padZero(hours)}:${padZero(minutes)}:${padZero(seconds)}:${padZero(ms, 3)}`;
 }
 
-function objectClicked(levelName, stars, creator, clearRate) {
+function padZero(num, length = 2) {
+    return String(num).padStart(length, '0');
+}
+
+function loadFileInWindow(levelObj) {
+    const modal = document.getElementById("myModal");
+    const modalContent = document.querySelector(".modal-content");
+    const levelInfo = document.getElementById("levelInfo");
+
+    levelInfo.innerHTML = `
+    <div class="level-info">
+        <!-- Use an icon or image here for a visual touch -->
+        <h2 id="levelName">${levelObj.name}</h2>
+    </div>
+    <div class="level-details">
+        <!-- Example of incorporating Mario-themed imagery -->
+        <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator}</span> <img src="mario-icon.png" alt="" style="height:20px;"></p>
+        <p><strong>Upload Time:</strong> <span id="uploadTime">${levelObj.uploadTime}</span></p>
+        <p><strong>Level ID:</strong> <span id="levelID">${levelObj.levelid}</span></p>
+    </div>
+    <div class="level-stats">
+        <p><strong>Clear Rate:</strong> <span id="clearRate">${(levelObj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</span></p>
+        <p><strong>Total Attempts:</strong> <span id="totalAttempts">${levelObj.total_attempts}</span></p>
+        <p><strong>Completions:</strong> <span id="completions">${levelObj.clears}</span></p>
+        <p><strong>Record Time:</strong> <span id="recordTime">${formatTime(levelObj.world_record_ms)}</span></p>
+        <p><strong>Record Achieved Date:</strong> <span id="recordDate">${levelObj.world_record_achieved_date}</span></p>
+        <p><strong>Record Holder:</strong> <span id="recordHolder">${levelObj.world_record_holder_nnid}</span></p>
+    </div>
+    <div class="actions">
+        <!-- Consider adding Mario-themed button icons or styles -->
+        <select id="course-dropdown">
+            <option value="option1">course000</option>
+            <option value="option2">course001</option>
+            <option value="option3">course002</option>
+        </select>
+        <button class="searchdownload-btn">Download</button>
+    </div>
+    `;
+
+    document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
+
+    modal.style.display = "block";
+
+    const closeModal = () => {
+        modal.style.display = "none";
+    };
+
+    const span = document.getElementsByClassName("close")[0];
+
+    span.onclick = closeModal;
+
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    };
+}
+
+
+function objectClicked(levelid, levelObj) {
     // Assuming 'filename' is the path to the HTML file to be loaded
-    loadFileInWindow('../pages/download-level.html', levelName, stars, creator, clearRate);
+    loadFileInWindow(levelObj);
 }
 
 function addObjects(levels) {
@@ -46,7 +111,7 @@ function addObjects(levels) {
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${obj.clearrate}</div>
         `;
-        objectDiv.addEventListener('click', () => objectClicked(obj.name, obj.stars, obj.creator, obj.clearrate));
+        objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         objectsContainer.appendChild(objectDiv);
     });
 }
@@ -114,6 +179,15 @@ function searchCheckBoxesChanged(searchType){
     }
 }
 
+function transformToDict(array) {
+    const result = {};
+    array.forEach(obj => {
+        result[obj.levelid] = obj;
+    });
+    return result;
+}
+
+
 function searchLevel() {
     // Get the search phrase from the input field
     const searchPhrase = document.getElementById('searchLevelText').value.trim();
@@ -124,7 +198,7 @@ function searchLevel() {
     // Check if the API link should be used
     if (SettingsData.useAPILink) {
         // Construct the API URL with the search phrase
-        const apiUrl = `${SettingsData.APILink}/smm1/searchLevelsByName/${encodeURIComponent(searchPhrase)}`;
+        const apiUrl = `${SettingsData.APILink}/searchLevelsByName/${encodeURIComponent(searchPhrase)}`;
         
         // Make a GET request to the API
         fetch(apiUrl)
@@ -139,7 +213,7 @@ function searchLevel() {
             .then(data => {
                 // Handle the JSON data from the API
                 console.log(data); // You can process the data here
-                setSetting("recentFoundLevels", data);
+                setSetting("recentFoundLevels", transformToDict(data));
                 displayLevels(data);
             })
             .catch(error => {
@@ -153,8 +227,10 @@ function selectFolder() {
     window.api.send("toMain", {action:"select-folder"});
 }
 
-function runLevelDownloader(link) {
-    window.api.send("toMain", {action:"download-level", url:link})
+function runLevelDownloader(levelObj) {
+    link = levelObj.url;
+    levelID = levelObj.levelid;
+    window.api.send("toMain", {action:"download-level", url:link, levelID:levelID, levelObj:levelObj});
 }
 
 function loadPage(page) {
@@ -202,6 +278,8 @@ function loadPageScripts(page) {
             document.getElementById("searchLevel-item").innerHTML = ``
         }
         setSetting("amounttrue", amounttrue);
+    } else if (page == "../pages/downloadedLevels.html") {
+        loadDownloadedLevels();
     }
 }
 
@@ -244,6 +322,16 @@ function loadSettings() {
         .catch(error => console.log(error));
 }
 
+function loadDownloadedLevels() {
+    fetch(downloadCache)
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            displayLevels(data);
+        })
+        .catch(error => console.log(error));
+}
+
 function displayLevels(levels) {
     addObjects(levels);
 }
@@ -266,6 +354,13 @@ window.addEventListener('DOMContentLoaded', () => {
                 displayLevels(data.levels);
             } else {
                 console.log(data.result)
+            }
+        }
+        if (data.action == "download-info") {
+            if (data.resultType == "SUCCESS") {
+                console.log(data.resultMessage)
+            } else {
+                console.log(data.resultMessage)
             }
         }
     });

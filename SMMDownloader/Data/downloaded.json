@@ -1,0 +1,22 @@
+{
+  "10": {
+    "sad": "dsad",
+    "name": "Test",
+    "levelid": 10
+  },
+  "13473476": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00013473476-00001?Expires=1624319280&Signature=XCn-we2Ibxl7UITEiwyTnoSCN0atmblymkUnwVcDZxjzsKTvvhs6pdKcUEfEnPqH041QArZBKTLLxETuWPinWKejfSdLHorA~D2XozJTPI5fPo3Z6ecVCcmx5Cgng~T-SR~JBpoy7V5DylfaJ9n7pwDwHMeLwmXkrcKOeuExwz87toNW0suqr-8zzKuigRvwdcBYyO-QH9RGGHVX84v6roKa~JkfVWsWM~~h1kXx0s7dIJZfyt2tXaSgeEPYcdS8V~Lkw4BBKrNR8TVL2q01a2ypsqsp71YVPGWP5d8SkCvK6r06r~EmzMtGeBW9gR6CfclkoN7a83AW2Cc~ClCeZQ__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Test",
+    "creator": "JavierEstrada",
+    "levelid": 13473476,
+    "creatorid": 1786361437,
+    "clears": 162,
+    "failures": 254,
+    "total_attempts": 416,
+    "clearrate": 0.3894230769230769,
+    "uploadTime": "2015-10-31T15:03:50.000Z",
+    "world_record_ms": 7109,
+    "world_record_holder_nnid": "IQpapa",
+    "stars": 7
+  }
+}

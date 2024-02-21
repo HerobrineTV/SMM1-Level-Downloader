@@ -4,10 +4,53 @@
     font-size: 16px;
 }
 
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
 
-/* styles.css */
+.modal-content {
+    background-color: #f0f0f0; /* Light gray background */
+    margin: 15% auto;
+    left: 5%;
+    width: 90%;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
 
-/* Universal styles */
+.creator-info {
+    display: flex;
+    justify-content: space-between;
+}
+
+.creator {
+    margin-left: auto; /* Pushes the creator name to the right */
+}
+
+.close {
+    color: #d90000; /* Red color */
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Main content styles */
 body {
     font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
     margin: 0;
@@ -29,7 +72,6 @@ button {
     font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
 }
 
-/* Main content styles */
 #main-content {
     max-width: 800px;
     margin: 0 auto;
@@ -71,7 +113,7 @@ button {
 }
 
 .checkbox-item input[type="checkbox"]:checked + .checkbox-label:before {
-    background-color: #d8d51b;
+    background-color: #d8d51b; /* Yellow color */
     border-color: #d8d51b;
 }
 
@@ -116,4 +158,70 @@ button {
 
 .object:hover {
     background-color: #e0e0e0;
+}
+/* Base Modal Styles */
+.modal {
+    display: none; /* Keep as is */
+    position: fixed; /* Keep as is */
+    z-index: 1; /* Keep as is */
+    left: 0; /* Keep as is */
+    top: 0; /* Keep as is */
+    width: 100%; /* Keep as is */
+    height: 100%; /* Keep as is */
+    overflow: auto; /* Keep as is */
+    background-color: rgba(0, 0, 0, 0.4); /* Lighter overlay */
+}
+
+.modal-content {
+    background-color: #fdfdfd;
+    margin: 15% auto; /* Increased margin for more centered content */
+    padding: 20px;
+    border: 2px solid #d90000; /* Bold red border */
+    width: 50%; /* Adjusted for a wider modal */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+    font-family: 'Comic Sans MS', 'Arial', sans-serif; /* Playful font */
+}
+
+/* Adjust close button to be more Mario-themed */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #d90000; /* Mario red */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Content and Typography Adjustments */
+.level-info h2 {
+    color: #d90000; /* Bright red */
+    font-size: 24px; /* Larger font size */
+}
+
+.level-details, .level-stats {
+    margin-bottom: 20px;
+    background-color: #fff; /* Added for contrast */
+    padding: 10px; /* Padding for visual space */
+    border-radius: 5px; /* Rounded corners */
+}
+
+.level-stats p, .level-details p {
+    font-size: 16px; /* Larger text for readability */
+}
+
+/* Button Adjustments for a Mario Feel */
+.play-btn, .download-btn {
+    background-color: #ff6b6b; /* Bright red */
+    border: 2px solid #555; /* Dark border for contrast */
+    font-weight: bold; /* Bold text */
+    text-transform: uppercase; /* UPPERCASE text for emphasis */
+}
+
+.play-btn:hover, .download-btn:hover {
+    background-color: #ff4747; /* Darker red on hover */
 }

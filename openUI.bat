@@ -1,1 +1,3 @@
-D:\Users\j.waschinski\SMM\SMM1-Level-Downloader\node_modules\electron\Electron.exe scripts/SMM1LevelDownloader.js
+-npm install --save electron axios
+
+node_modules\electron\dist\Electron.exe scripts/SMM1LevelDownloader.js

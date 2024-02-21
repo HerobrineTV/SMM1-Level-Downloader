@@ -18,7 +18,8 @@ const partNames = [
 ];
 
 // Ensure SMMDownloader directory exists
-const outputDirectory = path.join(__dirname, '../SMMDownloader');
+const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
+const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
 if (!fs.existsSync(outputDirectory)){
     fs.mkdirSync(outputDirectory, { recursive: true });
     console.log(`Created directory: ${outputDirectory}`);
@@ -81,7 +82,7 @@ async function downloadFile(fileUrl, outputPath) {
     }
   }
 
-  function splitFile(filePath) {
+  function splitFile(filePath, levelid, levelObj) {
     console.log(`Splitting file: ${filePath}`);
     const data = fs.readFileSync(filePath);
 
@@ -111,7 +112,8 @@ async function downloadFile(fileUrl, outputPath) {
     }
 
     // Ensure we have a directory to save the parts
-    const partsDirectory = path.join(outputDirectory, `${path.basename(filePath, path.extname(filePath))}_Extracted`);
+    //const partsDirectory = path.join(outputDirectory, `${path.basename(filePath, path.extname(filePath))}_Extracted`);
+    const partsDirectory = path.join(outputDirectory, `${levelid}`);
     if (!fs.existsSync(partsDirectory)) {
         fs.mkdirSync(partsDirectory, { recursive: true });
     }
@@ -125,7 +127,7 @@ async function downloadFile(fileUrl, outputPath) {
         }
     });
 
-    decompressAndRenameFiles(partsDirectory, parts.length, partNamesFirst);
+    decompressAndRenameFiles(partsDirectory, parts.length, partNamesFirst, levelObj);
 }
 
 function containsSpecificFile(directory, fileName) {
@@ -152,7 +154,7 @@ function containsSpecificFile(directory, fileName) {
   }
 
 // Function to decompress a file if a file using ASH Extractor http://wiibrew.org/wiki/ASH_Extractor
-  async function decompressAndRenameFiles(partsDirectory, partCount, partNamesFirst) {
+  async function decompressAndRenameFiles(partsDirectory, partCount, partNamesFirst, levelObj) {
     for (let i = 0; i < partCount; i++) {
         const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
 
@@ -167,11 +169,35 @@ function containsSpecificFile(directory, fileName) {
             }
         }
     }
-
+    addLevelToJson(levelObj)
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",resultMessage:"All files have been decompressed and Downloaded!"});
     console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
 }
 
-async function processUrl(originalUrl) {
+async function addLevelToJson(levelObj){
+      // Read the existing JSON data from the file
+      let jsonData = {};
+      try {
+          const data = fs.readFileSync(jsonDirectory+"/downloaded.json", 'utf8');
+          jsonData = JSON.parse(data);
+      } catch (error) {
+          console.error('Error reading JSON file:', error);
+          return;
+      }
+  
+      // Append the object to the JSON Object
+      jsonData[levelObj.levelid] = levelObj;
+
+      // Write the updated JSON back to the file
+      try {
+          fs.writeFileSync(jsonDirectory+"/downloaded.json", JSON.stringify(jsonData, null, 2));
+          console.log('Object added to JSON file successfully.');
+      } catch (error) {
+          console.error('Error writing JSON file:', error);
+      }
+}
+
+async function processUrl(originalUrl, levelid, levelObj) {
     const archiveUrl = await fetchArchiveUrl(originalUrl);
     if (!archiveUrl) return;
 
@@ -179,7 +205,7 @@ async function processUrl(originalUrl) {
     const outputPath = path.join(outputDirectory, fileName);
 
     await downloadFile(archiveUrl, outputPath);
-    splitFile(outputPath);
+    splitFile(outputPath, levelid, levelObj);
 }
 
 function startProcess() {
@@ -199,7 +225,7 @@ function startProcess() {
   function createWindow() {
     mainWindow = new BrowserWindow({
       width: 800,
-      height: 600,
+      height: 800,
       webPreferences: {
         nodeIntegration: true,
         preload: path.join(__dirname, 'preload.js')
@@ -227,12 +253,12 @@ function startProcess() {
     var jsonData;
     
     if (settings == "RESET") {
-      jsonData = JSON.stringify({"useCemuDir":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1/","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false}});
+      jsonData = JSON.stringify({"useCemuDir":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false}});
     } else {
       jsonData = JSON.stringify(settings);
     }
     // Write data to the file
-    fs.writeFile(path.join(outputDirectory,"/data.json"), jsonData, 'utf8', (err) => {
+    fs.writeFile(path.join(jsonDirectory,"/data.json"), jsonData, 'utf8', (err) => {
         if (err) {
           mainWindow.webContents.send("fromMain", {action:"saveing",result:'Error saving settings:'+err});
           return;
@@ -248,11 +274,27 @@ function startProcess() {
     mainWindow.webContents.send("fromMain", {action:"found-levels", resultType: 'SUCCESS', result:'Levels found', levels: [{"url":"exampleurl1", "name":"ExampleName", "creator":"ExampleCreator", "levelid":"1efe", "creatorid":"dsd", "clears":0, "failures":0, "total_attempts":0, "clearrate":0.00, "uploadTime":0, "world_record_ms":0, "world_record_holder_nnid":"gfh", "stars":0}]});
   }
 
+  function folderExists(folderPath) {
+    try {
+        // Check if the folder exists
+        fs.accessSync(folderPath, fs.constants.F_OK);
+        return true;
+    } catch (error) {
+        // Folder does not exist or cannot be accessed
+        return false;
+    }
+}
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
     } else if (args.action === "download-level") {
-      processUrl(args.url);
+      addLevelToJson(args.levelObj);
+      if (folderExists(outputDirectory+"/"+args.levelID)) {
+        mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"ERROR",resultMessage:"Already downloaded this level!"});
+        return;
+      }
+      processUrl(args.url, args.levelID, args.levelObj);
     } else if (args.action === "save-settings") {
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
