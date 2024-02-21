@@ -321,13 +321,31 @@ function loadSettings() {
         })
         .catch(error => console.log(error));
 }
+function objectToArray(obj) {
+    // Check if obj is not an object, return obj directly
+    if (typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+
+    // Check if obj is an array, iterate through its elements
+    if (Array.isArray(obj)) {
+        return obj.map(item => objectToArray(item));
+    }
+
+    // Return only the values of the object
+    return Object.values(obj);
+}
+
+
+
 
 function loadDownloadedLevels() {
     fetch(downloadCache)
         .then(response => response.json())
         .then(data => {
-            console.log(data);
-            displayLevels(data);
+            //console.log(data);
+            console.log(objectToArray(data))
+            displayLevels(objectToArray(data));
         })
         .catch(error => console.log(error));
 }

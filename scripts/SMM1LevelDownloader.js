@@ -224,7 +224,7 @@ function startProcess() {
 
   function createWindow() {
     mainWindow = new BrowserWindow({
-      width: 800,
+      width: 920,
       height: 800,
       webPreferences: {
         nodeIntegration: true,
