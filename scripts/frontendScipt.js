@@ -24,6 +24,34 @@ function searchTextInputChanged() {
     }
 }
 
+function loadFileInWindow(html, levelName, stars, creator, clearRate){
+    console.log(levelName, stars, creator, clearRate);
+}
+
+function objectClicked(levelName, stars, creator, clearRate) {
+    // Assuming 'filename' is the path to the HTML file to be loaded
+    loadFileInWindow('../pages/download-level.html', levelName, stars, creator, clearRate);
+}
+
+function addObjects(levels) {
+    const objectsContainer = document.getElementById('scrollable-objects');
+    objectsContainer.innerHTML = '';
+
+    levels.forEach(obj => {
+        const objectDiv = document.createElement('div');
+        objectDiv.classList.add('object');
+        objectDiv.innerHTML = `
+            <div>${obj.name}</div>
+            <div>Stars: ${obj.stars}</div>
+            <div>Creator: ${obj.creator}</div>
+            <div>Clear Rate: ${obj.clearrate}</div>
+        `;
+        objectDiv.addEventListener('click', () => objectClicked(obj.name, obj.stars, obj.creator, obj.clearrate));
+        objectsContainer.appendChild(objectDiv);
+    });
+}
+
+
 function searchCheckBoxesChanged(searchType){
     if (searchType == "LevelName") {
         if (SettingsData.searchParams.LevelName == false) {
@@ -186,6 +214,10 @@ function loadSettings() {
         .catch(error => console.log(error));
 }
 
+function displayLevels(levels) {
+    addObjects(levels);
+}
+
 function exitApp() {
     window.api.send("toMain", {action:"exit-app"});
 }
@@ -193,9 +225,7 @@ function exitApp() {
 window.addEventListener('DOMContentLoaded', () => {
     window.api.receive("fromMain", (data) => {
         if (data.action == "selectedFolder") {
-            //console.log(data);
             setSetting("CemuDirPath", data.path);
-            //document.getElementById('selectedFolder').innerHTML = `<h2>Selected Folder: ${data.path}</h2>`
         }
         if (data.action == "saveing") {
             console.log(data.result)
@@ -203,6 +233,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (data.action == "found-levels"){
             if (data.resultType == "SUCCESS") {
                 setSetting("recentFoundLevels", data.levels);
+                displayLevels(data.levels);
             } else {
                 console.log(data.result)
             }

@@ -95,3 +95,25 @@ button {
     background-color: #777;
     color: #fff;
 }
+
+/* Scrollable objects */
+#scrollable-objects {
+    max-height: 300px; /* Adjust height as needed */
+    overflow-y: auto; /* Enable vertical scroll */
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-top: 20px;
+}
+
+/* Object styles */
+.object {
+    cursor: pointer;
+    margin-bottom: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+}
+
+.object:hover {
+    background-color: #e0e0e0;
+}

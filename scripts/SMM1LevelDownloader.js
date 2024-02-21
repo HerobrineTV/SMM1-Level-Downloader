@@ -245,7 +245,7 @@ function startProcess() {
   }
 
   function searchLevelInDB(searchTypes, searchPhrase) {
-    mainWindow.webContents.send("fromMain", {action:"found-levels", resultType: 'SUCCESS', result:'Levels found', levels: [{"url":"exampleurl1", "name":"ExampleName", "creator":"ExampleCreator", "levelid":"1efe", "creatorid":"dsd"}]});
+    mainWindow.webContents.send("fromMain", {action:"found-levels", resultType: 'SUCCESS', result:'Levels found', levels: [{"url":"exampleurl1", "name":"ExampleName", "creator":"ExampleCreator", "levelid":"1efe", "creatorid":"dsd", "clears":0, "failures":0, "total_attempts":0, "clearrate":0.00, "uploadTime":0, "world_record_ms":0, "world_record_holder_nnid":"gfh", "stars":0}]});
   }
 
   ipcMain.on("toMain", (event, args) => {
