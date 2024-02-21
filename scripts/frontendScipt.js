@@ -4,44 +4,91 @@ let SettingsData;
 
 
 function CEMUcheckBoxChanged() {
-    if (document.getElementById("useCEMUfolderValue").value == "false") {
-        document.getElementById("useCEMUfolderValue").value = "true"
+    if (SettingsData.useCemuDir == false) {
         document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
-    } else if (document.getElementById("useCEMUfolderValue").value == "true") {
-        document.getElementById("useCEMUfolderValue").value = "false"
+        setSetting("useCemuDir", true)
+    } else if (SettingsData.useCemuDir == true) {
         document.getElementById('optionalCEMU').innerHTML = ``
+        setSetting("useCemuDir", false)
     } else {
-        document.getElementById("useCEMUfolderValue").value = "true"
-        document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
+        document.getElementById('optionalCEMU').innerHTML = ``
+        setSetting("useCemuDir", false)
+    }
+}
+
+function searchTextInputChanged() {
+    if (document.getElementById('searchLevel-item').textContent.trim() != "") {
+        document.getElementById('searchLevel-button').innerHTML = `<br><button onclick="searchLevel()">Search Level</button><br><br>`
+    } else {
+        document.getElementById('searchLevel-button').innerHTML = ``
     }
 }
 
 function searchCheckBoxesChanged(searchType){
     if (searchType == "LevelName") {
-        if (document.getElementById("searchLevelbyLevelName").value == "false") {
-            document.getElementById("searchLevelbyLevelName").value = "true"
-        } else if (document.getElementById("searchLevelbyLevelName").value == "true") {
-            document.getElementById("searchLevelbyLevelName").value = "false"
+        if (SettingsData.searchParams.LevelName == false) {
+            setSubSetting("searchParams", "LevelName", true)
+            increaseSettingvalue("amounttrue", 1)
+        } else if (SettingsData.searchParams.LevelName == true) {
+            setSubSetting("searchParams", "LevelName", false)
+            decreaseSettingvalue("amounttrue", 1)
         } else {
-            document.getElementById("searchLevelbyLevelName").value = "true"
+            setSubSetting("searchParams", "LevelName", false)
+            decreaseSettingvalue("amounttrue", 1)
         }
     }
     
     if (searchType == "LevelID") {
-        if (document.getElementById("searchLevelbyLevelID").value == "false") {
-            document.getElementById("searchLevelbyLevelID").value = "true"
-        } else if (document.getElementById("searchLevelbyLevelID").value == "true") {
-            document.getElementById("searchLevelbyLevelID").value = "false"
+        if (SettingsData.searchParams.LevelID == false) {
+            setSubSetting("searchParams", "LevelID", true)
+            increaseSettingvalue("amounttrue", 1)
+        } else if (SettingsData.searchParams.LevelID == true) {
+            setSubSetting("searchParams", "LevelID", false)
+            decreaseSettingvalue("amounttrue", 1)
         } else {
-            document.getElementById("searchLevelbyLevelID").value = "true"
+            setSubSetting("searchParams", "LevelID", false)
+            decreaseSettingvalue("amounttrue", 1)
         }
     }
 
-    if (document.getElementById("searchLevelbyLevelName").value == "true" || document.getElementById("searchLevelbyLevelID").value == "true") {
-        document.getElementById("searchLevel-item").innerHTML = `<label class="searchLevel-label" for="searchLevelText">Search: </label><input type="text" id="searchLevelText" name="searchLevel-option" value="">`
-    } else {
+    if (searchType == "CreatorName") {
+        if (SettingsData.searchParams.CreatorName == false) {
+            setSubSetting("searchParams", "CreatorName", true)
+            increaseSettingvalue("amounttrue", 1)
+        } else if (SettingsData.searchParams.CreatorName == true) {
+            setSubSetting("searchParams", "CreatorName", false)
+            decreaseSettingvalue("amounttrue", 1)
+        } else {
+            setSubSetting("searchParams", "CreatorName", false)
+            decreaseSettingvalue("amounttrue", 1)
+        }
+    }
+
+    if (searchType == "CreatorID") {
+        if (SettingsData.searchParams.CreatorID == false) {
+            setSubSetting("searchParams", "CreatorID", true)
+            increaseSettingvalue("amounttrue", 1)
+        } else if (SettingsData.searchParams.CreatorID == true) {
+            setSubSetting("searchParams", "CreatorID", false)
+            decreaseSettingvalue("amounttrue", 1)
+        } else {
+            setSubSetting("searchParams", "CreatorID", false)
+            decreaseSettingvalue("amounttrue", 1)
+        }
+    }
+
+    if (SettingsData.amounttrue && SettingsData.amounttrue > 0 && document.getElementById("searchLevel-item").innerHTML == ``) {
+        document.getElementById("searchLevel-item").innerHTML = `<label class="searchLevel-label" for="searchLevelText">Search: </label><input type="text" id="searchLevelText" name="searchLevel-option" value="" oninput="searchTextInputChanged()">`
+    } else if (SettingsData.amounttrue && SettingsData.amounttrue <= 0) {
+        document.getElementById("searchLevel-item").innerHTML = ``
+    } else if (!SettingsData.amounttrue) {
         document.getElementById("searchLevel-item").innerHTML = ``
     }
+}
+
+function searchLevel() {
+    setSetting("lastSearchPhrase", document.getElementById('searchLevel-item').textContent.trim())
+    window.api.send("toMain", {action:"search-level", searchTypes:SettingsData.searchParams, searchPhrase:document.getElementById('searchLevel-item').textContent.trim()});
 }
 
 function selectFolder() {
@@ -65,14 +112,69 @@ function loadPage(page) {
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
         if (SettingsData.useCemuDir == true) {
-            document.getElementById("useCEMUfolder").outerHTML += ("checked")
+            document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
         }
+    } else if (page == "../pages/main.html") {
+        amounttrue = 0;
+        if(SettingsData.searchParams.LevelName == true) {
+            document.getElementById("usesearchLevelbyLevelName").checked = true;
+            amounttrue++;
+        }
+        if(SettingsData.searchParams.LevelID == true) {
+            document.getElementById("usesearchLevelbyLevelID").checked = true;
+            amounttrue++;
+        }
+        if(SettingsData.searchParams.CreatorName == true) {
+            document.getElementById("usesearchLevelbyCreatorName").checked = true;
+            amounttrue++;
+        }
+        if(SettingsData.searchParams.CreatorID == true) {
+            document.getElementById("usesearchLevelbyCreatorID").checked = true;
+            amounttrue++;
+        }
+
+        if (amounttrue > 0) {
+            document.getElementById("searchLevel-item").innerHTML = `<label class="searchLevel-label" for="searchLevelText">Search: </label><input type="text" id="searchLevelText" name="searchLevel-option" value="">`
+            const source = document.getElementById('searchLevelText');
+
+            source.addEventListener('input', searchTextInputChanged);
+            source.addEventListener('propertychange', searchTextInputChanged);
+        } else {
+            document.getElementById("searchLevel-item").innerHTML = ``
+        }
+        setSetting("amounttrue", amounttrue);
     }
 }
 
-function saveSettings() {
+function increaseSettingvalue(val, amount) {
+    setSetting(val, SettingsData[val] + amount);
+}
 
+function decreaseSettingvalue(val, amount) {
+    if (SettingsData[val] > 0) {
+        setSetting(val, SettingsData[val] - amount);
+    }
+}
+
+function setSetting(settingsKey, settingsValue) {
+    SettingsData[settingsKey] = settingsValue;
+    if (settingsKey != "amounttrue") {
+        saveSettings();
+    }
+}
+
+function setSubSetting(settingsKey1, settingsKey2, settingsValue) {
+    SettingsData[settingsKey1][settingsKey2] = settingsValue;
+    saveSettings();
+}
+
+function resetSettings() {
+    window.api.send("toMain", {action:"save-settings", settings:"RESET"});
+}
+
+function saveSettings() {
+    window.api.send("toMain", {action:"save-settings", settings:SettingsData});
 }
 
 function loadSettings() {
@@ -80,32 +182,30 @@ function loadSettings() {
         .then(response => response.json())
         .then(data => {
             SettingsData = data;
-            //onsole.log(data);
-            /*
-            // Selected Folder
-            if (data.CemuDirPath != "") {
-                document.getElementById('selectedFolderValue').value = data.CemuDirPath;
-                console.log(data.CemuDirPath);
-                console.log(document.getElementById('selectedFolderValue').value)
-                //document.getElementById('selectedFolder').innerHTML = `<h2>Selected Folder: ${data}</h2>`
-            }
-
-            if (data.useCemuDir != "false") {
-                console.log(data.useCemuDir);
-                console.log(document.getElementById('useCEMUfolderValue').value)
-                document.getElementById('useCEMUfolderValue').value = data.useCemuDir;
-                //document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
-            }*/
-
         })
         .catch(error => console.log(error));
+}
+
+function exitApp() {
+    window.api.send("toMain", {action:"exit-app"});
 }
 
 window.addEventListener('DOMContentLoaded', () => {
     window.api.receive("fromMain", (data) => {
         if (data.action == "selectedFolder") {
-            document.getElementById('selectedFolderValue').value = data.path;
-            document.getElementById('selectedFolder').innerHTML = `<h2>Selected Folder: ${data.path}</h2>`
+            //console.log(data);
+            setSetting("CemuDirPath", data.path);
+            //document.getElementById('selectedFolder').innerHTML = `<h2>Selected Folder: ${data.path}</h2>`
+        }
+        if (data.action == "saveing") {
+            console.log(data.result)
+        }
+        if (data.action == "found-levels"){
+            if (data.resultType == "SUCCESS") {
+                setSetting("recentFoundLevels", data.levels);
+            } else {
+                console.log(data.result)
+            }
         }
     });
 });

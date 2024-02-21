@@ -11,8 +11,9 @@
 <body>
     <div class="toolbar">
         <button onclick="loadPage('../pages/main.html')">Main</button>
-        <button onclick="loadPage(`../pages/Info.html`)">Info</button>
+        <button onclick="loadPage(`../pages/info.html`)">Info</button>
         <button onclick="loadPage('../pages/settings.html')">Settings</button>
+        <button onclick="exitApp()">Exit</button>
     </div>
     <div id="values">
         <div id="settings">
@@ -30,7 +31,6 @@
     <div id="main-content">
         <h2>Welcome to the SMM1 Level Downloader</h2>
     </div>
-
     <script src="../scripts/frontendScipt.js"></script>
     <script>
         loadSettings();

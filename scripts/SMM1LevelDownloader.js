@@ -223,11 +223,42 @@ function startProcess() {
     });
   }
 
+  function saveSettings(settings) {
+    var jsonData;
+    
+    if (settings == "RESET") {
+      jsonData = JSON.stringify({"useCemuDir":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1/","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false}});
+    } else {
+      jsonData = JSON.stringify(settings);
+    }
+    // Write data to the file
+    fs.writeFile(path.join(outputDirectory,"/data.json"), jsonData, 'utf8', (err) => {
+        if (err) {
+          mainWindow.webContents.send("fromMain", {action:"saveing",result:'Error saving settings:'+err});
+          return;
+        }
+        if (settings == "RESET") {
+          app.quit();
+        }
+        mainWindow.webContents.send("fromMain", {action:"saveing",result:'Settings saved successfully'});
+    });
+  }
+
+  function searchLevelInDB(searchTypes, searchPhrase) {
+    mainWindow.webContents.send("fromMain", {action:"found-levels", resultType: 'SUCCESS', result:'Levels found', levels: [{"url":"exampleurl1", "name":"ExampleName", "creator":"ExampleCreator", "levelid":"1efe", "creatorid":"dsd"}]});
+  }
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
-      selectFolder()
+      selectFolder();
     } else if (args.action === "download-level") {
-      processUrl(args.url)
+      processUrl(args.url);
+    } else if (args.action === "save-settings") {
+      saveSettings(args.settings);
+    } else if (args.action === "search-level") {
+      searchLevelInDB(args.searchTypes, args.searchPhrase);
+    } else if (args.action === "exit-app") {
+      app.quit();
     }
   });
 

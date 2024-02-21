@@ -1,34 +1,97 @@
+/* Dropdown styles */
+#dropdown {
+    padding: 5px;
+    font-size: 16px;
+}
+
+
+/* styles.css */
+
+/* Universal styles */
 body {
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
     margin: 0;
-    font-family: Arial, sans-serif;
+    padding: 0;
 }
 
-.toolbar {
-    background-color: #333;
-    overflow: hidden;
+h1, h2 {
+    color: #d90000; /* Red color */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Text shadow */
 }
 
-.toolbar button {
-    background-color: #555;
+button {
+    background-color: #a7601f; /* Dark brown color */
     border: none;
     color: white;
     padding: 10px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 16px;
+    margin-right: 10px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+}
+
+/* Main content styles */
+#main-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f0f0f0; /* Light gray background */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Checkbox styles */
+.checkbox-item {
+    margin-bottom: 10px;
+}
+
+.checkbox-item input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-label {
+    display: inline-block;
+    padding-left: 25px;
+    padding-right: 30px;
+    padding-top: 0px;
+    position: relative;
+    cursor: pointer;
+}
+
+.checkbox-label:before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 3px;
+    position: absolute;
+    left: 0;
+    top: 2px;
+}
+
+.checkbox-item input[type="checkbox"]:checked + .checkbox-label:before {
+    background-color: #d8d51b;
+    border-color: #d8d51b;
+}
+
+/* Toolbar styles */
+.toolbar {
+    background-color: #d8d51b; /* Yellow color */
+    padding: 10px;
+}
+
+.toolbar button {
+    background-color: #521313; /* Dark brown color */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
 }
 
 .toolbar button:hover {
     background-color: #777;
-}
-
-#main-content {
-    padding: 20px;
-}
-
-#selectedFolder {
-    margin-top: 20px;
+    color: #fff;
 }
