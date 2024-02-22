@@ -288,7 +288,6 @@ async function processUrl(originalUrl, levelid, levelObj) {
     if (args.action === "select-folder") {
       selectFolder();
     } else if (args.action === "download-level") {
-      addLevelToJson(args.levelObj);
       if (folderExists(outputDirectory+"/"+args.levelID)) {
         mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"initializing",levelid:args.levelID,info:"Level folder already exists."});
         return;
