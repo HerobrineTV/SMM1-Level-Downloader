@@ -129,7 +129,7 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
         if (i < partNamesFirst.length) { // Ensure we don't exceed the names array
             const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
             fs.writeFileSync(partFilePath, part);
-            console.log(`Saved: ${partFilePath}`);
+            //console.log(`Saved: ${partFilePath}`);
             mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:`Saved part ${partNamesFirst[i]}`});
         }
     });

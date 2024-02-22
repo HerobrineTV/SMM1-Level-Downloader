@@ -2,7 +2,7 @@ const { ipcRenderer } = window; // Use provided ipcRenderer in Electron apps
 const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 let SettingsData;
-const totalSteps = 11;
+const totalSteps = 10;
 var currentStep = [];
 
 function CEMUcheckBoxChanged() {
