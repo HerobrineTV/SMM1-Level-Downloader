@@ -1,4 +1,19 @@
 {
+  "13132293": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00013132293-00001?Expires=1624512065&Signature=nTS~JJNhwosAPAP88qzPr7puaFkKoJtCYnBbIOS9J8aTx9v9DrCNlEgfVgdlC5ax33QRCTT88dOeeFldLb9Kfj717dyurIwRcraNwQFt814ZF9MfJLZnw1axoGzmsrWdOKOncQoFPSSJovATQ4SIyZLKahA83UO-4vGnv8g9YLtLmGHOBjV8IzNzYuKtA-Yx4F3yo1oIOyXFI4k~gar9W9cxbavMfLjvtye~l9aT-sSujU4XLHH-0cYuAsFem007HuC3BNgbAJlVrXo0Do6SD-fS~HYDThRbav4kj9SnTWix19~GhCreLacYC5i3M-CoFpLb~GxFTzCUAEknc7IS7A__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Test",
+    "creator": "Will40676",
+    "levelid": 13132293,
+    "creatorid": 1772672278,
+    "clears": 87,
+    "failures": 67,
+    "total_attempts": 154,
+    "clearrate": 0.564935064935065,
+    "uploadTime": "2015-10-28T23:34:08.000Z",
+    "world_record_ms": 5926,
+    "world_record_holder_nnid": "kawamura_r",
+    "stars": 3
+  },
   "13192483": {
     "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00013192483-00001?Expires=1626157244&Signature=exaudAiDvRmSIKMo1wADCv8RSmaN3oOtfNkrWUd4e9EgDfBDaDkN5S0BvyPHF2zziVRz-UOdLGAk6hlM16n0EdsHJlsEwUJ5xtuFAUl993TkjcWW2ok84dRd8Gl9yhm~hEVxV7c3oQntIp-5lcuiB0DplWK-IrL6pv8jaWmtmNt3Fef71yOB0PIq0izWxNZIsm0lPiAMHamvU9S-aaLPRQYsIhbnFlF74f64SKxmsao4qibjPXKYXYKheBBNhNQMJe6W9Kb5J23va3XG7pBNuKwaXCYEv0IRnW2uMebHWihKsfA8hufy36MLUrKTrUBp0ririX94BmbLGzDs2BAP1g__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
     "name": "HERO",
