@@ -28,7 +28,7 @@ if (!fs.existsSync(outputDirectory)){
 // Path to the ASH Extractor executable within the SMMDownloader directory
 const ashextractorExecutable = path.join(outputDirectory, 'ashextractor.exe');
 
-async function fetchArchiveUrl(originalUrl) {
+async function fetchArchiveUrl(originalUrl, levelObj) {
     const encodedUrl = encodeURIComponent(originalUrl);
     const apiUrl = `https://web.archive.org/__wb/sparkline?output=json&url=${encodedUrl}&collection=web`;
   
@@ -39,21 +39,24 @@ async function fetchArchiveUrl(originalUrl) {
         'Pragma': 'no-cache',
         'Cache-Control': 'no-cache',
     };
-  
-    const response = await axios.get(apiUrl, { headers });
-    console.log(`Fetched archive URL from Wayback Machine: ${JSON.stringify(response.data)}`);
+    try {
+      const response = await axios.get(apiUrl, { headers });
+      //console.log(`Fetched archive URL from Wayback Machine: ${JSON.stringify(response.data)}`);
+      
+      const archiveTimestamp = response.data.first_ts;
+      if (!archiveTimestamp) {
+          console.error('No archived version found.');
+          return null;
+      }
     
-    const archiveTimestamp = response.data.first_ts;
-    if (!archiveTimestamp) {
-        console.error('No archived version found.');
-        return null;
+      const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
+      return archiveUrl;
+    } catch (error) {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
-  
-    const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
-    return archiveUrl;
 }
 
-async function downloadFile(fileUrl, outputPath) {
+async function downloadFile(fileUrl, outputPath, levelObj) {
     const headers = {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'de,en-US;q=0.7,en;q=0.3',
@@ -76,14 +79,17 @@ async function downloadFile(fileUrl, outputPath) {
         decompress: true 
       });
       fs.writeFileSync(outputPath, response.data);
-      console.log(`File downloaded at: ${outputPath}`);
+      //console.log(`File downloaded at: ${outputPath}`);
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"downloadFile",levelid:levelObj.levelid,info:"Successfully downloaded file from Wayback Machine"});
     } catch (error) {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"downloadFile",levelid:levelObj.levelid,info:"Wasn't able to download file from Wayback Machine"});
       console.error('Error downloading file:', error.message);
     }
   }
 
   function splitFile(filePath, levelid, levelObj) {
-    console.log(`Splitting file: ${filePath}`);
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:"Starting to split file"});
+    //console.log(`Splitting file: ${filePath}`);
     const data = fs.readFileSync(filePath);
 
     // ASH0 in hexadecimal byte representation
@@ -124,6 +130,7 @@ async function downloadFile(fileUrl, outputPath) {
             const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
             fs.writeFileSync(partFilePath, part);
             console.log(`Saved: ${partFilePath}`);
+            mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:`Saved part ${partNamesFirst[i]}`});
         }
     });
 
@@ -155,13 +162,14 @@ function containsSpecificFile(directory, fileName) {
 
 // Function to decompress a file if a file using ASH Extractor http://wiibrew.org/wiki/ASH_Extractor
   async function decompressAndRenameFiles(partsDirectory, partCount, partNamesFirst, levelObj) {
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:`Starting Decompressing and Renaming Files`});
     for (let i = 0; i < partCount; i++) {
         const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
 
         try {
-            console.log(`Decompressing: ${partFilePath}`);
+            //console.log(`Decompressing: ${partFilePath}`);
             execSync(`"${ashextractorExecutable}" "${partFilePath}"`);
-            console.log(`Decompressed: ${partFilePath}`);
+            //console.log(`Decompressed: ${partFilePath}`);
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
                 console.log(`${partFilePath} has sucessfully been compressed!`);
@@ -170,12 +178,13 @@ function containsSpecificFile(directory, fileName) {
         }
     }
     addLevelToJson(levelObj)
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",resultMessage:"All files have been decompressed and Downloaded!"});
-    console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
+    //console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
 }
 
 async function addLevelToJson(levelObj){
       // Read the existing JSON data from the file
+      const levelobjlvlid = levelObj.levelid;
       let jsonData = {};
       try {
           const data = fs.readFileSync(jsonDirectory+"/downloaded.json", 'utf8');
@@ -191,34 +200,28 @@ async function addLevelToJson(levelObj){
       // Write the updated JSON back to the file
       try {
           fs.writeFileSync(jsonDirectory+"/downloaded.json", JSON.stringify(jsonData, null, 2));
-          console.log('Object added to JSON file successfully.');
+          //console.log('Object added to JSON file successfully.');
+          mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"addLevelToJson",levelid:levelobjlvlid,info:"Finished adding object to JSON file."});
       } catch (error) {
           console.error('Error writing JSON file:', error);
+          mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"addLevelToJson",levelid:levelobjlvlid,info:"Error adding object to JSON file."});
       }
 }
 
 async function processUrl(originalUrl, levelid, levelObj) {
-    const archiveUrl = await fetchArchiveUrl(originalUrl);
-    if (!archiveUrl) return;
+    const archiveUrl = await fetchArchiveUrl(originalUrl, levelObj);
+    if (!archiveUrl) {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine."});
+      return;
+    }
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Fetched archive URL from Wayback Machine."});
 
     const fileName = path.basename(new URL(originalUrl).pathname);
     const outputPath = path.join(outputDirectory, fileName);
 
-    await downloadFile(archiveUrl, outputPath);
+    await downloadFile(archiveUrl, outputPath, levelObj);
     splitFile(outputPath, levelid, levelObj);
 }
-
-function startProcess() {
-    rl.question('Enter the SMM1 Level URL you want to Download \n \n[URLS can be obtained here: https://app.gigasheet.com/spreadsheet/courses-jsonl/1493e4c3_5fed_45cb_b189_2e1428df82d5]: \n\n', (url) => {
-      if (url.trim() === '') {
-        console.error('URL cannot be empty. Please enter a valid URL.');
-        startProcess(); // Ask for URL again
-      } else {
-        processUrl(url);
-        rl.close();
-      }
-    });
-  }
 
   let mainWindow;
 
@@ -270,10 +273,6 @@ function startProcess() {
     });
   }
 
-  function searchLevelInDB(searchTypes, searchPhrase) {
-    mainWindow.webContents.send("fromMain", {action:"found-levels", resultType: 'SUCCESS', result:'Levels found', levels: [{"url":"exampleurl1", "name":"ExampleName", "creator":"ExampleCreator", "levelid":"1efe", "creatorid":"dsd", "clears":0, "failures":0, "total_attempts":0, "clearrate":0.00, "uploadTime":0, "world_record_ms":0, "world_record_holder_nnid":"gfh", "stars":0}]});
-  }
-
   function folderExists(folderPath) {
     try {
         // Check if the folder exists
@@ -291,7 +290,7 @@ function startProcess() {
     } else if (args.action === "download-level") {
       addLevelToJson(args.levelObj);
       if (folderExists(outputDirectory+"/"+args.levelID)) {
-        mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"ERROR",resultMessage:"Already downloaded this level!"});
+        mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"initializing",levelid:args.levelID,info:"Level folder already exists."});
         return;
       }
       processUrl(args.url, args.levelID, args.levelObj);

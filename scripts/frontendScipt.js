@@ -2,7 +2,8 @@ const { ipcRenderer } = window; // Use provided ipcRenderer in Electron apps
 const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 let SettingsData;
-
+const totalSteps = 11;
+var currentStep = [];
 
 function CEMUcheckBoxChanged() {
     if (SettingsData.useCemuDir == false) {
@@ -100,7 +101,7 @@ function objectClicked(levelid, levelObj) {
 
 function addObjects(levels) {
     const objectsContainer = document.getElementById('scrollable-objects');
-    objectsContainer.innerHTML = '';
+    if (SettingsData.currentPage == 1){objectsContainer.innerHTML = '';}
 
     levels.forEach(obj => {
         const objectDiv = document.createElement('div');
@@ -187,18 +188,17 @@ function transformToDict(array) {
     return result;
 }
 
+function onScrollToBottom() {
+    lazyLevelLoading(SettingsData.currentPage + 1);
+}
 
-function searchLevel() {
-    // Get the search phrase from the input field
-    const searchPhrase = document.getElementById('searchLevelText').value.trim();
-    
-    // Set the last search phrase in settings
-    setSetting("lastSearchPhrase", searchPhrase);
-    
-    // Check if the API link should be used
-    if (SettingsData.useAPILink) {
-        // Construct the API URL with the search phrase
-        const apiUrl = `${SettingsData.APILink}/searchLevelsByName/${encodeURIComponent(searchPhrase)}`;
+function lazyLevelLoading(page) {
+    SettingsData.currentPage = page;
+    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(SettingsData.lastSearchPhrase)}/${page}`
+    +`?coursename=${SettingsData.searchParams.LevelName == true? 1 : 0}`
+    +`&courseid=${SettingsData.searchParams.LevelID == true? 1 : 0}`
+    +`&creatorname=${SettingsData.searchParams.CreatorName == true? 1 : 0}`
+    +`&creatorid=${SettingsData.searchParams.CreatorID == true? 1 : 0}`;
         
         // Make a GET request to the API
         fetch(apiUrl)
@@ -213,13 +213,29 @@ function searchLevel() {
             .then(data => {
                 // Handle the JSON data from the API
                 console.log(data); // You can process the data here
-                setSetting("recentFoundLevels", transformToDict(data));
+                if (SettingsData.currentPage == 1) {
+                    setSetting("recentFoundLevels", transformToDict(data));
+                } else {
+                    setSetting("recentFoundLevels", {...SettingsData.recentFoundLevels,...transformToDict(data)});
+                }
                 displayLevels(data);
             })
             .catch(error => {
                 // Handle errors that occur during the fetch
                 console.error('There was a problem with the fetch operation:', error);
             });
+}
+
+function searchLevel() {
+    // Get the search phrase from the input field
+    const searchPhrase = document.getElementById('searchLevelText').value.trim();
+    
+    // Set the last search phrase in settings
+    setSetting("lastSearchPhrase", searchPhrase);
+    
+    // Check if the API link should be used
+    if (SettingsData.useAPILink) {
+        lazyLevelLoading(1)
     }
 }
 
@@ -230,6 +246,7 @@ function selectFolder() {
 function runLevelDownloader(levelObj) {
     link = levelObj.url;
     levelID = levelObj.levelid;
+    currentStep[levelObj.levelid] = 1;
     window.api.send("toMain", {action:"download-level", url:link, levelID:levelID, levelObj:levelObj});
 }
 
@@ -277,6 +294,15 @@ function loadPageScripts(page) {
         } else {
             document.getElementById("searchLevel-item").innerHTML = ``
         }
+
+        var scrollableElement = document.getElementById('scrollable-objects');
+
+        scrollableElement.addEventListener('scroll', function() {
+            if (scrollableElement.scrollTop + scrollableElement.clientHeight >= scrollableElement.scrollHeight) {
+                onScrollToBottom();
+            }
+        });
+
         setSetting("amounttrue", amounttrue);
     } else if (page == "../pages/downloadedLevels.html") {
         loadDownloadedLevels();
@@ -366,19 +392,16 @@ window.addEventListener('DOMContentLoaded', () => {
         if (data.action == "saveing") {
             console.log(data.result)
         }
-        if (data.action == "found-levels"){
-            if (data.resultType == "SUCCESS") {
-                setSetting("recentFoundLevels", data.levels);
-                displayLevels(data.levels);
-            } else {
-                console.log(data.result)
-            }
-        }
         if (data.action == "download-info") {
             if (data.resultType == "SUCCESS") {
-                console.log(data.resultMessage)
-            } else {
-                console.log(data.resultMessage)
+                console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
+                currentStep[data.levelid] = null;
+            } else if (data.resultType == "IN_PROGRESS") {
+                console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
+                currentStep[data.levelid]++;
+            } else if (data.resultType == "ERROR") {
+                currentStep[data.levelid] = null;
+                console.log("["+data.levelid+"] "+ data.info)
             }
         }
     });
