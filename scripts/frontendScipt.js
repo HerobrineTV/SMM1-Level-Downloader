@@ -109,7 +109,7 @@ function addObjects(levels) {
             <div>${obj.name}</div>
             <div>Stars: ${obj.stars}</div>
             <div>Creator: ${obj.creator}</div>
-            <div>Clear Rate: ${obj.clearrate}</div>
+            <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
         `;
         objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         objectsContainer.appendChild(objectDiv);
