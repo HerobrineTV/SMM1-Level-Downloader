@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Super Mario Maker 1 Level Downloader</title>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+
+    <body>
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+              <span class="close">&times;</span>
+              <p id="levelInfo"></p>
+            </div>
+          </div>
+        <div id="main-content">
+            <h2>Select which Levels u want to See:</h2>
+            <select id="savedlevelsDropdown" onchange="loadSavedLevels()">
+                <option value="downloaded">Downloaded in Cache</option>
+                <option value="backupped">Backupped in Cache</option>
+                <option value="cemu">Loaded to Cemu</option>
+            </select>
+            <div id="scrollable-objects"></div>
+        </div>
+    </body>
+
+</html>

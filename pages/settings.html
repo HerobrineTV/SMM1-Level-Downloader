@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<body>
+    <div id="main-content">
+        <h1 style="font-family: 'Times New Roman', Times, serif;">Main Settings</h1>
+        <br><br>
+        <div class="checkbox-item">
+            <input type="checkbox" id="useCEMUfolder" name="cemu-option" onclick="CEMUcheckBoxChanged()">
+            <label class="checkbox-label" for="useCEMUfolder">Use Cemu Folder (Coming Soon)</label>
+            <br><br>
+            <input type="checkbox" id="autoBackupLevels" name="backup-option" onclick="overwriteCheckBoxChanged()">
+            <label class="checkbox-label" for="autoBackupLevels">Backup Overwritten Levels</label>
+        </div>
+        <div id="optionalCEMU"></div>
+        <div id="selectedFolder"></div>
+        <h2>Reset Settings:</h2><button onclick="resetSettings()">Reset Settings</button><br><br>
+        <br><br>
+    </div>
+</body>
+
+</html>

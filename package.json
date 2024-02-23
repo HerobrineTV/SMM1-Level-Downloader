@@ -1,0 +1,17 @@
+{
+  "name": "smm1-level-downloader",
+  "version": "1.0.0",
+  "description": "A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection",
+  "main": "Main.js",
+  "devDependencies": {
+    "axios": "^1.6.7",
+    "electron": "^29.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

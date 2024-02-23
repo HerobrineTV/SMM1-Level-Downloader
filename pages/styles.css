@@ -1,0 +1,274 @@
+/* Dropdown styles */
+#dropdown {
+    padding: 5px;
+    font-size: 16px;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+    background-color: #f0f0f0; /* Light gray background */
+    margin: 15% auto;
+    left: 5%;
+    width: 90%;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.creator-info {
+    display: flex;
+    justify-content: space-between;
+}
+
+.creator {
+    margin-left: auto; /* Pushes the creator name to the right */
+}
+
+.close {
+    color: #d90000; /* Red color */
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Main content styles */
+body {
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+    margin: 0;
+    padding: 0;
+}
+
+h1, h2 {
+    color: #d90000; /* Red color */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Text shadow */
+}
+
+button {
+    background-color: #a7601f; /* Dark brown color */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+}
+
+#main-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f0f0f0; /* Light gray background */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Checkbox styles */
+.checkbox-item {
+    margin-bottom: 10px;
+}
+
+.checkbox-item input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-label {
+    display: inline-block;
+    padding-left: 25px;
+    padding-right: 30px;
+    padding-top: 0px;
+    position: relative;
+    cursor: pointer;
+}
+
+.checkbox-label:before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 3px;
+    position: absolute;
+    left: 0;
+    top: 2px;
+}
+
+.checkbox-item input[type="checkbox"]:checked + .checkbox-label:before {
+    background-color: #d8d51b; /* Yellow color */
+    border-color: #d8d51b;
+}
+
+/* Toolbar styles */
+.toolbar {
+    background-color: #d8d51b; /* Yellow color */
+    padding: 10px;
+}
+
+.toolbar button {
+    background-color: #521313; /* Dark brown color */
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+}
+
+.toolbar button:hover {
+    background-color: #777;
+    color: #fff;
+}
+
+/* Scrollable objects */
+#scrollable-objects {
+    max-height: 300px; /* Adjust height as needed */
+    overflow-y: auto; /* Enable vertical scroll */
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-top: 20px;
+}
+
+/* Object styles */
+.object {
+    cursor: pointer;
+    margin-bottom: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    background-color: #d5d4cc;
+}
+
+.object:hover {
+    background-color: #e0e0e0;
+}
+/* Base Modal Styles */
+.modal {
+    display: none; /* Keep as is */
+    position: fixed; /* Keep as is */
+    z-index: 1; /* Keep as is */
+    left: 0; /* Keep as is */
+    top: 0; /* Keep as is */
+    width: 100%; /* Keep as is */
+    height: 100%; /* Keep as is */
+    overflow: auto; /* Keep as is */
+    background-color: rgba(0, 0, 0, 0.4); /* Lighter overlay */
+}
+
+.modal-content {
+    background-color: #fdfdfd;
+    margin: 15% auto; /* Increased margin for more centered content */
+    padding: 20px;
+    border: 2px solid #d90000; /* Bold red border */
+    width: 50%; /* Adjusted for a wider modal */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+    font-family: 'Comic Sans MS', 'Arial', sans-serif; /* Playful font */
+}
+
+/* Adjust close button to be more Mario-themed */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #d90000; /* Mario red */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Content and Typography Adjustments */
+.level-info h2 {
+    color: #d90000; /* Bright red */
+    font-size: 24px; /* Larger font size */
+}
+
+.level-details, .level-stats {
+    margin-bottom: 20px;
+    background-color: #fff; /* Added for contrast */
+    padding: 10px; /* Padding for visual space */
+    border-radius: 5px; /* Rounded corners */
+}
+
+.level-stats p, .level-details p {
+    font-size: 16px; /* Larger text for readability */
+}
+
+/* Button Adjustments for a Mario Feel */
+.play-btn, .download-btn {
+    background-color: #ff6b6b; /* Bright red */
+    border: 2px solid #555; /* Dark border for contrast */
+    font-weight: bold; /* Bold text */
+    text-transform: uppercase; /* UPPERCASE text for emphasis */
+}
+
+.play-btn:hover, .download-btn:hover {
+    background-color: #ff4747; /* Darker red on hover */
+}
+
+#course-dropdown {
+    text-align: center;
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
+#savedlevelsDropdown {
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.profile img {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 5px;
+  }
