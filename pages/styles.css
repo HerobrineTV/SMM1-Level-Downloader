@@ -225,3 +225,37 @@ button {
 .play-btn:hover, .download-btn:hover {
     background-color: #ff4747; /* Darker red on hover */
 }
+
+#course-dropdown {
+    text-align: center;
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
+#savedlevelsDropdown {
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.profile img {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}

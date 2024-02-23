@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { app, BrowserWindow, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -17,7 +17,7 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
-// Ensure SMMDownloader directory exists
+const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
 if (!fs.existsSync(outputDirectory)){
@@ -229,6 +229,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow = new BrowserWindow({
       width: 920,
       height: 800,
+      icon:iconPath,
       webPreferences: {
         nodeIntegration: true,
         preload: path.join(__dirname, 'preload.js')
@@ -237,11 +238,17 @@ async function processUrl(originalUrl, levelid, levelObj) {
     });
 
     //mainWindow.setMenu(null);
-  
+    const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
+    mainWindow.setIcon(appIcon);
+    //mainWindow.loadFile(iconPath+"/Icon.png")
     mainWindow.loadFile('../pages/index.html');
   }
 
-  app.whenReady().then(createWindow);
+  app.whenReady().then(() => {
+    createWindow();
+});
+
+  //app.whenReady().then(createWindow);
 
   function selectFolder() {
     dialog.showOpenDialog({ properties: ['openDirectory'] }).then(result => {
@@ -256,7 +263,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     var jsonData;
     
     if (settings == "RESET") {
-      jsonData = JSON.stringify({"useCemuDir":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false}});
+      jsonData = JSON.stringify({"useCemuDir":false,"BackupLevels":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false, "SearchExact":false}});
     } else {
       jsonData = JSON.stringify(settings);
     }
@@ -299,6 +306,8 @@ async function processUrl(originalUrl, levelid, levelObj) {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
     } else if (args.action === "exit-app") {
       app.quit();
+    } else if (args.action === "openURL") {
+      shell.openExternal(args.url);
     }
   });
 

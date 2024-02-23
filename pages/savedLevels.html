@@ -15,7 +15,15 @@
               <p id="levelInfo"></p>
             </div>
           </div>
-          
+        <div id="main-content">
+            <h2>Select which Levels u want to See:</h2>
+            <select id="savedlevelsDropdown" onchange="loadSavedLevels()">
+                <option value="downloaded">Downloaded in Cache</option>
+                <option value="backupped">Backupped in Cache</option>
+                <option value="cemu">Loaded to Cemu</option>
+            </select>
+            <div id="scrollable-objects"></div>
+        </div>
     </body>
 
 </html>

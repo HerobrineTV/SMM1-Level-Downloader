@@ -1,6 +1,7 @@
 const { ipcRenderer } = window; // Use provided ipcRenderer in Electron apps
 const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
+const backupCache = ('../SMMDownloader/Data/backupped.json');
 let SettingsData;
 const totalSteps = 10;
 var currentStep = [];
@@ -15,6 +16,16 @@ function CEMUcheckBoxChanged() {
     } else {
         document.getElementById('optionalCEMU').innerHTML = ``
         setSetting("useCemuDir", false)
+    }
+}
+
+function overwriteCheckBoxChanged() {
+    if (SettingsData.BackupLevels == false) {
+        setSetting("BackupLevels", true)
+    } else if (SettingsData.BackupLevels == true) {
+        setSetting("BackupLevels", false)
+    } else {
+        setSetting("BackupLevels", false)
     }
 }
 
@@ -60,7 +71,6 @@ function loadFileInWindow(levelObj) {
         <p><strong>Total Attempts:</strong> <span id="totalAttempts">${levelObj.total_attempts}</span></p>
         <p><strong>Completions:</strong> <span id="completions">${levelObj.clears}</span></p>
         <p><strong>Record Time:</strong> <span id="recordTime">${formatTime(levelObj.world_record_ms)}</span></p>
-        <p><strong>Record Achieved Date:</strong> <span id="recordDate">${levelObj.world_record_achieved_date}</span></p>
         <p><strong>Record Holder:</strong> <span id="recordHolder">${levelObj.world_record_holder_nnid}</span></p>
     </div>
     <div class="actions">
@@ -171,6 +181,16 @@ function searchCheckBoxesChanged(searchType){
         }
     }
 
+    if (searchType == "SearchExact") {
+        if (SettingsData.searchParams.SearchExact == false) {
+            setSubSetting("searchParams", "SearchExact", true)
+        } else if (SettingsData.searchParams.SearchExact == true) {
+            setSubSetting("searchParams", "SearchExact", false)
+        } else {
+            setSubSetting("searchParams", "SearchExact", false)
+        }
+    }
+
     if (SettingsData.amounttrue && SettingsData.amounttrue > 0 && document.getElementById("searchLevel-item").innerHTML == ``) {
         document.getElementById("searchLevel-item").innerHTML = `<label class="searchLevel-label" for="searchLevelText">Search: </label><input type="text" id="searchLevelText" name="searchLevel-option" value="" oninput="searchTextInputChanged()">`
     } else if (SettingsData.amounttrue && SettingsData.amounttrue <= 0) {
@@ -198,7 +218,8 @@ function lazyLevelLoading(page) {
     +`?coursename=${SettingsData.searchParams.LevelName == true? 1 : 0}`
     +`&courseid=${SettingsData.searchParams.LevelID == true? 1 : 0}`
     +`&creatorname=${SettingsData.searchParams.CreatorName == true? 1 : 0}`
-    +`&creatorid=${SettingsData.searchParams.CreatorID == true? 1 : 0}`;
+    +`&creatorid=${SettingsData.searchParams.CreatorID == true? 1 : 0}`
+    +`&searchexact=${SettingsData.searchParams.SearchExact == true? 1 : 0}`;
         
         // Make a GET request to the API
         fetch(apiUrl)
@@ -266,6 +287,9 @@ function loadPageScripts(page) {
             document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
         }
+        if (SettingsData.BackupLevels == true) {
+            document.getElementById("autoBackupLevels").checked = true;
+        }
     } else if (page == "../pages/main.html") {
         amounttrue = 0;
         if(SettingsData.searchParams.LevelName == true) {
@@ -283,6 +307,9 @@ function loadPageScripts(page) {
         if(SettingsData.searchParams.CreatorID == true) {
             document.getElementById("usesearchLevelbyCreatorID").checked = true;
             amounttrue++;
+        }
+        if(SettingsData.searchParams.SearchExact == true) {
+            document.getElementById("useseExactSearch").checked = true;
         }
 
         if (amounttrue > 0) {
@@ -304,8 +331,19 @@ function loadPageScripts(page) {
         });
 
         setSetting("amounttrue", amounttrue);
-    } else if (page == "../pages/downloadedLevels.html") {
-        loadDownloadedLevels();
+    } else if (page == "../pages/savedLevels.html") {
+        loadSavedLevels();
+    }
+}
+
+function loadSavedLevels(){
+    const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
+    if (savedLevelsDrop.value == "downloaded") {
+        loadDownloadedLevels()
+    } else if (savedLevelsDrop.value == "cemu") {
+        loadLevelsfromCEMU()
+    } else if (savedLevelsDrop.value == "backupped") {
+        loadBackuppedLevels()
     }
 }
 
@@ -362,18 +400,52 @@ function objectToArray(obj) {
     return Object.values(obj);
 }
 
-
-
-
 function loadDownloadedLevels() {
     fetch(downloadCache)
         .then(response => response.json())
         .then(data => {
             //console.log(data);
-            console.log(objectToArray(data))
-            displayLevels(objectToArray(data));
+            if (data.length > 0) {
+                //console.log(objectToArray(data))
+                displayLevels(objectToArray(data));
+            } else {
+                const levellistObj = document.getElementById('scrollable-objects');
+                levellistObj.innerHTML = `<h2>Error</h2>Download List is Empty! <br> U need to Download Levels First.<br><br>`
+            }
         })
         .catch(error => console.log(error));
+}
+
+function loadLevelsfromCEMU() {
+    const levellistObj = document.getElementById('scrollable-objects');
+    if (SettingsData.useCemuDir == true) {
+        if (SettingsData.CemuDirPath!= "") {
+            // Load Level Folders form CEMU and maybe load the Levels Names
+        } else {
+            levellistObj.innerHTML = `<h2>Error</h2>Cemu Path Not Found or not Set! <br> Please set the Cemu Path in the settings.<br><br>`
+        }
+    } else {
+        levellistObj.innerHTML = `<h2>Error</h2>Using Cemu Folder is disabled! <br> Please enable it in the settings.<br><br>`
+    }
+}
+
+function loadBackuppedLevels() {
+    const levellistObj = document.getElementById('scrollable-objects');
+    if (SettingsData.BackupLevels == true) {
+        fetch(backupCache)
+        .then(response => response.json())
+        .then(data => {
+            //console.log(data);
+            if (data.length > 0) {
+                displayLevels(objectToArray(data));
+            } else {
+                levellistObj.innerHTML = `<h2>Error</h2>Backup List is Empty! <br> U need to Replace Levels first.<br><br>`
+            }
+        })
+        .catch(error => console.log(error));
+    } else {
+        levellistObj.innerHTML = `<h2>Error</h2>Backups are Disabled! <br> Please enable it in the settings.<br><br>`
+    }
 }
 
 function displayLevels(levels) {
@@ -382,6 +454,10 @@ function displayLevels(levels) {
 
 function exitApp() {
     window.api.send("toMain", {action:"exit-app"});
+}
+
+function openURL(url) {
+    window.api.send("toMain", {action:"openURL", url:url});
 }
 
 window.addEventListener('DOMContentLoaded', () => {
