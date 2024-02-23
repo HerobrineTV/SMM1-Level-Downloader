@@ -1,4 +1,4 @@
--npm install --save electron axios
+-npm install --save electron axios smm-course-viewer
 
 -node_modules\electron\Electron.exe scripts/SMM1LevelDownloader.js
 

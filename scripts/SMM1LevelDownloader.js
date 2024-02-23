@@ -3,7 +3,8 @@ const { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } = require('ele
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const readline = require('readline'); 
+const readline = require('readline');
+const smmCourseViewer = require('smm-course-viewer');
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -17,9 +18,15 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
+const thisReleaseTag = "V2.0-Pre"
+
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
-const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
+if (!fs.existsSync(jsonDirectory)){
+  fs.mkdirSync(jsonDirectory, { recursive: true });
+  console.log(`Created directory: ${jsonDirectory}`);
+}
+const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 if (!fs.existsSync(outputDirectory)){
     fs.mkdirSync(outputDirectory, { recursive: true });
     console.log(`Created directory: ${outputDirectory}`);
@@ -54,6 +61,27 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
     } catch (error) {
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
+}
+
+async function checkNewRelease() {
+  const repo = 'HerobrineTV/SMM1-Level-Downloader'; // Replace with your GitHub repo
+  const url = `https://api.github.com/repos/${repo}/releases/latest`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${data.message}`);
+    }
+
+    console.log('Latest release tag:', data.tag_name);
+    //console.log(data)
+    // You can further process the data as needed, for example, compare it with your local version
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch the latest release:', error);
+  }
 }
 
 async function downloadFile(fileUrl, outputPath, levelObj) {
@@ -270,6 +298,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
     mainWindow.loadFile('../pages/index.html');
+    checkNewRelease();
   }
 
   app.whenReady().then(() => {
@@ -291,7 +320,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     var jsonData;
     
     if (settings == "RESET") {
-      jsonData = JSON.stringify({"useCemuDir":false,"BackupLevels":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false, "SearchExact":false}});
+      jsonData = JSON.stringify({"useCemuDir":false,"BackupLevels":false,"CemuDirPath":"","selectedProfile":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false, "SearchExact":false}});
     } else {
       jsonData = JSON.stringify(settings);
     }
@@ -319,6 +348,51 @@ async function processUrl(originalUrl, levelid, levelObj) {
     }
 }
 
+function loadExistingUserIDs(cemupath) {
+  fs.readdir(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user"), { withFileTypes: true }, (err, files) => {
+    if (err) {
+      console.error('Error reading the directory:', err);
+      return;
+    }
+
+    const folders = files.filter(dirent => dirent.isDirectory() && dirent.name !== 'common').map(dirent => dirent.name);
+    mainWindow.webContents.send("fromMain", {action:"currentUsersInSMM1Dir",users:folders});
+  });
+}
+
+function loadExistingCourses(cemupath, profileid) {
+  fs.readdir(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid), { withFileTypes: true }, (err, files) => {
+    if (err) {
+      console.error('Error reading the directory:', err);
+      return;
+    }
+
+    const folders = files.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+
+    let levels = [];
+    var counter = 0;
+    for (let i = 0; i < folders.length; i++) {
+      smmCourseViewer.read(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid, folders[i], "course_data.cdt"), function(err, course, objects) {
+        levelObj = {
+          folder: folders[i],
+          name: ""
+        };
+        if(!err) {
+            //console.log(course['name'])
+            levelObj.name = course['name'];
+            levels.push(levelObj);
+        } else {
+          levels.push(levelObj);
+        }
+        counter++;
+        if (counter == folders.length - 1) {
+          mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
+        }
+      });
+    }
+  });
+}
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
@@ -341,6 +415,12 @@ async function processUrl(originalUrl, levelid, levelObj) {
         mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID});
       } else {
         mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID});
+      }
+    } else if (args.action === "get-smm1-courses") {
+      loadExistingCourses(args.path, args.selectedProfile);
+    } else if (args.action === "get-smm1-profiles") {
+      if (args.path != undefined && args.selectedProfile!== undefined && folderExists(args.path)) {
+        loadExistingUserIDs(args.path)
       }
     }
   });

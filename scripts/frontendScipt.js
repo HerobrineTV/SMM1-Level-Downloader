@@ -65,16 +65,16 @@ function loadFileInWindow(levelObj) {
     </div>
     <div class="level-details">
         <!-- Example of incorporating Mario-themed imagery -->
-        <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator}</span> <img src="mario-icon.png" alt="" style="height:20px;"></p>
-        <p><strong>Upload Time:</strong> <span id="uploadTime">${levelObj.uploadTime}</span></p>
+        <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator || null}</span> <img src="mario-icon.png" alt="" style="height:20px;"></p>
+        <p><strong>Upload Time:</strong> <span id="uploadTime">${levelObj.uploadTime || null}</span></p>
         <p><strong>Level ID:</strong> <span id="levelID">${levelObj.levelid}</span></p>
     </div>
     <div class="level-stats">
-        <p><strong>Clear Rate:</strong> <span id="clearRate">${(levelObj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</span></p>
-        <p><strong>Total Attempts:</strong> <span id="totalAttempts">${levelObj.total_attempts}</span></p>
-        <p><strong>Completions:</strong> <span id="completions">${levelObj.clears}</span></p>
-        <p><strong>Record Time:</strong> <span id="recordTime">${formatTime(levelObj.world_record_ms)}</span></p>
-        <p><strong>Record Holder:</strong> <span id="recordHolder">${levelObj.world_record_holder_nnid}</span></p>
+        <p><strong>Clear Rate:</strong> <span id="clearRate">${(levelObj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}%</span></p>
+        <p><strong>Total Attempts:</strong> <span id="totalAttempts">${levelObj.total_attempts || 0}</span></p>
+        <p><strong>Completions:</strong> <span id="completions">${levelObj.clears || 0}</span></p>
+        <p><strong>Record Time:</strong> <span id="recordTime">${formatTime(levelObj.world_record_ms) || NaN}</span></p>
+        <p><strong>Record Holder:</strong> <span id="recordHolder">${levelObj.world_record_holder_nnid || null}</span></p>
     </div>
     <div class="actions">
         <div id="download-actions">
@@ -124,13 +124,23 @@ function addObjects(levels) {
         }
         objectDiv.id = `object-${obj.levelid}`;
         objectDiv.classList.add('object');
-        objectDiv.innerHTML = `
+        if (obj.folder) {
+            objectDiv.innerHTML = `
+            <div>${obj.name}</div>
+            <div></div>
+            <div></div>
+            <div>Course Folder: ${obj.folder}</div>
+            <div class="downloaded-display"></div>
+        `;
+        } else {
+            objectDiv.innerHTML = `
             <div>${obj.name}</div>
             <div>Stars: ${obj.stars}</div>
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
             <div class="downloaded-display"></div>
         `;
+        }
         objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         objectsContainer.appendChild(objectDiv);
     });
@@ -293,6 +303,7 @@ function loadPage(page) {
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
         currentHTMLPage = "settings"
+        window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
         if (SettingsData.useCemuDir == true) {
             document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
@@ -432,7 +443,7 @@ function loadLevelsfromCEMU() {
     const levellistObj = document.getElementById('scrollable-objects');
     if (SettingsData.useCemuDir == true) {
         if (SettingsData.CemuDirPath!= "") {
-            // Load Level Folders form CEMU and maybe load the Levels Names
+            window.api.send("toMain", {action:"get-smm1-courses", path:SettingsData.CemuDirPath, selectedProfile: SettingsData.selectedProfile});
         } else {
             levellistObj.innerHTML = `<h2>Error</h2>Cemu Path Not Found or not Set! <br> Please set the Cemu Path in the settings.<br><br>`
         }
@@ -447,7 +458,7 @@ function loadBackuppedLevels() {
         fetch(backupCache)
         .then(response => response.json())
         .then(data => {
-            //console.log(data);
+
             if (data.length > 0) {
                 displayLevels(objectToArray(data));
             } else {
@@ -474,6 +485,11 @@ function openURL(url) {
 
 function checkIfLevelisAlreadyDownloaded(levelid){
     window.api.send("toMain", {action:"checkIfAlreadyDownloaded", levelID:levelid});
+}
+
+function changedProfileDropdown(){
+    const currentProfile = document.getElementById('profile-Dropdown').value;
+    setSetting("selectedProfile", currentProfile);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -516,6 +532,27 @@ window.addEventListener('DOMContentLoaded', () => {
                     levelDisplayObjDownloadActions.innerHTML = ``
                 }
             }
+        }
+        if (data.action == "currentUsersInSMM1Dir"){
+            //console.log(data.users)
+            const profileselectionDropdown = document.getElementById('profileselection');
+            var buildHTML = "";
+            buildHTML = `<h2>Select Profile</h2>`;
+            buildHTML += `<select id="profile-Dropdown" onchange="changedProfileDropdown()" name="profileselection-option">`;
+            
+            data.users.forEach(user => {
+                // Check if the current user is the selected profile and set the selected attribute accordingly
+                const isSelected = user === SettingsData.selectedProfile ? 'selected' : '';
+                buildHTML += `<option value="${user}" ${isSelected}>${user}</option>`;
+            });
+            
+            buildHTML += `</select>`;
+            profileselectionDropdown.innerHTML = buildHTML;
+        }
+        if (data.action == "currentLevelsInSMM1ProfileDir") {
+            document.getElementById('scrollable-objects').innerHTML = `<h2>Levels in Cemu Storage</h2>`;
+            displayLevels(data.levels);
+            console.log(data.levels)
         }
     });
 });

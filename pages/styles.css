@@ -247,6 +247,16 @@ button {
     font-family: "Press Start 2P", cursive;
 }
 
+#profile-Dropdown {
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
 .profile {
     display: flex;
     align-items: center;
