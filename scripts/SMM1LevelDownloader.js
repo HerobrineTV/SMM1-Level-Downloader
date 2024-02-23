@@ -308,6 +308,12 @@ async function processUrl(originalUrl, levelid, levelObj) {
       app.quit();
     } else if (args.action === "openURL") {
       shell.openExternal(args.url);
+    } else if (args.action === "checkIfAlreadyDownloaded") {
+      if (folderExists(outputDirectory+"/"+args.levelID)) {
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID});
+      } else {
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID});
+      }
     }
   });
 

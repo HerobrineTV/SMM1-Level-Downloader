@@ -5,6 +5,7 @@ const backupCache = ('../SMMDownloader/Data/backupped.json');
 let SettingsData;
 const totalSteps = 10;
 var currentStep = [];
+var currentHTMLPage = "";
 
 function CEMUcheckBoxChanged() {
     if (SettingsData.useCemuDir == false) {
@@ -115,6 +116,10 @@ function addObjects(levels) {
 
     levels.forEach(obj => {
         const objectDiv = document.createElement('div');
+        if (currentHTMLPage == "main") {
+            checkIfLevelisAlreadyDownloaded(obj.levelid);
+        }
+        objectDiv.id = `object-${obj.levelid}`;
         objectDiv.classList.add('object');
         objectDiv.innerHTML = `
             <div>${obj.name}</div>
@@ -283,6 +288,7 @@ function loadPage(page) {
 
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
+        currentHTMLPage = "settings"
         if (SettingsData.useCemuDir == true) {
             document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
@@ -291,6 +297,7 @@ function loadPageScripts(page) {
             document.getElementById("autoBackupLevels").checked = true;
         }
     } else if (page == "../pages/main.html") {
+        currentHTMLPage = "main"
         amounttrue = 0;
         if(SettingsData.searchParams.LevelName == true) {
             document.getElementById("usesearchLevelbyLevelName").checked = true;
@@ -332,6 +339,7 @@ function loadPageScripts(page) {
 
         setSetting("amounttrue", amounttrue);
     } else if (page == "../pages/savedLevels.html") {
+        currentHTMLPage = "savedLevels"
         loadSavedLevels();
     }
 }
@@ -460,6 +468,10 @@ function openURL(url) {
     window.api.send("toMain", {action:"openURL", url:url});
 }
 
+function checkIfLevelisAlreadyDownloaded(levelid){
+    window.api.send("toMain", {action:"checkIfAlreadyDownloaded", levelID:levelid});
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     window.api.receive("fromMain", (data) => {
         if (data.action == "selectedFolder") {
@@ -472,12 +484,25 @@ window.addEventListener('DOMContentLoaded', () => {
             if (data.resultType == "SUCCESS") {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 currentStep[data.levelid] = null;
+                const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
+                if (levelHTMLObj) {
+                    levelHTMLObj.innerHTML += `<h2>Already Downloaded</h2>`
+                }
             } else if (data.resultType == "IN_PROGRESS") {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 currentStep[data.levelid]++;
             } else if (data.resultType == "ERROR") {
                 currentStep[data.levelid] = null;
                 console.log("["+data.levelid+"] "+ data.info)
+            }
+        }
+        if (data.action == "checkIfAlreadyDownloaded-info") {
+            console.log(data)
+            if (data.answer == true){
+                const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
+                if (levelHTMLObj) {
+                    levelHTMLObj.innerHTML += `<h2>Already Downloaded</h2>`
+                }
             }
         }
     });
