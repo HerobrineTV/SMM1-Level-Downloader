@@ -52,7 +52,7 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
       const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
       return archiveUrl;
     } catch (error) {
-      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
+      //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
 }
 
@@ -208,8 +208,36 @@ async function addLevelToJson(levelObj){
       }
 }
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      const archiveUrl = await fetchArchiveUrl(originalUrl, levelObj);
+      if (archiveUrl) {
+        return archiveUrl; // If successful, return the URL
+      }
+      // If fetchArchiveUrl returns null or undefined, increase attempt count and retry after a delay
+      attempts++;
+      console.log(`Attempt ${attempts} failed. Retrying...`);
+      await delay(1000); // Wait for 1 second before retrying
+    } catch (error) {
+      // If fetchArchiveUrl throws an error, log it, increase attempt count, and retry after a delay
+      console.error(`Attempt ${attempts} failed with error: ${error}. Retrying...`);
+      attempts++;
+      await delay(1000); // Wait for 1 second before retrying
+    }
+  }
+  // After 5 failed attempts, return null to indicate failure
+  return null;
+}
+
+
 async function processUrl(originalUrl, levelid, levelObj) {
-    const archiveUrl = await fetchArchiveUrl(originalUrl, levelObj);
+    const archiveUrl = await fetchArchiveUrlWithRetries(originalUrl, levelObj);
     if (!archiveUrl) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine."});
       return;

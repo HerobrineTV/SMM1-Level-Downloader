@@ -56,6 +56,8 @@ function loadFileInWindow(levelObj) {
     const modalContent = document.querySelector(".modal-content");
     const levelInfo = document.getElementById("levelInfo");
 
+    checkIfLevelisAlreadyDownloaded(levelObj.levelid);
+
     levelInfo.innerHTML = `
     <div class="level-info">
         <!-- Use an icon or image here for a visual touch -->
@@ -75,13 +77,14 @@ function loadFileInWindow(levelObj) {
         <p><strong>Record Holder:</strong> <span id="recordHolder">${levelObj.world_record_holder_nnid}</span></p>
     </div>
     <div class="actions">
-        <!-- Consider adding Mario-themed button icons or styles -->
-        <select id="course-dropdown">
-            <option value="option1">course000</option>
-            <option value="option2">course001</option>
-            <option value="option3">course002</option>
-        </select>
-        <button class="searchdownload-btn">Download</button>
+        <div id="download-actions">
+            <select id="course-dropdown">
+                <option value="option1">course000</option>
+                <option value="option2">course001</option>
+                <option value="option3">course002</option>
+            </select>
+            <button class="searchdownload-btn">Download</button>
+        </div>
     </div>
     `;
 
@@ -126,6 +129,7 @@ function addObjects(levels) {
             <div>Stars: ${obj.stars}</div>
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
+            <div class="downloaded-display"></div>
         `;
         objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         objectsContainer.appendChild(objectDiv);
@@ -485,8 +489,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 currentStep[data.levelid] = null;
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
+                const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
                 if (levelHTMLObj) {
-                    levelHTMLObj.innerHTML += `<h2>Already Downloaded</h2>`
+                    levelHTMLObj.getElementsByClassName("downloaded-display")[0].innerHTML = `<h2>Already Downloaded</h2>`
+                }
+                if (levelDisplayObjDownloadActions) {
+                    levelDisplayObjDownloadActions.innerHTML = ``
                 }
             } else if (data.resultType == "IN_PROGRESS") {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
@@ -497,11 +505,15 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (data.action == "checkIfAlreadyDownloaded-info") {
-            console.log(data)
+            //console.log(data)
             if (data.answer == true){
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
+                const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
                 if (levelHTMLObj) {
-                    levelHTMLObj.innerHTML += `<h2>Already Downloaded</h2>`
+                    levelHTMLObj.getElementsByClassName("downloaded-display")[0].innerHTML = `<h2>Already Downloaded</h2>`
+                }
+                if (levelDisplayObjDownloadActions) {
+                    levelDisplayObjDownloadActions.innerHTML = ``
                 }
             }
         }
