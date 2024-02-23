@@ -227,7 +227,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
 
   function createWindow() {
     mainWindow = new BrowserWindow({
-      width: 920,
+      width: 930,
       height: 800,
       icon:iconPath,
       webPreferences: {
@@ -237,7 +237,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
       menu: false
     });
 
-    //mainWindow.setMenu(null);
+    mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
