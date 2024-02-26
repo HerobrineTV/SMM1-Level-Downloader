@@ -80,7 +80,7 @@ async function checkNewRelease() {
     // You can further process the data as needed, for example, compare it with your local version
     return data;
   } catch (error) {
-    console.error('Failed to fetch the latest release:', error);
+    console.error('Failed to fetch the latest release!');
   }
 }
 
@@ -361,7 +361,9 @@ function loadExistingUserIDs(cemupath) {
 }
 
 function loadExistingCourses(cemupath, profileid) {
-  fs.readdir(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid), { withFileTypes: true }, (err, files) => {
+  //const profileFolder = cemupath;
+  const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
+  fs.readdir(profileFolder, { withFileTypes: true }, (err, files) => {
     if (err) {
       console.error('Error reading the directory:', err);
       return;
@@ -372,9 +374,12 @@ function loadExistingCourses(cemupath, profileid) {
     let levels = [];
     var counter = 0;
     for (let i = 0; i < folders.length; i++) {
-      smmCourseViewer.read(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid, folders[i], "course_data.cdt"), function(err, course, objects) {
+      smmCourseViewer.read(path.join(profileFolder, folders[i], "course_data.cdt"), function(err, course, objects) {
         levelObj = {
           folder: folders[i],
+          course: course,
+          objects: objects,
+          levelid: folders[i],
           name: ""
         };
         if(!err) {
@@ -385,9 +390,17 @@ function loadExistingCourses(cemupath, profileid) {
           levels.push(levelObj);
         }
         counter++;
-        if (counter == folders.length - 1) {
+        if (counter == folders.length) {
+          //console.log(levels);
           mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
+          for (let i = 0; i < folders.length; i++) {
+            folders[i].fileName
+            const courseHTML = smmCourseViewer.course.getHtml();
+            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:courseHTML,levelid:folders[i],course:levels[i].course,objects:levels[i].objects});	
+          }
         }
+        //let sizeBase = getSelectedSize();
+        //new Draw('courseDisplay', course, objects, sizeBase);
       });
     }
   });

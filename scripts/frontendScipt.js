@@ -116,7 +116,7 @@ function objectClicked(levelid, levelObj) {
 function addObjects(levels) {
     const objectsContainer = document.getElementById('scrollable-objects');
     if (SettingsData.currentPage == 1){objectsContainer.innerHTML = '';}
-
+    console.log(levels);
     levels.forEach(obj => {
         const objectDiv = document.createElement('div');
         if (currentHTMLPage == "main") {
@@ -128,7 +128,8 @@ function addObjects(levels) {
             objectDiv.innerHTML = `
             <div>${obj.name}</div>
             <div></div>
-            <div></div>
+            <div id="courseInfoDisplay-${obj.levelid}"></div>
+            <div id="courseDisplay-${obj.levelid}"></div>
             <div>Course Folder: ${obj.folder}</div>
             <div class="downloaded-display"></div>
         `;
@@ -428,7 +429,7 @@ function loadDownloadedLevels() {
         .then(response => response.json())
         .then(data => {
             //console.log(data);
-            if (data.length > 0) {
+            if (data) {
                 //console.log(objectToArray(data))
                 displayLevels(objectToArray(data));
             } else {
@@ -459,7 +460,7 @@ function loadBackuppedLevels() {
         .then(response => response.json())
         .then(data => {
 
-            if (data.length > 0) {
+            if (data) {
                 displayLevels(objectToArray(data));
             } else {
                 levellistObj.innerHTML = `<h2>Error</h2>Backup List is Empty! <br> U need to Replace Levels first.<br><br>`
@@ -553,6 +554,11 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('scrollable-objects').innerHTML = `<h2>Levels in Cemu Storage</h2>`;
             displayLevels(data.levels);
             console.log(data.levels)
+        }
+        if (data.action == "displayCourse") {
+            document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = data.coursehtml;
+            new Draw(`courseDisplay-${data.levelid}`, data.course, data.objects, "8"); //32 64
+            //console.log(data)
         }
     });
 });
