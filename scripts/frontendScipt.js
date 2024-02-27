@@ -591,6 +591,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 courseInfoHTML += `<b>Uploader</b>: ${lastLoadedDownloads[data.levelid].creator}<br>`   
             }
             courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
+            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
 //            courseInfoHTML += `<b>Theme</b>: overworld (0)<br>`
 //            courseInfoHTML += `<b>Game Time</b>: 500s<br>`
 //            courseInfoHTML += `<b>Objects Count</b>: 115<br>`

@@ -418,7 +418,7 @@ function courseViewerExtract(coursepath){
           for (let i = 0; i < folders.length; i++) {
             folders[i].fileName
             //const courseHTML = smmCourseViewer.course.getHtml();
-            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:levels[i].html,levelid:levels[i].levelid,course:levels[i].course,objects:levels[i].objects});	
+            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:levels[i].html,levelid:levels[i].levelid,course:levels[i].course,objects:levels[i].objects,fileName:folders[i]});	
             //mainWindow.webContents.send("fromMain", {action:"displayCourse",levelid:folders[i],course:levels[i].course,objects:levels[i].objects});	
           }
         }

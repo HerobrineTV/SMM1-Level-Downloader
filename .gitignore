@@ -283,10 +283,8 @@ FakesAssemblies/
 
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
-node_modules/.bin
-node_modules/axios
-node_modules/electron
-node_modules/got
+node_modules/
+!node_modules/smm-course-viewer
 node_modules/smm-course-viewer/layout/draw/monster/*
 node_modules/smm-course-viewer/layout/draw/titleset/*
 
