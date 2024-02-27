@@ -104,6 +104,21 @@
     "world_record_holder_nnid": "Erikson2006",
     "stars": 4
   },
+  "29628157": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00029628157-00001?Expires=1623842422&Signature=vTDEvKRH2KJobCO8Q6trBlu~vWpWu6bGmye~gTQyb53RTtqEB8VYXE0amB9WiWfDgUIMmrvOEihmMrmConezrkx8vx1E2itgLfAHmDpwZ74fArnxWMaF-0gsZfo6lkuA4BBUfp1sn1Rt387cNQo6e1tb1FOlRFHdEKtWnJlNFRslAyKNhsB5IdWcPm9tV0lMhmLnguRR7I85k34-hmzcTPqYzVhOKmSZCFsFwsgnej1iM~k-v~0-z1i6EU6eXw8OyanFH-4~DJaxZ9sVREkPYlZjBhQ2QwD5pMM9tWf52DnoNDeldEKgnkjjj48o4rPfgAPNWzSUeeyyb1EoI5ssNA__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Feuer Level",
+    "creator": "Erikson2006",
+    "levelid": 29628157,
+    "creatorid": 1766635712,
+    "clears": 52,
+    "failures": 105,
+    "total_attempts": 157,
+    "clearrate": 0.33121019108280253,
+    "uploadTime": "2016-02-09T17:02:04.000Z",
+    "world_record_ms": 20515,
+    "world_record_holder_nnid": "kra_1986",
+    "stars": 5
+  },
   "29628230": {
     "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00029628230-00001?Expires=1624725861&Signature=qts9dkW36~MpQwK2Eau5XtWhHnkCvK60ieNGhe1OfpDX3GRxWsuCmTPyZyAC67o5MVQAm6hraTucdEelmxgTs2OuwImTHpeAl1U3Mn7hS8PF50YQyjyGulBc0pBOxZj53BLybK11iPWRojUUvoOtw~i7leX05xHVhoACUGdo33mUGA~gX1xTt3kAfFvJyp5HXD~hd88VsKQKyvund4OC8GRANDPBy-TxiPzXQwqSFkWB~fUltFR6a4qimSyqavxQ-k~QrKLWtcOTHnUpmEMpi-IpyBUB~L8kJ9D0~ioeQH5CQlqRuchlukpl1HPz1jlWoz2uouo1TgkuqoXiS2YnRw__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
     "name": "Münzen Level 2",
@@ -148,5 +163,20 @@
     "world_record_ms": 278944,
     "world_record_holder_nnid": "Rode123",
     "stars": 9
+  },
+  "65081017": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00065081017-00001?Expires=1623765657&Signature=JUxYVwKqwrkrGW87ruXwe2hFIBMZzt2gYmX4XKzd79xTFwcdfu9Ymv3Y-KSR6wNieXNWhkpPrjroqxSczDMkTrOOK~OJRR1Xsp2IbdJzGIgxteNTtSnjAh5Xh7iGWlr4~vM4V0ObGlX5wMOi1EdMXBHtY8B9ucRtpZArD~qqLgGmzRXNt--elmRyc2KWyoeLRVdj3tEe2gGmpHgxlXDsGpVq5GTYjUDjw2~GTMAIkSsBf8Pm52uHgfXHZyxvnJHT0KEHJY6SsAQ5vxjl4i4hgdiN~Rd0ZMSh~kTU90CVoyr0qr0MyKAkIKhweXWL0-rBc6FxeqSQ1PunKFn-tHEWlw__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Lets go Toad!",
+    "creator": "test-bf",
+    "levelid": 65081017,
+    "creatorid": 1786356948,
+    "clears": 14,
+    "failures": 111,
+    "total_attempts": 125,
+    "clearrate": 0.112,
+    "uploadTime": "2019-04-02T17:57:23.000Z",
+    "world_record_ms": 48414,
+    "world_record_holder_nnid": "jonnyvfmid",
+    "stars": 2
   }
 }

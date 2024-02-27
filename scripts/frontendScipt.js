@@ -429,7 +429,8 @@ function loadDownloadedLevels() {
         .then(data => {
             //console.log(data);
             if (data) {
-                //console.log(objectToArray(data))
+                // loadDownloadedLevels()
+                window.api.send("toMain", {action:"get-smm1-cached-downloads"});
                 displayLevels(objectToArray(data));
             } else {
                 const levellistObj = document.getElementById('scrollable-objects');
@@ -550,6 +551,10 @@ window.addEventListener('DOMContentLoaded', () => {
             profileselectionDropdown.innerHTML = buildHTML;
         }
         if (data.action == "currentLevelsInSMM1ProfileDir") {
+            if (data.levels == null) {
+                document.getElementById('scrollable-objects').innerHTML = `<h2>${data.problem}</h2>`
+                return;
+            }
             document.getElementById('scrollable-objects').innerHTML = `<h2>Levels in Cemu Storage</h2>`;
             displayLevels(data.levels);
             console.log(data.levels)

@@ -201,11 +201,19 @@ function containsSpecificFile(directory, fileName) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
               console.log(`${partFilePath} has sucessfully been compressed!`);
               renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
+              fs.unlink(partFilePath, (err) => {
+                if (err) throw err;
+                console.log('File deleted successfully!');
+              });
             }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
                 console.log(`${partFilePath} has sucessfully been compressed!`);
                 renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
+                fs.unlink(partFilePath, (err) => {
+                  if (err) throw err;
+                  console.log('File deleted successfully!');
+                });
             }
         }
     }
@@ -364,10 +372,8 @@ function loadExistingUserIDs(cemupath) {
   });
 }
 
-function loadExistingCourses(cemupath, profileid) {
-  const profileFolder = cemupath;
-  //const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
-  fs.readdir(profileFolder, { withFileTypes: true }, (err, files) => {
+function courseViewerExtract(coursepath){
+  fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
     if (err) {
       console.error('Error reading the directory:', err);
       return;
@@ -377,8 +383,20 @@ function loadExistingCourses(cemupath, profileid) {
 
     let levels = [];
     var counter = 0;
+
+    if (folders.length == 0) {
+      if (coursepath == outputDirectory) {
+
+      } else if (coursepath == "BACKUP_DIR_PATH_HERE") {
+
+      } else {
+        mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"No Levels Found!"});
+        return;
+      }
+    }
+
     for (let i = 0; i < folders.length; i++) {
-      smmCourseViewer.read(path.join(profileFolder, folders[i], "course_data.cdt"), function(err, course, objects) {
+      smmCourseViewer.read(path.join(coursepath, folders[i], "course_data.cdt"), function(err, course, objects) {
         levelObj = {
           folder: folders[i],
           course: course,
@@ -395,7 +413,7 @@ function loadExistingCourses(cemupath, profileid) {
         }
         counter++;
         if (counter == folders.length) {
-          console.log(levels[0].course)
+          //console.log(levels[0].course)
           mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
           for (let i = 0; i < folders.length; i++) {
             folders[i].fileName
@@ -409,6 +427,20 @@ function loadExistingCourses(cemupath, profileid) {
       });
     }
   });
+}
+
+function loadDownloadedCourses() {
+  courseViewerExtract(outputDirectory);
+}
+
+function loadExistingCourses(cemupath, profileid) {
+  //const profileFolder = cemupath;
+  if (folderExists(cemupath) && folderExists(path.join(cemupath, "mlc01"))) {
+    const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
+    courseViewerExtract(profileFolder);
+  } else {
+    mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"mlc01 folder not Found in Cemu Path"});
+  }
 }
 
   ipcMain.on("toMain", (event, args) => {
@@ -434,6 +466,8 @@ function loadExistingCourses(cemupath, profileid) {
       } else {
         mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID});
       }
+    } else if (args.action === "get-smm1-cached-downloads") {
+      loadDownloadedCourses();
     } else if (args.action === "get-smm1-courses") {
       loadExistingCourses(args.path, args.selectedProfile);
     } else if (args.action === "get-smm1-profiles") {
