@@ -429,7 +429,7 @@ function courseViewerExtract(coursepath){
   });
 }
 
-function loadDownloadedCourses() {
+function loadDownloadedCourses(levels) {
   courseViewerExtract(outputDirectory);
 }
 

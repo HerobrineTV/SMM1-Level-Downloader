@@ -3,6 +3,7 @@ const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 const backupCache = ('../SMMDownloader/Data/backupped.json');
 let SettingsData;
+let lastLoadedDownloads = {};
 const totalSteps = 10;
 var currentStep = [];
 var currentHTMLPage = "";
@@ -65,7 +66,7 @@ function loadFileInWindow(levelObj) {
     </div>
     <div class="level-details">
         <!-- Example of incorporating Mario-themed imagery -->
-        <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator || null}</span> <img src="mario-icon.png" alt="" style="height:20px;"></p>
+        <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator || null}</span></p>
         <p><strong>Upload Time:</strong> <span id="uploadTime">${levelObj.uploadTime || null}</span></p>
         <p><strong>Level ID:</strong> <span id="levelID">${levelObj.levelid}</span></p>
     </div>
@@ -80,8 +81,6 @@ function loadFileInWindow(levelObj) {
         <div id="download-actions">
             <select id="course-dropdown">
                 <option value="option1">course000</option>
-                <option value="option2">course001</option>
-                <option value="option3">course002</option>
             </select>
             <button class="searchdownload-btn">Download</button>
         </div>
@@ -116,7 +115,7 @@ function objectClicked(levelid, levelObj) {
 function addObjects(levels) {
     const objectsContainer = document.getElementById('scrollable-objects');
     if (SettingsData.currentPage == 1){objectsContainer.innerHTML = '';}
-    console.log(levels);
+    //console.log(levels);
     levels.forEach(obj => {
         const objectDiv = document.createElement('div');
         if (currentHTMLPage == "main") {
@@ -124,9 +123,11 @@ function addObjects(levels) {
         }
         objectDiv.id = `object-${obj.levelid}`;
         objectDiv.classList.add('object');
+        objectDiv.classList.add('searchable');
+        objectDiv.setAttribute('data-name', obj.name);
         if (obj.folder) {
             objectDiv.innerHTML = ``
-            +`<div>${obj.name}</div>`
+            +`<div id="courseName-${obj.levelid}">${obj.name}</div>`
             +`<div></div>`
             +`<div id="courseDisplay-${obj.levelid}"></div>`
             +`<div id="courseInfoDisplay-${obj.levelid}"></div>`
@@ -134,7 +135,7 @@ function addObjects(levels) {
             +`<div class="downloaded-display"></div>`;
         } else {
             objectDiv.innerHTML = `
-            <div>${obj.name}</div>
+            <div id="courseName-${obj.levelid}">${obj.name}</div>
             <div>Stars: ${obj.stars}</div>
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
@@ -146,6 +147,27 @@ function addObjects(levels) {
     });
 }
 
+function searchDivs(searchQuery, parentId) {
+    // Get the parent div using its ID
+    var parentDiv = document.getElementById(parentId);
+
+    // Get all child divs within the parent div
+    var childDivs = parentDiv.getElementsByClassName('searchable');
+
+    // Loop through each child div
+    for (var i = 0; i < childDivs.length; i++) {
+        var currentDiv = childDivs[i];
+
+        // If the current div does not contain the search query in its data-name attribute or innerText
+        if (!currentDiv.getAttribute('data-name').toLowerCase().includes(searchQuery.toLowerCase()) && !currentDiv.innerText.toLowerCase().includes(searchQuery.toLowerCase())) {
+            // Make the div invisible
+            currentDiv.style.display = 'none';
+        } else {
+            // Else, make sure the div is visible (in case it was previously hidden)
+            currentDiv.style.display = '';
+        }
+    }
+}
 
 function searchCheckBoxesChanged(searchType){
     if (searchType == "LevelName") {
@@ -355,6 +377,9 @@ function loadPageScripts(page) {
         setSetting("amounttrue", amounttrue);
     } else if (page == "../pages/savedLevels.html") {
         currentHTMLPage = "savedLevels"
+        document.getElementById('searchSavedLevel-button').addEventListener("click", () => {
+            searchDivs(document.getElementById('searchSavedLevelText').value.trim(), 'scrollable-objects');
+        })
         loadSavedLevels();
     }
 }
@@ -429,6 +454,7 @@ function loadDownloadedLevels() {
         .then(data => {
             //console.log(data);
             if (data) {
+                lastLoadedDownloads = data;
                 // loadDownloadedLevels()
                 window.api.send("toMain", {action:"get-smm1-cached-downloads"});
                 displayLevels(objectToArray(data));
@@ -507,7 +533,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 currentStep[data.levelid] = null;
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
-                if (levelHTMLObj) {
+                if (levelHTMLObj && currentHTMLPage == "main") {
                     levelHTMLObj.getElementsByClassName("downloaded-display")[0].innerHTML = `<h2>Already Downloaded</h2>`
                 }
                 if (levelDisplayObjDownloadActions) {
@@ -526,7 +552,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (data.answer == true){
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
-                if (levelHTMLObj) {
+                if (levelHTMLObj && currentHTMLPage == "main") {
                     levelHTMLObj.getElementsByClassName("downloaded-display")[0].innerHTML = `<h2>Already Downloaded</h2>`
                 }
                 if (levelDisplayObjDownloadActions) {
@@ -557,20 +583,22 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             document.getElementById('scrollable-objects').innerHTML = `<h2>Levels in Cemu Storage</h2>`;
             displayLevels(data.levels);
-            console.log(data.levels)
         }
         if (data.action == "displayCourse") {
-            //document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = data.coursehtml;
-            document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = ``
-            + `<b>Name</b>: ${data.course.name} (${data.course.mode})<br>`
-            + `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
-//            + `<b>Theme</b>: overworld (0)<br>`
-//            + `<b>Game Time</b>: 500s<br>`
-//            + `<b>Objects Count</b>: 115<br>`
-//            + `<b>Scroll</b>: none (0) over 39 blocks<br>`
-            + `</div>`
+            document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})</b><br>`
+            var courseInfoHTML = ``;
+            if (lastLoadedDownloads[data.levelid]) {
+                courseInfoHTML += `<b>Uploader</b>: ${lastLoadedDownloads[data.levelid].creator}<br>`   
+            }
+            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
+//            courseInfoHTML += `<b>Theme</b>: overworld (0)<br>`
+//            courseInfoHTML += `<b>Game Time</b>: 500s<br>`
+//            courseInfoHTML += `<b>Objects Count</b>: 115<br>`
+//            courseInfoHTML += `<b>Scroll</b>: none (0) over 39 blocks<br>`
+            courseInfoHTML += `</div>`
             new Draw(`courseDisplay-${data.levelid}`, data.course, data.objects, "8"); //32 64
-            //console.log(data)
+            
+            document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
         }
     });
 });
