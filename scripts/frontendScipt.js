@@ -125,14 +125,13 @@ function addObjects(levels) {
         objectDiv.id = `object-${obj.levelid}`;
         objectDiv.classList.add('object');
         if (obj.folder) {
-            objectDiv.innerHTML = `
-            <div>${obj.name}</div>
-            <div></div>
-            <div id="courseInfoDisplay-${obj.levelid}"></div>
-            <div id="courseDisplay-${obj.levelid}"></div>
-            <div>Course Folder: ${obj.folder}</div>
-            <div class="downloaded-display"></div>
-        `;
+            objectDiv.innerHTML = ``
+            +`<div>${obj.name}</div>`
+            +`<div></div>`
+            +`<div id="courseDisplay-${obj.levelid}"></div>`
+            +`<div id="courseInfoDisplay-${obj.levelid}"></div>`
+        //    +`<div>Course Folder: ${obj.folder}</div>`
+            +`<div class="downloaded-display"></div>`;
         } else {
             objectDiv.innerHTML = `
             <div>${obj.name}</div>
@@ -556,7 +555,15 @@ window.addEventListener('DOMContentLoaded', () => {
             console.log(data.levels)
         }
         if (data.action == "displayCourse") {
-            document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = data.coursehtml;
+            //document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = data.coursehtml;
+            document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = ``
+            + `<b>Name</b>: ${data.course.name} (${data.course.mode})<br>`
+            + `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
+//            + `<b>Theme</b>: overworld (0)<br>`
+//            + `<b>Game Time</b>: 500s<br>`
+//            + `<b>Objects Count</b>: 115<br>`
+//            + `<b>Scroll</b>: none (0) over 39 blocks<br>`
+            + `</div>`
             new Draw(`courseDisplay-${data.levelid}`, data.course, data.objects, "8"); //32 64
             //console.log(data)
         }

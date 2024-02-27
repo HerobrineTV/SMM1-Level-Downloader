@@ -73,9 +73,9 @@ button {
 }
 
 #main-content {
-    max-width: 800px;
+    max-width: 80%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 1%;
     background-color: #f0f0f0; /* Light gray background */
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -140,7 +140,7 @@ button {
 
 /* Scrollable objects */
 #scrollable-objects {
-    max-height: 300px; /* Adjust height as needed */
+    max-height: 80%; /* Adjust height as needed */
     overflow-y: auto; /* Enable vertical scroll */
     border: 1px solid #ccc;
     padding: 10px;
@@ -272,6 +272,7 @@ button {
 
 ::-webkit-scrollbar {
     width: 10px;
+    height: 10px;
   }
   
   ::-webkit-scrollbar-track {
@@ -282,3 +283,41 @@ button {
     background-color: #888;
     border-radius: 5px;
   }
+
+  body{margin: 0;padding: 0;}
+
+.courseInfoDisplay {
+    text-transform: capitalize;
+}
+
+.courseDrawMain {
+    width: 100%;
+    height: 230px;
+    overflow: auto;
+    background: none;
+    border: 3px solid #17a2b8;
+}
+
+.courseDraw {
+    width: auto;
+    height: auto;
+    margin: 0; padding: 0;
+    background: none;
+    font-size: 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -33,7 +33,7 @@ if (!fs.existsSync(outputDirectory)){
 }
 
 // Path to the ASH Extractor executable within the SMMDownloader directory
-const ashextractorExecutable = path.join(outputDirectory, 'ashextractor.exe');
+const ashextractorExecutable = path.join(__dirname, '../SMMDownloader', 'ashextractor.exe');
 
 async function fetchArchiveUrl(originalUrl, levelObj) {
     const encodedUrl = encodeURIComponent(originalUrl);
@@ -127,10 +127,10 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     let index = 0;
 
     const partNamesFirst = [
-        "thumbnail0.tnl",
-        "course_data.cdt",
-        "course_data_sub.cdt",
-        "thumbnail1.tnl"
+        "thumbnail0",
+        "course_data",
+        "course_data_sub",
+        "thumbnail1"
     ];
 
     // Search through the file for each occurrence of the separator
@@ -196,8 +196,12 @@ function containsSpecificFile(directory, fileName) {
 
         try {
             //console.log(`Decompressing: ${partFilePath}`);
-            execSync(`"${ashextractorExecutable}" "${partFilePath}"`);
-            //console.log(`Decompressed: ${partFilePath}`);
+            console.log(ashextractorExecutable, partFilePath);
+            execSync(`"${ashextractorExecutable}" ${partFilePath}`);
+            if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
+              console.log(`${partFilePath} has sucessfully been compressed!`);
+              renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
+            }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
                 console.log(`${partFilePath} has sucessfully been compressed!`);
@@ -361,8 +365,8 @@ function loadExistingUserIDs(cemupath) {
 }
 
 function loadExistingCourses(cemupath, profileid) {
-  //const profileFolder = cemupath;
-  const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
+  const profileFolder = cemupath;
+  //const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
   fs.readdir(profileFolder, { withFileTypes: true }, (err, files) => {
     if (err) {
       console.error('Error reading the directory:', err);
@@ -380,10 +384,10 @@ function loadExistingCourses(cemupath, profileid) {
           course: course,
           objects: objects,
           levelid: folders[i],
+          html: smmCourseViewer.course.getHtml(),
           name: ""
         };
         if(!err) {
-            //console.log(course['name'])
             levelObj.name = course['name'];
             levels.push(levelObj);
         } else {
@@ -391,12 +395,13 @@ function loadExistingCourses(cemupath, profileid) {
         }
         counter++;
         if (counter == folders.length) {
-          //console.log(levels);
+          console.log(levels[0].course)
           mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
           for (let i = 0; i < folders.length; i++) {
             folders[i].fileName
-            const courseHTML = smmCourseViewer.course.getHtml();
-            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:courseHTML,levelid:folders[i],course:levels[i].course,objects:levels[i].objects});	
+            //const courseHTML = smmCourseViewer.course.getHtml();
+            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:levels[i].html,levelid:levels[i].levelid,course:levels[i].course,objects:levels[i].objects});	
+            //mainWindow.webContents.send("fromMain", {action:"displayCourse",levelid:folders[i],course:levels[i].course,objects:levels[i].objects});	
           }
         }
         //let sizeBase = getSelectedSize();
