@@ -623,8 +623,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
                 if (levelHTMLObj && currentHTMLPage == "main") {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
-                    barcontainer.style.display = 'contents';
-                    barcontainer.style.backgroundColor = '';
+                    if (barcontainer) {
+                        barcontainer.style.display = 'contents';
+                        barcontainer.style.backgroundColor = '';
+                    }
                     document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
                 if (levelDisplayObjDownloadActions && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
@@ -646,8 +648,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
                 if (levelHTMLObj && currentHTMLPage == "main") {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
-                    barcontainer.style.display = 'contents';
-                    barcontainer.style.backgroundColor = '';
+                    if (barcontainer) {
+                        barcontainer.style.display = 'contents';
+                        barcontainer.style.backgroundColor = '';
+                    }
                     document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
                 if (levelDisplayObjDownloadActions  && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
