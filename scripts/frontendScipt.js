@@ -532,8 +532,8 @@ function loadDownloadedLevels() {
     fetch(downloadCache)
         .then(response => response.json())
         .then(data => {
-            //console.log(data);
-            if (data) {
+            //console.log(data.length);
+            if (data && Object.keys(data).length > 0) {
                 lastLoadedDownloads = data;
                 // loadDownloadedLevels()
                 window.api.send("toMain", {action:"get-smm1-cached-downloads"});
