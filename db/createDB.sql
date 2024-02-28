@@ -27,3 +27,17 @@ CREATE TABLE `Levels` (
   `world_record_updated_time` datetime DEFAULT NULL,
   PRIMARY KEY (`EntryID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7507867 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+#CREATE INDEX idx_course_name ON Levels (course_name);
+CREATE INDEX idx_id ON Levels (id);
+#CREATE INDEX idx_creator_nnid ON Levels (creator_nnid);
+CREATE INDEX idx_creator_pid ON Levels (creator_pid);
+
+ALTER TABLE Levels ADD FULLTEXT idx_fulltext_course_name (course_name);
+ALTER TABLE Levels ADD FULLTEXT idx_fulltext_creator_nnid (creator_nnid);
+
+
+SELECT COUNT(*) From Levels l  
+
+
+SELECT * FROM Levels l WHERE l.course_name or l.course_name LIKE "TEST" ORDER BY EntryID DESC LIMIT 20

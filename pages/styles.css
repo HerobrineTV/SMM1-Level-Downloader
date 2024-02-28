@@ -71,11 +71,20 @@ button {
     cursor: pointer;
     font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
 }
+/*
+div {
+    font-size: 20px;
+}
+*/
+p2 {
+    font-size: 20px;
+    color: green;
+}
 
 #main-content {
-    max-width: 800px;
+    max-width: 80%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 1%;
     background-color: #f0f0f0; /* Light gray background */
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -140,7 +149,7 @@ button {
 
 /* Scrollable objects */
 #scrollable-objects {
-    max-height: 300px; /* Adjust height as needed */
+    max-height: 80vh; /* Adjust height as needed, using vh for viewport height */
     overflow-y: auto; /* Enable vertical scroll */
     border: 1px solid #ccc;
     padding: 10px;
@@ -247,6 +256,16 @@ button {
     font-family: "Press Start 2P", cursive;
 }
 
+#profile-Dropdown {
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
 .profile {
     display: flex;
     align-items: center;
@@ -262,6 +281,7 @@ button {
 
 ::-webkit-scrollbar {
     width: 10px;
+    height: 14px;
   }
   
   ::-webkit-scrollbar-track {
@@ -272,3 +292,55 @@ button {
     background-color: #888;
     border-radius: 5px;
   }
+
+  body{margin: 0;padding: 0;}
+
+.courseInfoDisplay {
+    text-transform: capitalize;
+}
+
+.courseDrawMain {
+    width: 99%;
+    height: 235px;
+    overflow: auto;
+    background: none;
+    border: 3px solid #bd851f;
+}
+
+.courseDraw {
+    width: auto;
+    height: auto;
+    margin: 0; padding: 0;
+    background: none;
+    font-size: 0;
+}
+
+#downloadingBarProgress {
+    transition: width 0.5s ease-in-out;
+    height: 24px;
+    background-color: #4CAF50;
+  }
+
+.downloadingBarContainerClass {
+    margin-left: 2.5%;
+    margin-top: 2.5%;
+    margin-bottom: 2.5%;
+    width: 95%; 
+    display: none;
+    background-color:#ddd;
+  }
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -284,6 +284,9 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+!node_modules/smm-course-viewer
+node_modules/smm-course-viewer/layout/draw/monster/*
+node_modules/smm-course-viewer/layout/draw/titleset/*
 
 # Visual Studio 6 build log
 *.plg
@@ -397,3 +400,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 SMMDownloader/Data/DownloadCache/
+pages/layout/draw

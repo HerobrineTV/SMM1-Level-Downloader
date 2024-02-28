@@ -3,7 +3,8 @@ const { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } = require('ele
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const readline = require('readline'); 
+const readline = require('readline');
+const smmCourseViewer = require('smm-course-viewer');
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -17,16 +18,22 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
+const thisReleaseTag = "V2.0-Pre"
+
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
-const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
+if (!fs.existsSync(jsonDirectory)){
+  fs.mkdirSync(jsonDirectory, { recursive: true });
+  //console.log(`Created directory: ${jsonDirectory}`);
+}
+const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 if (!fs.existsSync(outputDirectory)){
     fs.mkdirSync(outputDirectory, { recursive: true });
-    console.log(`Created directory: ${outputDirectory}`);
+    //console.log(`Created directory: ${outputDirectory}`);
 }
 
 // Path to the ASH Extractor executable within the SMMDownloader directory
-const ashextractorExecutable = path.join(outputDirectory, 'ashextractor.exe');
+const ashextractorExecutable = path.join(__dirname, '../SMMDownloader', 'ashextractor.exe');
 
 async function fetchArchiveUrl(originalUrl, levelObj) {
     const encodedUrl = encodeURIComponent(originalUrl);
@@ -52,11 +59,33 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
       const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
       return archiveUrl;
     } catch (error) {
-      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
+      //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
 }
 
+async function checkNewRelease() {
+  const repo = 'HerobrineTV/SMM1-Level-Downloader'; // Replace with your GitHub repo
+  const url = `https://api.github.com/repos/${repo}/releases/latest`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${data.message}`);
+    }
+
+    //console.log('Latest release tag:', data.tag_name);
+    //console.log(data)
+    // You can further process the data as needed, for example, compare it with your local version
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch the latest release!');
+  }
+}
+
 async function downloadFile(fileUrl, outputPath, levelObj) {
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"downloadFile",levelid:levelObj.levelid,info:"Trying to download file from Wayback Machine"});
     const headers = {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'de,en-US;q=0.7,en;q=0.3',
@@ -99,10 +128,10 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     let index = 0;
 
     const partNamesFirst = [
-        "thumbnail0.tnl",
-        "course_data.cdt",
-        "course_data_sub.cdt",
-        "thumbnail1.tnl"
+        "thumbnail0",
+        "course_data",
+        "course_data_sub",
+        "thumbnail1"
     ];
 
     // Search through the file for each occurrence of the separator
@@ -154,9 +183,9 @@ function containsSpecificFile(directory, fileName) {
   
     if (fs.existsSync(filePath)) {
       fs.renameSync(filePath, newFilePath);
-      console.log(`Renamed ${originalFileName} to ${newFileName}`);
+      //console.log(`Renamed ${originalFileName} to ${newFileName}`);
     } else {
-      console.log(`${originalFileName} does not exist and cannot be renamed.`);
+      //console.log(`${originalFileName} does not exist and cannot be renamed.`);
     }
   }
 
@@ -168,15 +197,32 @@ function containsSpecificFile(directory, fileName) {
 
         try {
             //console.log(`Decompressing: ${partFilePath}`);
-            execSync(`"${ashextractorExecutable}" "${partFilePath}"`);
-            //console.log(`Decompressed: ${partFilePath}`);
+            //console.log(ashextractorExecutable, partFilePath);
+            execSync(`"${ashextractorExecutable}" ${partFilePath}`);
+            if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
+              //console.log(`${partFilePath} has sucessfully been compressed!`);
+              renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
+              fs.unlink(partFilePath, (err) => {
+                if (err) throw err;
+                //console.log('File deleted successfully!');
+              });
+            }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
-                console.log(`${partFilePath} has sucessfully been compressed!`);
+                //console.log(`${partFilePath} has sucessfully been compressed!`);
                 renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
+                fs.unlink(partFilePath, (err) => {
+                  if (err) throw err;
+                  //console.log('File deleted successfully!');
+                });
             }
         }
     }
+    const partFilePath = path.join(outputDirectory, levelObj.levelid+'-00001');
+    fs.unlink(partFilePath, (err) => {
+      if (err) throw err;
+      //console.log('File deleted successfully!');
+    });
     addLevelToJson(levelObj)
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
     //console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
@@ -208,8 +254,37 @@ async function addLevelToJson(levelObj){
       }
 }
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
+  let attempts = 0;
+  while (attempts < 5) {
+    try {
+      const archiveUrl = await fetchArchiveUrl(originalUrl, levelObj);
+      if (archiveUrl) {
+        return archiveUrl; // If successful, return the URL
+      }
+      // If fetchArchiveUrl returns null or undefined, increase attempt count and retry after a delay
+      attempts++;
+      //console.log(`Attempt ${attempts} failed. Retrying...`);
+      await delay(1000); // Wait for 1 second before retrying
+    } catch (error) {
+      // If fetchArchiveUrl throws an error, log it, increase attempt count, and retry after a delay
+      console.error(`Attempt ${attempts} failed with error: ${error}. Retrying...`);
+      attempts++;
+      await delay(1000); // Wait for 1 second before retrying
+    }
+  }
+  // After 5 failed attempts, return null to indicate failure
+  return null;
+}
+
+
 async function processUrl(originalUrl, levelid, levelObj) {
-    const archiveUrl = await fetchArchiveUrl(originalUrl, levelObj);
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Trying to fetch archive URL from Wayback Machine."});
+    const archiveUrl = await fetchArchiveUrlWithRetries(originalUrl, levelObj);
     if (!archiveUrl) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine."});
       return;
@@ -217,7 +292,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Fetched archive URL from Wayback Machine."});
 
     const fileName = path.basename(new URL(originalUrl).pathname);
-    const outputPath = path.join(outputDirectory, fileName);
+    const outputPath = path.join(outputDirectory, fileName.replace(/^0+/, ''));
 
     await downloadFile(archiveUrl, outputPath, levelObj);
     splitFile(outputPath, levelid, levelObj);
@@ -242,6 +317,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
     mainWindow.loadFile('../pages/index.html');
+    checkNewRelease();
   }
 
   app.whenReady().then(() => {
@@ -263,7 +339,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     var jsonData;
     
     if (settings == "RESET") {
-      jsonData = JSON.stringify({"useCemuDir":false,"BackupLevels":false,"CemuDirPath":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false, "SearchExact":false}});
+      jsonData = JSON.stringify({"useCemuDir":false,"BackupLevels":false,"CemuDirPath":"","selectedProfile":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false, "SearchExact":false}});
     } else {
       jsonData = JSON.stringify(settings);
     }
@@ -291,6 +367,132 @@ async function processUrl(originalUrl, levelid, levelObj) {
     }
 }
 
+function loadExistingUserIDs(cemupath) {
+  fs.readdir(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user"), { withFileTypes: true }, (err, files) => {
+    if (err) {
+      console.error('Error reading the directory:', err);
+      return;
+    }
+
+    const folders = files.filter(dirent => dirent.isDirectory() && dirent.name !== 'common').map(dirent => dirent.name);
+    mainWindow.webContents.send("fromMain", {action:"currentUsersInSMM1Dir",users:folders});
+  });
+}
+
+function courseViewerExtract(coursepath){
+  fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
+    if (err) {
+      console.error('Error reading the directory:', err);
+      return;
+    }
+
+    const folders = files.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
+
+    let levels = [];
+    var counter = 0;
+
+    if (folders.length == 0) {
+      if (coursepath == outputDirectory) {
+
+      } else if (coursepath == "BACKUP_DIR_PATH_HERE") {
+
+      } else {
+        mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"No Levels Found!"});
+        return;
+      }
+    }
+
+    for (let i = 0; i < folders.length; i++) {
+      smmCourseViewer.read(path.join(coursepath, folders[i], "course_data.cdt"), function(err, course, objects) {
+        levelObj = {
+          folder: folders[i],
+          course: course,
+          objects: objects,
+          levelid: folders[i],
+          html: smmCourseViewer.course.getHtml(),
+          name: ""
+        };
+        if(!err) {
+            levelObj.name = course['name'];
+            levels.push(levelObj);
+        } else {
+          levels.push(levelObj);
+        }
+        counter++;
+        if (counter == folders.length) {
+          //console.log(levels[0].course)
+          mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
+          for (let i = 0; i < folders.length; i++) {
+            folders[i].fileName
+            //const courseHTML = smmCourseViewer.course.getHtml();
+            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:levels[i].html,levelid:levels[i].levelid,course:levels[i].course,objects:levels[i].objects,fileName:folders[i]});	
+            //mainWindow.webContents.send("fromMain", {action:"displayCourse",levelid:folders[i],course:levels[i].course,objects:levels[i].objects});	
+          }
+        }
+        //let sizeBase = getSelectedSize();
+        //new Draw('courseDisplay', course, objects, sizeBase);
+      });
+    }
+  });
+}
+
+function loadDownloadedCourses(levels) {
+  courseViewerExtract(outputDirectory);
+}
+
+function loadExistingCourses(cemupath, profileid) {
+  //const profileFolder = cemupath;
+  if (folderExists(cemupath) && folderExists(path.join(cemupath, "mlc01"))) {
+    const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
+    courseViewerExtract(profileFolder);
+  } else {
+    mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"mlc01 folder not Found in Cemu Path"});
+  }
+}
+
+function removeKeyFromJSONFile(keyToRemove) {
+  // Read the file asynchronously
+  fs.readFile(jsonDirectory+"/downloaded.json", 'utf8', (err, data) => {
+      if (err) {
+          console.error(`Error reading file from disk: ${err}`);
+      } else {
+          // Parse the JSON data to an object
+          let jsonObj = JSON.parse(data);
+
+          // Check if the key exists and delete it
+          if (jsonObj.hasOwnProperty(keyToRemove)) {
+              delete jsonObj[keyToRemove];
+              //console.log(`Key '${keyToRemove}' removed.`);
+
+              // Convert the modified object back to a JSON string
+              const updatedJSON = JSON.stringify(jsonObj, null, 2);
+
+              // Write the modified JSON string back to the file
+              fs.writeFile(jsonDirectory+"/downloaded.json", updatedJSON, 'utf8', (err) => {
+                  if (err) {
+                      console.error(`Error writing file: ${err}`);
+                  } else {
+                      //console.log('File has been updated successfully.');
+                  }
+              });
+          } else {
+              //console.log(`Key '${keyToRemove}' not found.`);
+          }
+      }
+  });
+}
+
+function deleteCourseFile(levelid) {
+  //console.log(outputDirectory, levelid)
+  const partFilePath = path.join(outputDirectory, levelid+"");
+  fs.rm(partFilePath, { recursive: true, force: true }, (err) => {
+      if (err) throw err;
+      removeKeyFromJSONFile(levelid+"")
+      mainWindow.webContents.send("fromMain", {action:"courseFileDeleted",levelid:levelid});
+      //console.log('File deleted successfully!');
+    });
+}
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
@@ -299,6 +501,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
         mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"initializing",levelid:args.levelID,info:"Level folder already exists."});
         return;
       }
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'INIT',step:"startingProcess",info:"Starting download process for level: "+args.levelID});
       processUrl(args.url, args.levelID, args.levelObj);
     } else if (args.action === "save-settings") {
       saveSettings(args.settings);
@@ -308,6 +511,22 @@ async function processUrl(originalUrl, levelid, levelObj) {
       app.quit();
     } else if (args.action === "openURL") {
       shell.openExternal(args.url);
+    } else if (args.action === "checkIfAlreadyDownloaded") {
+      if (folderExists(outputDirectory+"/"+args.levelID)) {
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID});
+      } else {
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID});
+      }
+    } else if (args.action === "get-smm1-cached-downloads") {
+      loadDownloadedCourses();
+    } else if (args.action === "get-smm1-courses") {
+      loadExistingCourses(args.path, args.selectedProfile);
+    } else if (args.action === "get-smm1-profiles") {
+      if (args.path != undefined && args.selectedProfile!== undefined && folderExists(args.path)) {
+        loadExistingUserIDs(args.path)
+      }
+    } else if (args.action === "delete-course-file") {
+      deleteCourseFile(args.levelid);
     }
   });
 
