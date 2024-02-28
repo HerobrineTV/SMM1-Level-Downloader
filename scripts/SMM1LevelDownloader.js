@@ -85,6 +85,7 @@ async function checkNewRelease() {
 }
 
 async function downloadFile(fileUrl, outputPath, levelObj) {
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"downloadFile",levelid:levelObj.levelid,info:"Trying to download file from Wayback Machine"});
     const headers = {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'de,en-US;q=0.7,en;q=0.3',
@@ -277,6 +278,7 @@ async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
 
 
 async function processUrl(originalUrl, levelid, levelObj) {
+    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Trying to fetch archive URL from Wayback Machine."});
     const archiveUrl = await fetchArchiveUrlWithRetries(originalUrl, levelObj);
     if (!archiveUrl) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine."});
@@ -451,6 +453,7 @@ function loadExistingCourses(cemupath, profileid) {
         mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"initializing",levelid:args.levelID,info:"Level folder already exists."});
         return;
       }
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'INIT',step:"startingProcess",info:"Starting download process for level: "+args.levelID});
       processUrl(args.url, args.levelID, args.levelObj);
     } else if (args.action === "save-settings") {
       saveSettings(args.settings);

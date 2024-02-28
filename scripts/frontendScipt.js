@@ -4,9 +4,45 @@ const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 const backupCache = ('../SMMDownloader/Data/backupped.json');
 let SettingsData;
 let lastLoadedDownloads = {};
-const totalSteps = 10;
+const totalSteps = 12;
 var currentStep = [];
 var currentHTMLPage = "";
+
+var downloadingBar = {
+    maxSteps: totalSteps, // Default max steps, can be overridden in initialize if needed
+    
+    initialize: function(maxSteps, levelid) {
+      this.maxSteps = maxSteps;
+      currentStep[levelid] = 0; // Initialize steps for this levelid
+      this.updateBar(levelid); // Initialize the bar's state
+    },
+    
+    incrementStep: function(levelid) {
+      if (currentStep[levelid] < this.maxSteps) {
+        currentStep[levelid]++;
+        this.updateBar(levelid);
+      }
+    },
+    
+    updateBar: function(levelid) {
+      var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
+      const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
+      barcontainer.style.display = 'block';
+      barcontainer.children[0].style.width = progressPercentage + '%';
+
+      if (currentStep[levelid] == this.maxSteps) {
+        barcontainer.style.display = 'block';
+        delay(1000).then(() => {
+            barcontainer.innerHTML = `<h2>Download Complete</h2>`;
+            barcontainer.style.display = 'contents';
+        })
+      }
+    }
+};
+
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
 function CEMUcheckBoxChanged() {
     if (SettingsData.useCemuDir == false) {
@@ -132,7 +168,8 @@ function addObjects(levels) {
             +`<div id="courseDisplay-${obj.levelid}"></div>`
             +`<div id="courseInfoDisplay-${obj.levelid}"></div>`
         //    +`<div>Course Folder: ${obj.folder}</div>`
-            +`<div class="downloaded-display"></div>`;
+            +`<div class="downloaded-display"></div>`
+            +`<div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>`;
         } else {
             objectDiv.innerHTML = `
             <div id="courseName-${obj.levelid}">${obj.name}</div>
@@ -140,7 +177,8 @@ function addObjects(levels) {
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
             <div class="downloaded-display"></div>
-        `;
+            <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
+            `;
         }
         objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         objectsContainer.appendChild(objectDiv);
@@ -433,6 +471,7 @@ function loadSettings() {
         })
         .catch(error => console.log(error));
 }
+
 function objectToArray(obj) {
     // Check if obj is not an object, return obj directly
     if (typeof obj !== 'object' || obj === null) {
@@ -446,6 +485,14 @@ function objectToArray(obj) {
 
     // Return only the values of the object
     return Object.values(obj);
+}
+
+function raiseDownloadBar(levelid, state){
+    if (state == "INIT") {
+        downloadingBar.initialize(totalSteps, levelid);
+    } else {
+        downloadingBar.incrementStep(levelid);
+    }
 }
 
 function loadDownloadedLevels() {
@@ -511,6 +558,7 @@ function openURL(url) {
 }
 
 function checkIfLevelisAlreadyDownloaded(levelid){
+    console.log(levelid);
     window.api.send("toMain", {action:"checkIfAlreadyDownloaded", levelID:levelid});
 }
 
@@ -528,20 +576,26 @@ window.addEventListener('DOMContentLoaded', () => {
             console.log(data.result)
         }
         if (data.action == "download-info") {
-            if (data.resultType == "SUCCESS") {
+            if (data.resultType == "INIT") {
+                raiseDownloadBar(data.levelid, data.resultType);
+            } else if (data.resultType == "SUCCESS") {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
+                raiseDownloadBar(data.levelid,  data.resultType);
                 currentStep[data.levelid] = null;
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
                 if (levelHTMLObj && currentHTMLPage == "main") {
-                    levelHTMLObj.getElementsByClassName("downloaded-display")[0].innerHTML = `<h2>Already Downloaded</h2>`
+                    const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
+                    barcontainer.style.display = 'contents';
+                    barcontainer.style.backgroundColor = '';
+                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<h2>Already Downloaded</h2>`
                 }
                 if (levelDisplayObjDownloadActions) {
                     levelDisplayObjDownloadActions.innerHTML = ``
                 }
             } else if (data.resultType == "IN_PROGRESS") {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
-                currentStep[data.levelid]++;
+                raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "ERROR") {
                 currentStep[data.levelid] = null;
                 console.log("["+data.levelid+"] "+ data.info)
@@ -553,7 +607,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
                 if (levelHTMLObj && currentHTMLPage == "main") {
-                    levelHTMLObj.getElementsByClassName("downloaded-display")[0].innerHTML = `<h2>Already Downloaded</h2>`
+                    const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
+                    barcontainer.style.display = 'contents';
+                    barcontainer.style.backgroundColor = '';
+                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<h2>Already Downloaded</h2>`
                 }
                 if (levelDisplayObjDownloadActions) {
                     levelDisplayObjDownloadActions.innerHTML = ``

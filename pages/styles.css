@@ -306,7 +306,21 @@ button {
     font-size: 0;
 }
 
+#downloadingBarProgress {
+    transition: width 0.5s ease-in-out;
+    height: 24px;
+    background-color: #4CAF50;
+  }
 
+  .downloadingBarContainerClass {
+    margin-left: 2.5%;
+    margin-top: 2.5%;
+    margin-bottom: 2.5%;
+    width: 95%; 
+    display: none;
+    background-color:#ddd;
+  }
+  
 
 
 
