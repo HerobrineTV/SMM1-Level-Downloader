@@ -71,6 +71,15 @@ button {
     cursor: pointer;
     font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
 }
+/*
+div {
+    font-size: 20px;
+}
+*/
+p2 {
+    font-size: 20px;
+    color: green;
+}
 
 #main-content {
     max-width: 80%;
@@ -140,7 +149,7 @@ button {
 
 /* Scrollable objects */
 #scrollable-objects {
-    max-height: 80%; /* Adjust height as needed */
+    max-height: 80vh; /* Adjust height as needed, using vh for viewport height */
     overflow-y: auto; /* Enable vertical scroll */
     border: 1px solid #ccc;
     padding: 10px;

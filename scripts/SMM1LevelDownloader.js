@@ -183,9 +183,9 @@ function containsSpecificFile(directory, fileName) {
   
     if (fs.existsSync(filePath)) {
       fs.renameSync(filePath, newFilePath);
-      console.log(`Renamed ${originalFileName} to ${newFileName}`);
+      //console.log(`Renamed ${originalFileName} to ${newFileName}`);
     } else {
-      console.log(`${originalFileName} does not exist and cannot be renamed.`);
+      //console.log(`${originalFileName} does not exist and cannot be renamed.`);
     }
   }
 
@@ -200,11 +200,11 @@ function containsSpecificFile(directory, fileName) {
             console.log(ashextractorExecutable, partFilePath);
             execSync(`"${ashextractorExecutable}" ${partFilePath}`);
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
-              console.log(`${partFilePath} has sucessfully been compressed!`);
+              //console.log(`${partFilePath} has sucessfully been compressed!`);
               renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
               fs.unlink(partFilePath, (err) => {
                 if (err) throw err;
-                console.log('File deleted successfully!');
+                //console.log('File deleted successfully!');
               });
             }
         } catch (error) {
@@ -213,11 +213,16 @@ function containsSpecificFile(directory, fileName) {
                 renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
                 fs.unlink(partFilePath, (err) => {
                   if (err) throw err;
-                  console.log('File deleted successfully!');
+                  //console.log('File deleted successfully!');
                 });
             }
         }
     }
+    const partFilePath = path.join(outputDirectory, levelObj.levelid+'-00001');
+    fs.unlink(partFilePath, (err) => {
+      if (err) throw err;
+      //console.log('File deleted successfully!');
+    });
     addLevelToJson(levelObj)
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
     //console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
@@ -287,7 +292,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Fetched archive URL from Wayback Machine."});
 
     const fileName = path.basename(new URL(originalUrl).pathname);
-    const outputPath = path.join(outputDirectory, fileName);
+    const outputPath = path.join(outputDirectory, fileName.replace(/^0+/, ''));
 
     await downloadFile(archiveUrl, outputPath, levelObj);
     splitFile(outputPath, levelid, levelObj);
@@ -445,6 +450,49 @@ function loadExistingCourses(cemupath, profileid) {
   }
 }
 
+function removeKeyFromJSONFile(keyToRemove) {
+  // Read the file asynchronously
+  fs.readFile(jsonDirectory+"/downloaded.json", 'utf8', (err, data) => {
+      if (err) {
+          console.error(`Error reading file from disk: ${err}`);
+      } else {
+          // Parse the JSON data to an object
+          let jsonObj = JSON.parse(data);
+
+          // Check if the key exists and delete it
+          if (jsonObj.hasOwnProperty(keyToRemove)) {
+              delete jsonObj[keyToRemove];
+              console.log(`Key '${keyToRemove}' removed.`);
+
+              // Convert the modified object back to a JSON string
+              const updatedJSON = JSON.stringify(jsonObj, null, 2);
+
+              // Write the modified JSON string back to the file
+              fs.writeFile(jsonDirectory+"/downloaded.json", updatedJSON, 'utf8', (err) => {
+                  if (err) {
+                      console.error(`Error writing file: ${err}`);
+                  } else {
+                      console.log('File has been updated successfully.');
+                  }
+              });
+          } else {
+              console.log(`Key '${keyToRemove}' not found.`);
+          }
+      }
+  });
+}
+
+function deleteCourseFile(levelid) {
+  //console.log(outputDirectory, levelid)
+  const partFilePath = path.join(outputDirectory, levelid+"");
+  fs.rm(partFilePath, { recursive: true, force: true }, (err) => {
+      if (err) throw err;
+      removeKeyFromJSONFile(levelid+"")
+      mainWindow.webContents.send("fromMain", {action:"courseFileDeleted",levelid:levelid});
+      console.log('File deleted successfully!');
+    });
+}
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
@@ -477,6 +525,8 @@ function loadExistingCourses(cemupath, profileid) {
       if (args.path != undefined && args.selectedProfile!== undefined && folderExists(args.path)) {
         loadExistingUserIDs(args.path)
       }
+    } else if (args.action === "delete-course-file") {
+      deleteCourseFile(args.levelid);
     }
   });
 

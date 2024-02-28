@@ -23,20 +23,46 @@ var downloadingBar = {
         this.updateBar(levelid);
       }
     },
+
+    updateWindow: function(levelid) {
+        if (currentStep[levelid]) {
+            var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
+            const levelDisplayObjDownloadActions = document.getElementById(`download-actions`);
+            var downloadingBarContainerWindow = document.getElementById(`downloadingBarContainerWindow`);
+    
+            if (!downloadingBarContainerWindow) {
+                levelDisplayObjDownloadActions.innerHTML = `<div id="downloadingBarContainerWindow" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>`
+                downloadingBarContainerWindow = document.getElementById(`downloadingBarContainerWindow`);
+            }
+    
+            downloadingBarContainerWindow.style.display = 'block';
+            downloadingBarContainerWindow.children[0].style.width = progressPercentage + '%';
+    
+            if (currentStep[levelid] == this.maxSteps) {
+                delay(1000).then(() => {
+                    downloadingBarContainerWindow.innerHTML = `<p2>Download Complete</p2>`;
+                    downloadingBarContainerWindow.style.display = 'contents';
+                })
+              }
+        }
+    },
     
     updateBar: function(levelid) {
-      var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
-      const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
-      barcontainer.style.display = 'block';
-      barcontainer.children[0].style.width = progressPercentage + '%';
-
-      if (currentStep[levelid] == this.maxSteps) {
-        barcontainer.style.display = 'block';
-        delay(1000).then(() => {
-            barcontainer.innerHTML = `<h2>Download Complete</h2>`;
-            barcontainer.style.display = 'contents';
-        })
-      }
+        if (currentStep[levelid]) {
+            this.updateWindow(levelid)
+            var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
+            const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
+      
+            barcontainer.style.display = 'block';
+            barcontainer.children[0].style.width = progressPercentage + '%';
+      
+            if (currentStep[levelid] == this.maxSteps) {
+              delay(1000).then(() => {
+                  barcontainer.innerHTML = `<p2>Download Complete</p2>`;
+                  barcontainer.style.display = 'contents';
+              })
+            }
+        }
     }
 };
 
@@ -124,6 +150,7 @@ function loadFileInWindow(levelObj) {
     `;
 
     document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
+    downloadingBar.updateWindow(levelObj.levelid);
 
     modal.style.display = "block";
 
@@ -344,6 +371,12 @@ function selectFolder() {
 }
 
 function runLevelDownloader(levelObj) {
+
+    const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
+    if (levelDisplayObjDownloadActions) {
+        levelDisplayObjDownloadActions.innerHTML = `<p>Downloading...</p>`
+    }
+
     link = levelObj.url;
     levelID = levelObj.levelid;
     currentStep[levelObj.levelid] = 1;
@@ -557,8 +590,12 @@ function openURL(url) {
     window.api.send("toMain", {action:"openURL", url:url});
 }
 
+function deleteLevel(levelid) {
+    window.api.send("toMain", {action:"delete-course-file", levelid:levelid});
+}
+
 function checkIfLevelisAlreadyDownloaded(levelid){
-    console.log(levelid);
+    //console.log(levelid);
     window.api.send("toMain", {action:"checkIfAlreadyDownloaded", levelID:levelid});
 }
 
@@ -588,10 +625,11 @@ window.addEventListener('DOMContentLoaded', () => {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
                     barcontainer.style.display = 'contents';
                     barcontainer.style.backgroundColor = '';
-                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<h2>Already Downloaded</h2>`
+                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
                 if (levelDisplayObjDownloadActions) {
-                    levelDisplayObjDownloadActions.innerHTML = ``
+                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
+                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
             } else if (data.resultType == "IN_PROGRESS") {
                 console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
@@ -610,12 +648,16 @@ window.addEventListener('DOMContentLoaded', () => {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
                     barcontainer.style.display = 'contents';
                     barcontainer.style.backgroundColor = '';
-                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<h2>Already Downloaded</h2>`
+                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
                 if (levelDisplayObjDownloadActions) {
-                    levelDisplayObjDownloadActions.innerHTML = ``
+                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
+                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
             }
+        }
+        if (data.action == "courseFileDeleted") {
+            document.getElementById(`object-${data.levelid}`).remove();
         }
         if (data.action == "currentUsersInSMM1Dir"){
             //console.log(data.users)
@@ -647,8 +689,8 @@ window.addEventListener('DOMContentLoaded', () => {
             if (lastLoadedDownloads[data.levelid]) {
                 courseInfoHTML += `<b>Uploader</b>: ${lastLoadedDownloads[data.levelid].creator}<br>`   
             }
-            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
-            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
+//            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
+//            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
 //            courseInfoHTML += `<b>Theme</b>: overworld (0)<br>`
 //            courseInfoHTML += `<b>Game Time</b>: 500s<br>`
 //            courseInfoHTML += `<b>Objects Count</b>: 115<br>`
