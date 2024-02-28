@@ -121,13 +121,12 @@ function loadFileInWindow(levelObj) {
 
     checkIfLevelisAlreadyDownloaded(levelObj.levelid);
 
+    // Modified part to include the custom dropdown instead of <select>
     levelInfo.innerHTML = `
     <div class="level-info">
-        <!-- Use an icon or image here for a visual touch -->
         <h2 id="levelName">${levelObj.name}</h2>
     </div>
     <div class="level-details">
-        <!-- Example of incorporating Mario-themed imagery -->
         <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator || null}</span></p>
         <p><strong>Upload Time:</strong> <span id="uploadTime">${levelObj.uploadTime || null}</span></p>
         <p><strong>Level ID:</strong> <span id="levelID">${levelObj.levelid}</span></p>
@@ -140,17 +139,34 @@ function loadFileInWindow(levelObj) {
         <p><strong>Record Holder:</strong> <span id="recordHolder">${levelObj.world_record_holder_nnid || null}</span></p>
     </div>
     <div class="actions">
-        <div id="download-actions">
-            <select id="course-dropdown">
-                <option value="option1">course000</option>
-            </select>
-            <button class="searchdownload-btn">Download</button>
+        <div id="download-actions" class="custom-select">
+            <div class="selected-option">Course</div>
+            <div class="options-container">
+                <div class="option">course000</div>
+                <div class="option">course001</div>
+                <div class="option">course002</div>
+                <div class="option">course003</div>
+                <div class="option">course004</div>
+                <div class="option">course005</div>
+            </div>
+            <div id="download-actions-button-1">
+                <button class="searchdownload-btn">Download</button>
+            </div>
         </div>
     </div>
     `;
 
+    // Add event listeners for the custom dropdown
+    setupCustomDropdown();
+
     document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
     downloadingBar.updateWindow(levelObj.levelid);
+
+    if (SettingsData.useCemuDir == false || SettingsData.CemuDirPath == "") {
+        document.getElementsByClassName("selected-option")[0].style.display = "none";
+    } else {
+        document.getElementsByClassName("selected-option")[0].style.display = "block";
+    }
 
     modal.style.display = "block";
 
@@ -169,6 +185,22 @@ function loadFileInWindow(levelObj) {
     };
 }
 
+function setupCustomDropdown() {
+    const selected = document.querySelector('.selected-option');
+    const optionsContainer = document.querySelector('.options-container');
+    const optionsList = document.querySelectorAll('.option');
+
+    selected.addEventListener('click', () => {
+        optionsContainer.style.display = optionsContainer.style.display === 'block' ? 'none' : 'block';
+    });
+
+    optionsList.forEach(option => {
+        option.addEventListener('click', (e) => {
+            selected.innerHTML = e.target.innerHTML;
+            optionsContainer.style.display = 'none'; // Hide options after selection
+        });
+    });
+}
 
 function objectClicked(levelid, levelObj) {
     // Assuming 'filename' is the path to the HTML file to be loaded
@@ -396,8 +428,8 @@ function loadPage(page) {
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
         currentHTMLPage = "settings"
-        window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
         if (SettingsData.useCemuDir == true) {
+            window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
             document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
         }
@@ -620,7 +652,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 raiseDownloadBar(data.levelid,  data.resultType);
                 currentStep[data.levelid] = null;
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
-                const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
+                const levelDisplayObjDownloadActions = document.getElementById(`download-actions-button-1`)
                 if (levelHTMLObj && currentHTMLPage == "main") {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
                     if (barcontainer) {
@@ -645,7 +677,7 @@ window.addEventListener('DOMContentLoaded', () => {
             //console.log(data)
             if (data.answer == true){
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
-                const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
+                const levelDisplayObjDownloadActions = document.getElementById(`download-actions-button-1`)
                 if (levelHTMLObj && currentHTMLPage == "main") {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
                     if (barcontainer) {

@@ -522,7 +522,8 @@ function deleteCourseFile(levelid) {
     } else if (args.action === "get-smm1-courses") {
       loadExistingCourses(args.path, args.selectedProfile);
     } else if (args.action === "get-smm1-profiles") {
-      if (args.path != undefined && args.selectedProfile!== undefined && folderExists(args.path)) {
+      //console.log(args.path, args.selectedProfile, folderExists(args.path));
+      if (args.path != undefined && folderExists(args.path)) {
         loadExistingUserIDs(args.path)
       }
     } else if (args.action === "delete-course-file") {
