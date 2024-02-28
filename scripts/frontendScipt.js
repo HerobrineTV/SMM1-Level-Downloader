@@ -25,7 +25,7 @@ var downloadingBar = {
     },
 
     updateWindow: function(levelid) {
-        if (currentStep[levelid]) {
+        if (currentStep[levelid] && document.getElementById('levelID').innerHTML.includes(levelid)) {
             var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
             const levelDisplayObjDownloadActions = document.getElementById(`download-actions`);
             var downloadingBarContainerWindow = document.getElementById(`downloadingBarContainerWindow`);
@@ -339,7 +339,7 @@ function lazyLevelLoading(page) {
             })
             .then(data => {
                 // Handle the JSON data from the API
-                console.log(data); // You can process the data here
+                //console.log(data); // You can process the data here
                 if (SettingsData.currentPage == 1) {
                     setSetting("recentFoundLevels", transformToDict(data));
                 } else {
@@ -610,13 +610,13 @@ window.addEventListener('DOMContentLoaded', () => {
             setSetting("CemuDirPath", data.path);
         }
         if (data.action == "saveing") {
-            console.log(data.result)
+            //console.log(data.result)
         }
         if (data.action == "download-info") {
             if (data.resultType == "INIT") {
                 raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "SUCCESS") {
-                console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
+                //console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 raiseDownloadBar(data.levelid,  data.resultType);
                 currentStep[data.levelid] = null;
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
@@ -627,16 +627,16 @@ window.addEventListener('DOMContentLoaded', () => {
                     barcontainer.style.backgroundColor = '';
                     document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
-                if (levelDisplayObjDownloadActions) {
+                if (levelDisplayObjDownloadActions && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
                     levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
             } else if (data.resultType == "IN_PROGRESS") {
-                console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
+                //console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "ERROR") {
                 currentStep[data.levelid] = null;
-                console.log("["+data.levelid+"] "+ data.info)
+                //console.log("["+data.levelid+"] "+ data.info)
             }
         }
         if (data.action == "checkIfAlreadyDownloaded-info") {
@@ -650,13 +650,16 @@ window.addEventListener('DOMContentLoaded', () => {
                     barcontainer.style.backgroundColor = '';
                     document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
-                if (levelDisplayObjDownloadActions) {
+                if (levelDisplayObjDownloadActions  && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
                     levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
             }
         }
         if (data.action == "courseFileDeleted") {
+            if (document.getElementById('levelID').innerHTML.includes(data.levelid)) {
+                document.getElementById("myModal").style.display = 'none';
+            }
             document.getElementById(`object-${data.levelid}`).remove();
         }
         if (data.action == "currentUsersInSMM1Dir"){

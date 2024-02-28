@@ -24,12 +24,12 @@ const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
 if (!fs.existsSync(jsonDirectory)){
   fs.mkdirSync(jsonDirectory, { recursive: true });
-  console.log(`Created directory: ${jsonDirectory}`);
+  //console.log(`Created directory: ${jsonDirectory}`);
 }
 const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 if (!fs.existsSync(outputDirectory)){
     fs.mkdirSync(outputDirectory, { recursive: true });
-    console.log(`Created directory: ${outputDirectory}`);
+    //console.log(`Created directory: ${outputDirectory}`);
 }
 
 // Path to the ASH Extractor executable within the SMMDownloader directory
@@ -75,7 +75,7 @@ async function checkNewRelease() {
       throw new Error(`GitHub API error: ${data.message}`);
     }
 
-    console.log('Latest release tag:', data.tag_name);
+    //console.log('Latest release tag:', data.tag_name);
     //console.log(data)
     // You can further process the data as needed, for example, compare it with your local version
     return data;
@@ -197,7 +197,7 @@ function containsSpecificFile(directory, fileName) {
 
         try {
             //console.log(`Decompressing: ${partFilePath}`);
-            console.log(ashextractorExecutable, partFilePath);
+            //console.log(ashextractorExecutable, partFilePath);
             execSync(`"${ashextractorExecutable}" ${partFilePath}`);
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
               //console.log(`${partFilePath} has sucessfully been compressed!`);
@@ -209,7 +209,7 @@ function containsSpecificFile(directory, fileName) {
             }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
-                console.log(`${partFilePath} has sucessfully been compressed!`);
+                //console.log(`${partFilePath} has sucessfully been compressed!`);
                 renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
                 fs.unlink(partFilePath, (err) => {
                   if (err) throw err;
@@ -268,7 +268,7 @@ async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
       }
       // If fetchArchiveUrl returns null or undefined, increase attempt count and retry after a delay
       attempts++;
-      console.log(`Attempt ${attempts} failed. Retrying...`);
+      //console.log(`Attempt ${attempts} failed. Retrying...`);
       await delay(1000); // Wait for 1 second before retrying
     } catch (error) {
       // If fetchArchiveUrl throws an error, log it, increase attempt count, and retry after a delay
@@ -462,7 +462,7 @@ function removeKeyFromJSONFile(keyToRemove) {
           // Check if the key exists and delete it
           if (jsonObj.hasOwnProperty(keyToRemove)) {
               delete jsonObj[keyToRemove];
-              console.log(`Key '${keyToRemove}' removed.`);
+              //console.log(`Key '${keyToRemove}' removed.`);
 
               // Convert the modified object back to a JSON string
               const updatedJSON = JSON.stringify(jsonObj, null, 2);
@@ -472,11 +472,11 @@ function removeKeyFromJSONFile(keyToRemove) {
                   if (err) {
                       console.error(`Error writing file: ${err}`);
                   } else {
-                      console.log('File has been updated successfully.');
+                      //console.log('File has been updated successfully.');
                   }
               });
           } else {
-              console.log(`Key '${keyToRemove}' not found.`);
+              //console.log(`Key '${keyToRemove}' not found.`);
           }
       }
   });
@@ -489,7 +489,7 @@ function deleteCourseFile(levelid) {
       if (err) throw err;
       removeKeyFromJSONFile(levelid+"")
       mainWindow.webContents.send("fromMain", {action:"courseFileDeleted",levelid:levelid});
-      console.log('File deleted successfully!');
+      //console.log('File deleted successfully!');
     });
 }
 
