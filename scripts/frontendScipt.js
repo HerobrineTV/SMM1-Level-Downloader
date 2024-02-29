@@ -7,6 +7,7 @@ let lastLoadedDownloads = {};
 const totalSteps = 12;
 var currentStep = [];
 var currentHTMLPage = "";
+const drawQueue = [];
 
 var downloadingBar = {
     maxSteps: totalSteps, // Default max steps, can be overridden in initialize if needed
@@ -15,6 +16,15 @@ var downloadingBar = {
       this.maxSteps = maxSteps;
       currentStep[levelid] = 0; // Initialize steps for this levelid
       this.updateBar(levelid); // Initialize the bar's state
+    },
+
+    addBar: function(levelid) {
+        const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
+
+        if (barcontainer) {
+            barcontainer.style.display = 'block';
+            barcontainer.children[0].style.width = 0 + '%';
+        }
     },
     
     incrementStep: function(levelid) {
@@ -25,7 +35,7 @@ var downloadingBar = {
     },
 
     updateWindow: function(levelid) {
-        if (currentStep[levelid] && document.getElementById('levelID').innerHTML.includes(levelid)) {
+        if (currentStep[levelid] && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(levelid)) {
             var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
             const levelDisplayObjDownloadActions = document.getElementById(`download-actions`);
             var downloadingBarContainerWindow = document.getElementById(`downloadingBarContainerWindow`);
@@ -439,6 +449,8 @@ function selectFolder() {
 
 function runLevelDownloader(levelObj) {
 
+    downloadingBar.addBar(levelObj.levelid);
+
     const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
     if (levelDisplayObjDownloadActions) {
         levelDisplayObjDownloadActions.innerHTML = `<p>Downloading...</p>`
@@ -671,11 +683,26 @@ function changedProfileDropdown(){
     setSetting("selectedProfile", currentProfile);
 }
 
+function enqueueDrawTask(levelid, course, objects) {
+    if (document.getElementById(`courseDisplay-${levelid}`)!= null) {
+        drawQueue.push({ levelid, course, objects });
+    }
+}
+
 function drawLevel(levelid, course, objects) {
     if (document.getElementById(`courseDisplay-${levelid}`)!= null) {
         new Draw(`courseDisplay-${levelid}`, course, objects, "8"); //32 64
     }
 }
+
+setInterval(() => {
+    if (drawQueue.length > 0) {
+        const tasksToDraw = drawQueue.splice(0, 10); // Get up to 10 tasks to draw
+        tasksToDraw.forEach(task => {
+            drawLevel(task.levelid, task.course, task.objects);
+        });
+    }
+}, 100);
 
 window.addEventListener('DOMContentLoaded', () => {
     window.api.receive("fromMain", (data) => {
@@ -687,10 +714,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (data.action == "download-info") {
             if (data.resultType == "INIT") {
-                console.log(data.resultType);
+                //console.log(data.resultType);
                 raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "SUCCESS") {
-                console.log(data.resultType);
+                //console.log(data.resultType);
                 //console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 raiseDownloadBar(data.levelid,  data.resultType);
                 currentStep[data.levelid] = null;
@@ -711,14 +738,23 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
                 //console.log("TEST2")
             } else if (data.resultType == "IN_PROGRESS") {
-                console.log(data.resultType);
+                //console.log(data.resultType);
                 //console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "ERROR") {
-                console.log(data.resultType);
-                downloadingBar.resetBar(data.levelid)
+                if (data.step == "initializing") {
+                    const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
+                    if (barcontainer) {
+                        barcontainer.style.display = 'contents';
+                        barcontainer.style.backgroundColor = '';
+                        barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
+                    }
+                } else {
+                    downloadingBar.resetBar(data.levelid)
+                }
+                //console.log(data.resultType);
                 currentStep[data.levelid] = null;
-                console.log("["+data.levelid+"] "+ data.info)
+                //console.log("["+data.levelid+"] "+ data.info)
             }
         }
         if (data.action == "checkIfAlreadyDownloaded-info") {
@@ -783,7 +819,7 @@ window.addEventListener('DOMContentLoaded', () => {
 //            courseInfoHTML += `<b>Objects Count</b>: 115<br>`
 //            courseInfoHTML += `<b>Scroll</b>: none (0) over 39 blocks<br>`
             courseInfoHTML += `</div>`
-            drawLevel(data.levelid, data.course, data.objects)
+            enqueueDrawTask(data.levelid, data.course, data.objects)
             document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
         }
     });
