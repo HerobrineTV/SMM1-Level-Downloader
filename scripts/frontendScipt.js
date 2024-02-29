@@ -33,17 +33,17 @@ var downloadingBar = {
             if (!downloadingBarContainerWindow) {
                 levelDisplayObjDownloadActions.innerHTML = `<div id="downloadingBarContainerWindow" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>`
                 downloadingBarContainerWindow = document.getElementById(`downloadingBarContainerWindow`);
+            } else {
+                downloadingBarContainerWindow.style.display = 'block';
+                downloadingBarContainerWindow.children[0].style.width = progressPercentage + '%';
+        
+                if (currentStep[levelid] == this.maxSteps) {
+                    delay(1000).then(() => {
+                        downloadingBarContainerWindow.innerHTML = `<p2>Download Complete</p2>`;
+                        downloadingBarContainerWindow.style.display = 'contents';
+                    })
+                  }
             }
-    
-            downloadingBarContainerWindow.style.display = 'block';
-            downloadingBarContainerWindow.children[0].style.width = progressPercentage + '%';
-    
-            if (currentStep[levelid] == this.maxSteps) {
-                delay(1000).then(() => {
-                    downloadingBarContainerWindow.innerHTML = `<p2>Download Complete</p2>`;
-                    downloadingBarContainerWindow.style.display = 'contents';
-                })
-              }
         }
     },
     
@@ -52,21 +52,32 @@ var downloadingBar = {
             this.updateWindow(levelid)
             var progressPercentage = (currentStep[levelid] / this.maxSteps) * 100;
             const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
-      
-            barcontainer.style.display = 'block';
-            barcontainer.children[0].style.width = progressPercentage + '%';
-      
-            if (currentStep[levelid] == this.maxSteps) {
-              delay(1000).then(() => {
-                  barcontainer.innerHTML = `<p2>Download Complete</p2>`;
-                  barcontainer.style.display = 'contents';
-              })
+            
+            if (barcontainer) {
+                barcontainer.style.display = 'block';
+                barcontainer.children[0].style.width = progressPercentage + '%';
+          
+                if (currentStep[levelid] == this.maxSteps) {
+                  delay(1000).then(() => {
+                      barcontainer.innerHTML = `<p2>Download Complete</p2>`;
+                      barcontainer.style.display = 'contents';
+                  })
+                }
             }
         }
+    },
+
+    resetBar: function(levelid) {
+        const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
+            
+            if (barcontainer) {
+                barcontainer.innerHTML = ``;
+                barcontainer.style.display = 'none';
+            }
     }
 };
 
-function delay(ms) {
+async function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
@@ -95,7 +106,7 @@ function overwriteCheckBoxChanged() {
 
 function searchTextInputChanged() {
     if (document.getElementById('searchLevelText').value.trim() != "") {
-        document.getElementById('searchLevel-button').innerHTML = `<br><button onclick="searchLevel()">Search Level</button><br><br>`
+        document.getElementById('searchLevel-button').innerHTML = `<br><button onclick="searchLevel()">Search Level</button>`
     } else {
         document.getElementById('searchLevel-button').innerHTML = ``
     }
@@ -140,7 +151,7 @@ function loadFileInWindow(levelObj) {
     </div>
     <div class="actions">
         <div id="download-actions" class="custom-select">
-            <div class="selected-option">Course</div>
+            <div class="selected-option">Load_to_Course</div>
             <div class="options-container">
                 <div class="option">course000</div>
                 <div class="option">course001</div>
@@ -375,7 +386,11 @@ function lazyLevelLoading(page) {
                 if (SettingsData.currentPage == 1) {
                     setSetting("recentFoundLevels", transformToDict(data));
                 } else {
-                    setSetting("recentFoundLevels", {...SettingsData.recentFoundLevels,...transformToDict(data)});
+                    setSetting("recentFoundLevels", {...transformToDict(data),...SettingsData.recentFoundLevels});
+                }
+                if (data.length > 0) {
+                    // SettingsData.recentFoundLevels
+                    document.getElementById("downloadAllLevel-button").innerHTML = `<button onclick="downloadAll()">Download All</button><br><br>`
                 }
                 displayLevels(data);
             })
@@ -383,6 +398,26 @@ function lazyLevelLoading(page) {
                 // Handle errors that occur during the fetch
                 console.error('There was a problem with the fetch operation:', error);
             });
+}
+
+async function downloadAll() {
+    var levels = []
+    var count = 0
+    for (const [key, value] of Object.entries(SettingsData.recentFoundLevels)) {
+        levels[count] = value;
+        count++;
+        
+        if (count >= 10) {
+            for (var i = 0; i < levels.length; i++) {
+                runLevelDownloader(levels[i])
+                //console.log(count, value);
+            }
+            //await delay(1000).then(() => {
+                count = 0;
+                levels = [];
+            //});
+        }
+    }
 }
 
 function searchLevel() {
@@ -636,6 +671,12 @@ function changedProfileDropdown(){
     setSetting("selectedProfile", currentProfile);
 }
 
+function drawLevel(levelid, course, objects) {
+    if (document.getElementById(`courseDisplay-${levelid}`)!= null) {
+        new Draw(`courseDisplay-${levelid}`, course, objects, "8"); //32 64
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     window.api.receive("fromMain", (data) => {
         if (data.action == "selectedFolder") {
@@ -646,8 +687,10 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (data.action == "download-info") {
             if (data.resultType == "INIT") {
+                console.log(data.resultType);
                 raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "SUCCESS") {
+                console.log(data.resultType);
                 //console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 raiseDownloadBar(data.levelid,  data.resultType);
                 currentStep[data.levelid] = null;
@@ -658,19 +701,24 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (barcontainer) {
                         barcontainer.style.display = 'contents';
                         barcontainer.style.backgroundColor = '';
+                        barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
                     }
-                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
-                if (levelDisplayObjDownloadActions && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
+                //console.log("TEST")
+                if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
                     levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
+                //console.log("TEST2")
             } else if (data.resultType == "IN_PROGRESS") {
+                console.log(data.resultType);
                 //console.log("["+data.levelid+"] "+ currentStep[data.levelid] +" / "+ totalSteps, data.info)
                 raiseDownloadBar(data.levelid, data.resultType);
             } else if (data.resultType == "ERROR") {
+                console.log(data.resultType);
+                downloadingBar.resetBar(data.levelid)
                 currentStep[data.levelid] = null;
-                //console.log("["+data.levelid+"] "+ data.info)
+                console.log("["+data.levelid+"] "+ data.info)
             }
         }
         if (data.action == "checkIfAlreadyDownloaded-info") {
@@ -683,10 +731,10 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (barcontainer) {
                         barcontainer.style.display = 'contents';
                         barcontainer.style.backgroundColor = '';
+                        barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
                     }
-                    document.getElementById(`downloadingBarContainer-${data.levelid}`).innerHTML = `<p2>Already Downloaded</p2>`
                 }
-                if (levelDisplayObjDownloadActions  && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
+                if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
                     levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
@@ -719,7 +767,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('scrollable-objects').innerHTML = `<h2>${data.problem}</h2>`
                 return;
             }
-            document.getElementById('scrollable-objects').innerHTML = `<h2>Levels in Cemu Storage</h2>`;
+            document.getElementById('scrollable-objects').innerHTML = `<h2></h2>`;
             displayLevels(data.levels);
         }
         if (data.action == "displayCourse") {
@@ -735,8 +783,7 @@ window.addEventListener('DOMContentLoaded', () => {
 //            courseInfoHTML += `<b>Objects Count</b>: 115<br>`
 //            courseInfoHTML += `<b>Scroll</b>: none (0) over 39 blocks<br>`
             courseInfoHTML += `</div>`
-            new Draw(`courseDisplay-${data.levelid}`, data.course, data.objects, "8"); //32 64
-            
+            drawLevel(data.levelid, data.course, data.objects)
             document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
         }
     });

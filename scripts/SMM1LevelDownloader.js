@@ -5,6 +5,14 @@ const path = require('path');
 const { execSync } = require('child_process');
 const readline = require('readline');
 const smmCourseViewer = require('smm-course-viewer');
+const { EventEmitter } = require('events');
+
+const queueEventEmitter = new EventEmitter();
+
+const downloadQueue = [];
+let tasksProcessedThisMinute = 0;
+let lastProcessedTimestamp = Date.now();
+let isProcessingQueue = false;
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -59,8 +67,54 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
       const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
       return archiveUrl;
     } catch (error) {
+      //console.error(error);
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
+}
+
+async function processQueue() {
+  while (true) {
+    if (downloadQueue.length > 0) {
+      const currentTime = Date.now();
+      const timeSinceLastProcessed = currentTime - lastProcessedTimestamp;
+      
+      // Check if a new minute has started
+      if (timeSinceLastProcessed >= 60000) {
+        // Reset the counter and timestamp if a new minute has started
+        tasksProcessedThisMinute = 0;
+        lastProcessedTimestamp = currentTime;
+      }
+
+      if (tasksProcessedThisMinute == 10) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
+      
+      // Check if the rate limit is reached
+      if (tasksProcessedThisMinute >= 20) {
+        // Calculate wait time until the next minute
+        const waitTime = 120000 - timeSinceLastProcessed;
+        //const waitTime = 60000;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        tasksProcessedThisMinute = 0; // Reset the counter after waiting
+        lastProcessedTimestamp = Date.now(); // Update last processed timestamp
+      }
+      
+      // Process the next task in the queue
+      const task = downloadQueue.shift();
+      //console.log(task.levelID);
+      await processUrlWithDelay(task.url, task.levelID, task.levelObj);
+      tasksProcessedThisMinute++;
+      
+    } else {
+      // Wait for a new task event before continuing the loop
+      await new Promise(resolve => queueEventEmitter.once('newTask', resolve));
+    }
+  }
+}
+
+async function processUrlWithDelay(url, levelID, levelObj) {
+  //await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for 3 seconds
+  processUrl(url, levelID, levelObj); // Then call processUrl
 }
 
 async function checkNewRelease() {
@@ -380,6 +434,7 @@ function loadExistingUserIDs(cemupath) {
 }
 
 function courseViewerExtract(coursepath){
+
   fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
     if (err) {
       console.error('Error reading the directory:', err);
@@ -389,22 +444,19 @@ function courseViewerExtract(coursepath){
     const folders = files.filter(dirent => dirent.isDirectory()).map(dirent => dirent.name);
 
     let levels = [];
-    var counter = 0;
+    let counter = 0;
 
     if (folders.length == 0) {
-      if (coursepath == outputDirectory) {
-
-      } else if (coursepath == "BACKUP_DIR_PATH_HERE") {
-
-      } else {
-        mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"No Levels Found!"});
-        return;
-      }
+      // Handle no levels found scenario
+      mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"No Levels Found!"});
+      return;
     }
+
+    const sendQueue = []; // Queue to hold the send operations
 
     for (let i = 0; i < folders.length; i++) {
       smmCourseViewer.read(path.join(coursepath, folders[i], "course_data.cdt"), function(err, course, objects) {
-        levelObj = {
+        const levelObj = {
           folder: folders[i],
           course: course,
           objects: objects,
@@ -412,31 +464,43 @@ function courseViewerExtract(coursepath){
           html: smmCourseViewer.course.getHtml(),
           name: ""
         };
-        if(!err) {
-            levelObj.name = course['name'];
-            levels.push(levelObj);
-        } else {
-          levels.push(levelObj);
+        if (!err) {
+          levelObj.name = course['name'];
         }
+        levels.push(levelObj);
         counter++;
-        if (counter == folders.length) {
-          //console.log(levels[0].course)
+
+        if (counter === folders.length) {
+          // When all levels are processed, send summary
           mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
-          for (let i = 0; i < folders.length; i++) {
-            folders[i].fileName
-            //const courseHTML = smmCourseViewer.course.getHtml();
-            mainWindow.webContents.send("fromMain", {action:"displayCourse",coursehtml:levels[i].html,levelid:levels[i].levelid,course:levels[i].course,objects:levels[i].objects,fileName:folders[i]});	
-            //mainWindow.webContents.send("fromMain", {action:"displayCourse",levelid:folders[i],course:levels[i].course,objects:levels[i].objects});	
-          }
+
+          // Queue the send operations
+          levels.forEach((level, index) => {
+            sendQueue.push(() => mainWindow.webContents.send("fromMain", {
+              action: "displayCourse",
+              coursehtml: level.html,
+              levelid: level.levelid,
+              course: level.course,
+              objects: level.objects,
+              fileName: folders[index]
+            }));
+          });
+
+          // Process the queue at a rate of 10 messages per second
+          const sendInterval = setInterval(() => {
+            if (sendQueue.length > 0) {
+              const sendOperation = sendQueue.shift();
+              sendOperation();
+            } else {
+              clearInterval(sendInterval); // Stop the interval when all messages are sent
+            }
+          }, 1); // 1ms interval
         }
-        //let sizeBase = getSelectedSize();
-        //new Draw('courseDisplay', course, objects, sizeBase);
       });
     }
   });
 }
-
-function loadDownloadedCourses(levels) {
+function loadDownloadedCourses() {
   courseViewerExtract(outputDirectory);
 }
 
@@ -497,12 +561,38 @@ function deleteCourseFile(levelid) {
     if (args.action === "select-folder") {
       selectFolder();
     } else if (args.action === "download-level") {
-      if (folderExists(outputDirectory+"/"+args.levelID)) {
-        mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"initializing",levelid:args.levelID,info:"Level folder already exists."});
+      const outputDirectoryPath = outputDirectory + "/" + args.levelID;
+
+      if (folderExists(outputDirectoryPath)) {
+        mainWindow.webContents.send("fromMain", {
+          action: "download-info",
+          resultType: 'ERROR',
+          step: "initializing",
+          levelid: args.levelID,
+          info: "Level folder already exists."
+        });
         return;
       }
-      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'INIT',step:"startingProcess",info:"Starting download process for level: "+args.levelID});
-      processUrl(args.url, args.levelID, args.levelObj);
+    
+      mainWindow.webContents.send("fromMain", {
+        action: "download-info",
+        resultType: 'INIT',
+        step: "startingProcess",
+        info: "Starting download process for level: " + args.levelID
+      });
+    
+      // Add the download task to the queue
+      downloadQueue.push({ url: args.url, levelID: args.levelID, levelObj: args.levelObj });
+      queueEventEmitter.emit('newTask'); // Signal that a new task has been added
+    
+      // Ensure the queue processor is running
+      if (!isProcessingQueue) {
+        isProcessingQueue = true;
+        processQueue().catch(error => {
+          console.error('Error processing download queue:', error);
+          isProcessingQueue = false; // Reset the processing flag in case of error
+        });
+      }
     } else if (args.action === "save-settings") {
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
