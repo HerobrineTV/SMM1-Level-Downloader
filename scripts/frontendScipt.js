@@ -8,6 +8,7 @@ const totalSteps = 12;
 var currentStep = [];
 var currentHTMLPage = "";
 const drawQueue = [];
+let currentLoadedLevels = [];
 
 var downloadingBar = {
     maxSteps: totalSteps, // Default max steps, can be overridden in initialize if needed
@@ -371,6 +372,20 @@ function onScrollToBottom() {
     lazyLevelLoading(SettingsData.currentPage + 1);
 }
 
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max) || 0;
+}
+
+function downloadRandomLevel() {
+    var recentLevelsArr = currentLoadedLevels;
+    var arrayIndex = getRandomInt(recentLevelsArr.length);
+    if (arrayIndex < 0) {arrayIndex = 0;}
+    //console.log(recentLevelsArr)
+    //console.log(recentLevelsArr[arrayIndex])
+    loadFileInWindow(recentLevelsArr[arrayIndex])
+    //runLevelDownloader(SettingsData.recentFoundLevels[arrayIndex])
+}
+
 function lazyLevelLoading(page) {
     SettingsData.currentPage = page;
     const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(SettingsData.lastSearchPhrase)}/${page}`
@@ -395,12 +410,15 @@ function lazyLevelLoading(page) {
                 //console.log(data); // You can process the data here
                 if (SettingsData.currentPage == 1) {
                     setSetting("recentFoundLevels", transformToDict(data));
+                    currentLoadedLevels = data;
                 } else {
                     setSetting("recentFoundLevels", {...transformToDict(data),...SettingsData.recentFoundLevels});
+                    currentLoadedLevels = [...currentLoadedLevels, ...data];
                 }
                 if (data.length > 0) {
                     // SettingsData.recentFoundLevels
                     document.getElementById("downloadAllLevel-button").innerHTML = `<button onclick="downloadAll()">Download All</button><br><br>`
+                    document.getElementById("selectRandomLevel-button").innerHTML = `<button onclick="downloadRandomLevel()">Random found Level</button><br><br>`
                 }
                 displayLevels(data);
             })
