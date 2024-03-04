@@ -372,11 +372,55 @@ function onScrollToBottom() {
     lazyLevelLoading(SettingsData.currentPage + 1);
 }
 
+function findRandomLevel() {
+    const ranID = getRandomInt(12000000)
+
+    SettingsData.currentPage = 1;
+    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(ranID)}/1`
+    +`?coursename=0`
+    +`&courseid=1`
+    +`&creatorname=0`
+    +`&creatorid=0`
+    +`&searchexact=0`;
+        
+        // Make a GET request to the API
+        fetch(apiUrl)
+            .then(response => {
+                // Check if the response is successful
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                // Parse the JSON response
+                return response.json();
+            })
+            .then(data => {
+                // Handle the JSON data from the API
+                //console.log(data); // You can process the data here
+                if (SettingsData.currentPage == 1) {
+                    setSetting("recentFoundLevels", transformToDict(data));
+                    currentLoadedLevels = data;
+                } else {
+                    setSetting("recentFoundLevels", {...transformToDict(data),...SettingsData.recentFoundLevels});
+                    currentLoadedLevels = [...currentLoadedLevels, ...data];
+                }
+                if (data.length > 0) {
+                    // SettingsData.recentFoundLevels
+                    document.getElementById("downloadAllLevel-button").innerHTML = `<button onclick="downloadAll()">Download All</button><br><br>`
+                    document.getElementById("selectRandomLevel-button").innerHTML = `<button onclick="showRandomLevel()">Random found Level</button><br><br>`
+                }
+                displayLevels(data);
+            })
+            .catch(error => {
+                // Handle errors that occur during the fetch
+                console.error('There was a problem with the fetch operation:', error);
+            });
+}
+
 function getRandomInt(max) {
     return Math.floor(Math.random() * max) || 0;
 }
 
-function downloadRandomLevel() {
+function showRandomLevel() {
     var recentLevelsArr = currentLoadedLevels;
     var arrayIndex = getRandomInt(recentLevelsArr.length);
     if (arrayIndex < 0) {arrayIndex = 0;}
@@ -418,7 +462,7 @@ function lazyLevelLoading(page) {
                 if (data.length > 0) {
                     // SettingsData.recentFoundLevels
                     document.getElementById("downloadAllLevel-button").innerHTML = `<button onclick="downloadAll()">Download All</button><br><br>`
-                    document.getElementById("selectRandomLevel-button").innerHTML = `<button onclick="downloadRandomLevel()">Random found Level</button><br><br>`
+                    document.getElementById("selectRandomLevel-button").innerHTML = `<button onclick="showRandomLevel()">Random found Level</button><br><br>`
                 }
                 displayLevels(data);
             })
