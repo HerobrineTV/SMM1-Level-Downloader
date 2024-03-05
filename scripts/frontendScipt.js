@@ -85,6 +85,18 @@ var downloadingBar = {
                 barcontainer.innerHTML = ``;
                 barcontainer.style.display = 'none';
             }
+    },
+
+    showError: function(levelid, error) {
+        const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
+            
+            if (barcontainer) {
+                barcontainer.innerHTML = `Error: ${error}`;
+                barcontainer.style.display = 'none';
+            }
+            delay(1000).then(() => {
+                this.resetBar(levelid);
+            })
     }
 };
 
@@ -185,9 +197,13 @@ function loadFileInWindow(levelObj) {
     downloadingBar.updateWindow(levelObj.levelid);
 
     if (SettingsData.useCemuDir == false || SettingsData.CemuDirPath == "") {
-        document.getElementsByClassName("selected-option")[0].style.display = "none";
+        if (document.getElementsByClassName("selected-option")[0]) {
+            document.getElementsByClassName("selected-option")[0].style.display = "none";
+        }
     } else {
-        document.getElementsByClassName("selected-option")[0].style.display = "block";
+        if (document.getElementsByClassName("selected-option")[0]) {
+            document.getElementsByClassName("selected-option")[0].style.display = "block";   
+        }
     }
 
     modal.style.display = "block";
@@ -812,7 +828,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
                     }
                 } else {
-                    downloadingBar.resetBar(data.levelid)
+                    downloadingBar.showError(data.levelid, data.info)
                 }
                 //console.log(data.resultType);
                 currentStep[data.levelid] = null;
