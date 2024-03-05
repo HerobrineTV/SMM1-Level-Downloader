@@ -9,6 +9,8 @@ var currentStep = [];
 var currentHTMLPage = "";
 const drawQueue = [];
 let currentLoadedLevels = [];
+var isDeleteMode = false;
+let deleteArray = [];
 
 var downloadingBar = {
     maxSteps: totalSteps, // Default max steps, can be overridden in initialize if needed
@@ -240,9 +242,69 @@ function setupCustomDropdown() {
     });
 }
 
+function deleteSelected() {
+    if (deleteArray.length == 0) {
+        return;
+    }
+    for (let i = 0; i < deleteArray.length; i++) {
+        deleteLevel(deleteArray[i]);
+    }
+}
+
+function changeDeleteMode() {
+    const confirmbtn = document.getElementById('confirmmultidelete-btn')
+    const scrollFrame = document.getElementById('scrollable-objects')
+    if (isDeleteMode == false) {
+        for (let i = 0; i < deleteArray.length; i++) {
+            const clickedLevelObj = document.getElementById(`object-${deleteArray[i]}`);
+            if (clickedLevelObj) {
+                clickedLevelObj.style.backgroundColor = "";
+            }
+        }
+        deleteArray = [];
+        isDeleteMode = true;
+        if (confirmbtn) {
+            confirmbtn.style.display = "";
+        }
+        if (scrollFrame) {
+            scrollFrame.style.borderColor = "red";
+        }
+    } else {
+        deleteArray = [];
+        isDeleteMode = false;
+        if (confirmbtn) {
+            confirmbtn.style.display = "none";
+        }
+        if (scrollFrame) {
+            scrollFrame.style.borderColor = "rgb(204, 204, 204)";
+        }
+    }
+}
+
+function markLevelAsDeleting(levelObj){
+    const clickedLevelObj = document.getElementById(`object-${levelObj.levelid}`);
+    if (deleteArray.includes(levelObj.levelid)) {
+        const index = deleteArray.indexOf(levelObj.levelid);
+        if (index > -1) {
+            deleteArray.splice(index, 1);
+        }
+        if (clickedLevelObj) {
+            clickedLevelObj.style.backgroundColor = "";
+        }
+    } else {
+        deleteArray.push(levelObj.levelid);
+        if (clickedLevelObj) {
+            clickedLevelObj.style.backgroundColor = "rosybrown";
+        }
+    }
+}
+
 function objectClicked(levelid, levelObj) {
-    // Assuming 'filename' is the path to the HTML file to be loaded
-    loadFileInWindow(levelObj);
+    if (isDeleteMode == false) {
+        loadFileInWindow(levelObj);
+    } else {
+        markLevelAsDeleting(levelObj);
+    }
 }
 
 function addObjects(levels) {
@@ -552,6 +614,8 @@ function loadPage(page) {
 
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
+        deleteArray = [];
+        isDeleteMode = false;
         currentHTMLPage = "settings"
         if (SettingsData.useCemuDir == true) {
             window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
@@ -562,6 +626,8 @@ function loadPageScripts(page) {
             document.getElementById("autoBackupLevels").checked = true;
         }
     } else if (page == "../pages/main.html") {
+        deleteArray = [];
+        isDeleteMode = false;
         currentHTMLPage = "main"
         amounttrue = 0;
         if(SettingsData.searchParams.LevelName == true) {
@@ -604,6 +670,8 @@ function loadPageScripts(page) {
 
         setSetting("amounttrue", amounttrue);
     } else if (page == "../pages/savedLevels.html") {
+        deleteArray = [];
+        isDeleteMode = false;
         currentHTMLPage = "savedLevels"
         document.getElementById('searchSavedLevel-button').addEventListener("click", () => {
             searchDivs(document.getElementById('searchSavedLevelText').value.trim(), 'scrollable-objects');
@@ -855,8 +923,10 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (data.action == "courseFileDeleted") {
-            if (document.getElementById('levelID').innerHTML.includes(data.levelid)) {
-                document.getElementById("myModal").style.display = 'none';
+            if (document.getElementById('levelID')) {
+                if (document.getElementById('levelID').innerHTML.includes(data.levelid)) {
+                    document.getElementById("myModal").style.display = 'none';
+                }
             }
             document.getElementById(`object-${data.levelid}`).remove();
         }
