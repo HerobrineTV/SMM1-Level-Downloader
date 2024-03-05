@@ -26,7 +26,9 @@
                 <label class="searchLevel-label" for="searchSavedLevelText">Search: </label><input type="text" id="searchSavedLevelText" name="searchLevel-option" value="">
             </div>
             <button id="multidelete-btn" onclick="changeDeleteMode()">Multi Delete</button>
+            <button id="cancelmultidelete-btn" onclick="changeDeleteMode()" style="display: none;">Cancel</button>
             <button id="confirmmultidelete-btn" onclick="deleteSelected()" style="display: none;">Delete Selected</button>
+            <button id="selectallmultidelete-btn" onclick="selectAllToDelete()" style="display: none;">Select All</button>
             <div id="searchSavedLevel-button">
                 <br><button>Search Level</button><br><br>
             </div>

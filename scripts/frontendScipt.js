@@ -10,6 +10,7 @@ var currentHTMLPage = "";
 const drawQueue = [];
 let currentLoadedLevels = [];
 var isDeleteMode = false;
+var isAllSelectedForDel = false;
 let deleteArray = [];
 
 var downloadingBar = {
@@ -26,7 +27,9 @@ var downloadingBar = {
 
         if (barcontainer) {
             barcontainer.style.display = 'block';
-            barcontainer.children[0].style.width = 0 + '%';
+            if (barcontainer.children[0]) {
+                barcontainer.children[0].style.width = 0 + '%';
+            }
         }
     },
     
@@ -68,7 +71,9 @@ var downloadingBar = {
             
             if (barcontainer) {
                 barcontainer.style.display = 'block';
-                barcontainer.children[0].style.width = progressPercentage + '%';
+                if (barcontainer.children[0]) {
+                    barcontainer.children[0].style.width = progressPercentage + '%';
+                }
           
                 if (currentStep[levelid] == this.maxSteps) {
                   delay(1000).then(() => {
@@ -82,7 +87,6 @@ var downloadingBar = {
 
     resetBar: function(levelid) {
         const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
-            
             if (barcontainer) {
                 barcontainer.innerHTML = ``;
                 barcontainer.style.display = 'none';
@@ -91,12 +95,13 @@ var downloadingBar = {
 
     showError: function(levelid, error) {
         const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
-            
+        //console.log("Resetting bar for " + levelid + " because it of " + error);
             if (barcontainer) {
-                barcontainer.innerHTML = `Error: ${error}`;
-                barcontainer.style.display = 'none';
+                barcontainer.innerHTML = `<p2>Failed to Download Level!<p2>\n\nError: ${error}`;
+                barcontainer.style.display = 'contents';
+                barcontainer.style.color = 'crimson';
             }
-            delay(1000).then(() => {
+            delay(60000).then(() => {
                 this.resetBar(levelid);
             })
     }
@@ -242,19 +247,66 @@ function setupCustomDropdown() {
     });
 }
 
-function deleteSelected() {
-    if (deleteArray.length == 0) {
-        return;
+function selectAllToDelete() {
+    if (isDeleteMode == true) {
+        const valuesArray = Object.values(lastLoadedDownloads);
+        if (isAllSelectedForDel == false) {	
+            isAllSelectedForDel = true;
+            deleteArray = [];
+            for (let i = 0; i < valuesArray.length; i++) {
+                //deleteArray.push(valuesArray[i].levelid);
+                markLevelAsDeleting(valuesArray[i]);
+            }
+        } else {
+            isAllSelectedForDel = false;
+            deleteArray = [];
+            for (let i = 0; i < valuesArray.length; i++) {
+                const clickedLevelObj = document.getElementById(`object-${valuesArray[i].levelid}`);
+                if (clickedLevelObj) {
+                    clickedLevelObj.style.backgroundColor = "";
+                }
+            }
+        }
     }
-    for (let i = 0; i < deleteArray.length; i++) {
-        deleteLevel(deleteArray[i]);
+}
+
+function deleteSelected() {
+    if (isDeleteMode == true) {
+        if (deleteArray.length == 0) {
+            return;
+        }
+        for (let i = 0; i < deleteArray.length; i++) {
+            deleteLevel(deleteArray[i]);
+        }
+        changeDeleteMode()
     }
 }
 
 function changeDeleteMode() {
     const confirmbtn = document.getElementById('confirmmultidelete-btn')
     const scrollFrame = document.getElementById('scrollable-objects')
+    const selectallbtn = document.getElementById('selectallmultidelete-btn')
+    const cancelbtn = document.getElementById('cancelmultidelete-btn')
+    const multideletebtn = document.getElementById('multidelete-btn')
     if (isDeleteMode == false) {
+        deleteArray = [];
+        isDeleteMode = true;
+        if (multideletebtn) {
+            multideletebtn.style.display = "none";
+        }
+        if (cancelbtn) {
+            cancelbtn.style.display = "";
+        }
+        if (confirmbtn) {
+            confirmbtn.style.display = "";
+        }
+        if (selectallbtn) {
+            selectallbtn.style.display = "";
+        }
+        if (scrollFrame) {
+            scrollFrame.style.borderColor = "red";
+        }
+    } else {
         for (let i = 0; i < deleteArray.length; i++) {
             const clickedLevelObj = document.getElementById(`object-${deleteArray[i]}`);
             if (clickedLevelObj) {
@@ -262,18 +314,19 @@ function changeDeleteMode() {
             }
         }
         deleteArray = [];
-        isDeleteMode = true;
-        if (confirmbtn) {
-            confirmbtn.style.display = "";
-        }
-        if (scrollFrame) {
-            scrollFrame.style.borderColor = "red";
-        }
-    } else {
-        deleteArray = [];
         isDeleteMode = false;
+        isAllSelectedForDel = false;
+        if (multideletebtn) {
+            multideletebtn.style.display = "";
+        }
+        if (cancelbtn) {
+            cancelbtn.style.display = "none";
+        }
         if (confirmbtn) {
             confirmbtn.style.display = "none";
+        }
+        if (selectallbtn) {
+            selectallbtn.style.display = "none";
         }
         if (scrollFrame) {
             scrollFrame.style.borderColor = "rgb(204, 204, 204)";
@@ -283,8 +336,9 @@ function changeDeleteMode() {
 
 function markLevelAsDeleting(levelObj){
     const clickedLevelObj = document.getElementById(`object-${levelObj.levelid}`);
-    if (deleteArray.includes(levelObj.levelid)) {
-        const index = deleteArray.indexOf(levelObj.levelid);
+    //console.log(levelObj.levelid, deleteArray)
+    if (deleteArray.includes(parseInt(levelObj.levelid))) {
+        const index = deleteArray.indexOf(parseInt(levelObj.levelid));
         if (index > -1) {
             deleteArray.splice(index, 1);
         }
@@ -293,6 +347,9 @@ function markLevelAsDeleting(levelObj){
         }
     } else {
         deleteArray.push(levelObj.levelid);
+        if (deleteArray.length == Object.values(lastLoadedDownloads).length) {
+            isAllSelectedForDel = true;
+        }
         if (clickedLevelObj) {
             clickedLevelObj.style.backgroundColor = "rosybrown";
         }
@@ -303,6 +360,7 @@ function objectClicked(levelid, levelObj) {
     if (isDeleteMode == false) {
         loadFileInWindow(levelObj);
     } else {
+        isAllSelectedForDel = false;
         markLevelAsDeleting(levelObj);
     }
 }

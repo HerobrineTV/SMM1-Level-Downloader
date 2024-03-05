@@ -514,44 +514,44 @@ function loadExistingCourses(cemupath, profileid) {
   }
 }
 
-function removeKeyFromJSONFile(keyToRemove) {
-  // Read the file asynchronously
-  fs.readFile(jsonDirectory+"/downloaded.json", 'utf8', (err, data) => {
+let operationQueue = Promise.resolve();
+
+function removeKeyFromJSONFileSafe(keyToRemove) {
+  operationQueue = operationQueue.then(() => new Promise((resolve, reject) => {
+    fs.readFile(jsonDirectory + "/downloaded.json", 'utf8', (err, data) => {
       if (err) {
-          console.error(`Error reading file from disk: ${err}`);
+        console.error(`Error reading file from disk: ${err}`);
+        reject(err);
       } else {
-          // Parse the JSON data to an object
-          let jsonObj = JSON.parse(data);
-
-          // Check if the key exists and delete it
-          if (jsonObj.hasOwnProperty(keyToRemove)) {
-              delete jsonObj[keyToRemove];
-              //console.log(`Key '${keyToRemove}' removed.`);
-
-              // Convert the modified object back to a JSON string
-              const updatedJSON = JSON.stringify(jsonObj, null, 2);
-
-              // Write the modified JSON string back to the file
-              fs.writeFile(jsonDirectory+"/downloaded.json", updatedJSON, 'utf8', (err) => {
-                  if (err) {
-                      console.error(`Error writing file: ${err}`);
-                  } else {
-                      //console.log('File has been updated successfully.');
-                  }
-              });
-          } else {
-              //console.log(`Key '${keyToRemove}' not found.`);
-          }
+        let jsonObj = JSON.parse(data);
+        if (jsonObj.hasOwnProperty(keyToRemove)) {
+          delete jsonObj[keyToRemove];
+          const updatedJSON = JSON.stringify(jsonObj, null, 2);
+          fs.writeFile(jsonDirectory + "/downloaded.json", updatedJSON, 'utf8', (err) => {
+            if (err) {
+              console.error(`Error writing file: ${err}`);
+              reject(err);
+            } else {
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
       }
-  });
+    });
+  }));
+
+  return operationQueue;
 }
+
 
 function deleteCourseFile(levelid) {
   //console.log(outputDirectory, levelid)
   const partFilePath = path.join(outputDirectory, levelid+"");
   fs.rm(partFilePath, { recursive: true, force: true }, (err) => {
       if (err) throw err;
-      removeKeyFromJSONFile(levelid+"")
+      removeKeyFromJSONFileSafe(levelid+"")
       mainWindow.webContents.send("fromMain", {action:"courseFileDeleted",levelid:levelid});
       //console.log('File deleted successfully!');
     });
