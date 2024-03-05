@@ -27,11 +27,10 @@
             <label class="checkbox-label" for="useseExactSearch">Exact Search (Faster Level Search)</label>
         </div>
         <div id="searchLevel-item"></div>
-        <div id="mainSearchButtons">
-            <div id="searchLevel-button"></div>
-            <div id="downloadAllLevel-button"></div>
-            <div id="selectRandomLevel-button"></div>
-        </div>
+        <br>
+        <button onclick="searchLevel()" id="searchLevel-button" style='display: none;'>Search Level</button>
+        <button onclick="downloadAll()" id="downloadAllLevel-button" style='display: none;'>Download All</button>
+        <button onclick="showRandomLevel()" id="selectRandomLevel-button" style='display: none;'>Random found Level</button><br>
         <div id="scrollable-objects"></div>
         <br><br>
     </div>

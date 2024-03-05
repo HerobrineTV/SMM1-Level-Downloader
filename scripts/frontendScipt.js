@@ -97,13 +97,13 @@ var downloadingBar = {
         const barcontainer = document.getElementById(`downloadingBarContainer-${levelid}`);
         //console.log("Resetting bar for " + levelid + " because it of " + error);
             if (barcontainer) {
-                barcontainer.innerHTML = `<p2>Failed to Download Level!<p2>\n\nError: ${error}`;
+                barcontainer.innerHTML = `<p2 style="color: crimson">Failed to Download Level!</p2><br><p style="display: contents; color: crimson">Error: ${error}</p>`;
                 barcontainer.style.display = 'contents';
                 barcontainer.style.color = 'crimson';
             }
-            delay(60000).then(() => {
-                this.resetBar(levelid);
-            })
+            //delay(60000).then(() => {
+            //    this.resetBar(levelid);
+            //})
     }
 };
 
@@ -136,9 +136,9 @@ function overwriteCheckBoxChanged() {
 
 function searchTextInputChanged() {
     if (document.getElementById('searchLevelText').value.trim() != "") {
-        document.getElementById('searchLevel-button').innerHTML = `<br><button onclick="searchLevel()">Search Level</button>`
+        document.getElementById('searchLevel-button').style.display = ""
     } else {
-        document.getElementById('searchLevel-button').innerHTML = ``
+        document.getElementById('searchLevel-button').style.display = "none"
     }
 }
 
@@ -541,8 +541,8 @@ function findRandomLevel() {
                 }
                 if (data.length > 0) {
                     // SettingsData.recentFoundLevels
-                    document.getElementById("downloadAllLevel-button").innerHTML = `<button onclick="downloadAll()">Download All</button><br><br>`
-                    document.getElementById("selectRandomLevel-button").innerHTML = `<button onclick="showRandomLevel()">Random found Level</button><br><br>`
+                    document.getElementById("downloadAllLevel-button").style.display = ""
+                    document.getElementById("selectRandomLevel-button").style.display = ""
                 }
                 displayLevels(data);
             })
@@ -597,8 +597,8 @@ function lazyLevelLoading(page) {
                 }
                 if (data.length > 0) {
                     // SettingsData.recentFoundLevels
-                    document.getElementById("downloadAllLevel-button").innerHTML = `<button onclick="downloadAll()">Download All</button><br><br>`
-                    document.getElementById("selectRandomLevel-button").innerHTML = `<button onclick="showRandomLevel()">Random found Level</button><br><br>`
+                    document.getElementById("downloadAllLevel-button").style.display = ""
+                    document.getElementById("selectRandomLevel-button").style.display = ""
                 }
                 displayLevels(data);
             })
@@ -612,6 +612,9 @@ async function downloadAll() {
     var levels = []
     var count = 0
     for (const [key, value] of Object.entries(SettingsData.recentFoundLevels)) {
+        
+        runLevelDownloader(value)
+        /*
         levels[count] = value;
         count++;
         
@@ -624,7 +627,7 @@ async function downloadAll() {
                 count = 0;
                 levels = [];
             //});
-        }
+        }*/
     }
 }
 
@@ -674,6 +677,7 @@ function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
         deleteArray = [];
         isDeleteMode = false;
+        isAllSelectedForDel = false;
         currentHTMLPage = "settings"
         if (SettingsData.useCemuDir == true) {
             window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
@@ -686,6 +690,7 @@ function loadPageScripts(page) {
     } else if (page == "../pages/main.html") {
         deleteArray = [];
         isDeleteMode = false;
+        isAllSelectedForDel = false;
         currentHTMLPage = "main"
         amounttrue = 0;
         if(SettingsData.searchParams.LevelName == true) {
@@ -730,6 +735,7 @@ function loadPageScripts(page) {
     } else if (page == "../pages/savedLevels.html") {
         deleteArray = [];
         isDeleteMode = false;
+        isAllSelectedForDel = false;
         currentHTMLPage = "savedLevels"
         document.getElementById('searchSavedLevel-button').addEventListener("click", () => {
             searchDivs(document.getElementById('searchSavedLevelText').value.trim(), 'scrollable-objects');
@@ -740,11 +746,38 @@ function loadPageScripts(page) {
 
 function loadSavedLevels(){
     const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
+    const confirmbtn = document.getElementById('confirmmultidelete-btn')
+    const selectallbtn = document.getElementById('selectallmultidelete-btn')
+    const cancelbtn = document.getElementById('cancelmultidelete-btn')
+    const multideletebtn = document.getElementById('multidelete-btn')
+
+    if (multideletebtn) {
+        multideletebtn.style.display = "";
+    }
+    if (cancelbtn) {
+        cancelbtn.style.display = "none";
+    }
+    if (confirmbtn) {
+        confirmbtn.style.display = "none";
+    }
+    if (selectallbtn) {
+        selectallbtn.style.display = "none";
+    }
+
     if (savedLevelsDrop.value == "downloaded") {
+        deleteArray = [];
+        isDeleteMode = false;
+        isAllSelectedForDel = false;
         loadDownloadedLevels()
     } else if (savedLevelsDrop.value == "cemu") {
+        deleteArray = [];
+        isDeleteMode = false;
+        isAllSelectedForDel = false;
         loadLevelsfromCEMU()
     } else if (savedLevelsDrop.value == "backupped") {
+        deleteArray = [];
+        isDeleteMode = false;
+        isAllSelectedForDel = false;
         loadBackuppedLevels()
     }
 }
