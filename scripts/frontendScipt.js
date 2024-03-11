@@ -336,8 +336,9 @@ function changeDeleteMode() {
 
 function markLevelAsDeleting(levelObj){
     const clickedLevelObj = document.getElementById(`object-${levelObj.levelid}`);
-    //console.log(levelObj.levelid, deleteArray)
+    console.log(levelObj.levelid, deleteArray)
     if (deleteArray.includes(parseInt(levelObj.levelid))) {
+        //console.log("NotInArray")
         const index = deleteArray.indexOf(parseInt(levelObj.levelid));
         if (index > -1) {
             deleteArray.splice(index, 1);
@@ -346,7 +347,8 @@ function markLevelAsDeleting(levelObj){
             clickedLevelObj.style.backgroundColor = "";
         }
     } else {
-        deleteArray.push(levelObj.levelid);
+        //console.log("InArray")
+        deleteArray.push(parseInt(levelObj.levelid));
         if (deleteArray.length == Object.values(lastLoadedDownloads).length) {
             isAllSelectedForDel = true;
         }
@@ -357,6 +359,7 @@ function markLevelAsDeleting(levelObj){
 }
 
 function objectClicked(levelid, levelObj) {
+    console.log("Clicked")
     if (isDeleteMode == false) {
         loadFileInWindow(levelObj);
     } else {
@@ -675,6 +678,7 @@ function loadPage(page) {
 
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
+        window.api.send("toMain", {action:"write-to-log", message:"This is a Test!"});
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
