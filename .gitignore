@@ -399,5 +399,8 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Custom Exceptions
 SMMDownloader/Data/DownloadCache/
 pages/layout/draw
+SMMDownloader/Data/logs

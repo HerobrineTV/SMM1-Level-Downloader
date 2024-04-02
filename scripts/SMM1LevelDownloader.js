@@ -61,12 +61,14 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
       const archiveTimestamp = response.data.first_ts;
       if (!archiveTimestamp) {
           console.error('No archived version found.');
+          writeToLog('[Error] '+'No archived Version on GitHub found!');
           return null;
       }
     
       const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
       return archiveUrl;
     } catch (error) {
+      writeToLog('[Error] '+'Error fetching Github API! '+error.message);
       //console.error(error);
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
@@ -134,6 +136,7 @@ async function checkNewRelease() {
     // You can further process the data as needed, for example, compare it with your local version
     return data;
   } catch (error) {
+    writeToLog('[Error] '+'Failed to fetch the latest release!');
     console.error('Failed to fetch the latest release!');
   }
 }
@@ -166,6 +169,7 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"downloadFile",levelid:levelObj.levelid,info:"Successfully downloaded file from Wayback Machine"});
     } catch (error) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"downloadFile",levelid:levelObj.levelid,info:"Wasn't able to download file from Wayback Machine"});
+      writeToLog('[Error] '+'Error downloading file: '+error.message);
       console.error('Error downloading file:', error.message);
     }
   }
@@ -226,6 +230,7 @@ function containsSpecificFile(directory, fileName) {
       return files.includes(fileName);
     } catch (error) {
       console.error(`Error reading directory ${directory}:`, error);
+      writeToLog('[Error] '+`Error reading directory ${directory}: `+error.message);
       return false;
     }
   }
@@ -290,6 +295,7 @@ async function addLevelToJson(levelObj){
           const data = fs.readFileSync(jsonDirectory+"/downloaded.json", 'utf8');
           jsonData = JSON.parse(data);
       } catch (error) {
+          writeToLog('[Error] '+`Error reading JSON file: `+error.message);
           console.error('Error reading JSON file:', error);
           return;
       }
@@ -304,6 +310,7 @@ async function addLevelToJson(levelObj){
           mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"addLevelToJson",levelid:levelobjlvlid,info:"Finished adding object to JSON file."});
       } catch (error) {
           console.error('Error writing JSON file:', error);
+          writeToLog('[Error] '+`Error writing JSON file: `+error.message);
           mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"addLevelToJson",levelid:levelobjlvlid,info:"Error adding object to JSON file."});
       }
 }
@@ -331,6 +338,7 @@ async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
       await delay(1000); // Wait for 1 second before retrying
     }
   }
+  writeToLog('[Error] '+`Failed 5 Times to fetch the Archive URL!`);
   // After 5 failed attempts, return null to indicate failure
   return null;
 }
@@ -424,6 +432,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
 function loadExistingUserIDs(cemupath) {
   fs.readdir(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user"), { withFileTypes: true }, (err, files) => {
     if (err) {
+      writeToLog('[Error] '+`Error reading the directory: `+error.message);
       console.error('Error reading the directory:', err);
       return;
     }
@@ -437,6 +446,7 @@ function courseViewerExtract(coursepath){
 
   fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
     if (err) {
+      writeToLog('[Error] '+`Error reading the directory: `+error.message);
       console.error('Error reading the directory:', err);
       return;
     }
@@ -520,6 +530,7 @@ function removeKeyFromJSONFileSafe(keyToRemove) {
   operationQueue = operationQueue.then(() => new Promise((resolve, reject) => {
     fs.readFile(jsonDirectory + "/downloaded.json", 'utf8', (err, data) => {
       if (err) {
+        writeToLog('[Error] '+`Error reading file from disk: `+error.message);
         console.error(`Error reading file from disk: ${err}`);
         reject(err);
       } else {
@@ -529,6 +540,7 @@ function removeKeyFromJSONFileSafe(keyToRemove) {
           const updatedJSON = JSON.stringify(jsonObj, null, 2);
           fs.writeFile(jsonDirectory + "/downloaded.json", updatedJSON, 'utf8', (err) => {
             if (err) {
+              writeToLog('[Error] '+`Error writing file: `+error.message);
               console.error(`Error writing file: ${err}`);
               reject(err);
             } else {
@@ -545,6 +557,20 @@ function removeKeyFromJSONFileSafe(keyToRemove) {
   return operationQueue;
 }
 
+
+function writeToLog(message) {
+  const today = new Date();
+  const dateString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+  const logFileName = `log_${dateString}.txt`;
+  const logFilePath = path.join(jsonDirectory, "logs", logFileName);
+
+  fs.appendFile(logFilePath, message + "\n", (err) => {
+    if (err) {
+      writeToLog('[Error] '+`Error writing to file: `+error.message);
+      console.error(`Error writing to file: ${err}`);
+    }
+  });
+}
 
 function deleteCourseFile(levelid) {
   //console.log(outputDirectory, levelid)
@@ -589,6 +615,7 @@ function deleteCourseFile(levelid) {
       if (!isProcessingQueue) {
         isProcessingQueue = true;
         processQueue().catch(error => {
+          writeToLog('[Error] '+`Error processing download queue: `+error.message);
           console.error('Error processing download queue:', error);
           isProcessingQueue = false; // Reset the processing flag in case of error
         });
@@ -616,6 +643,8 @@ function deleteCourseFile(levelid) {
       if (args.path != undefined && folderExists(args.path)) {
         loadExistingUserIDs(args.path)
       }
+    }else if (args.action === "write-to-log") {
+      writeToLog(args.message);
     } else if (args.action === "delete-course-file") {
       deleteCourseFile(args.levelid);
     }
