@@ -418,7 +418,8 @@ async function processUrl(originalUrl, levelid, levelObj) {
             "CreatorName":false,
             "CreatorID":false,
             "SearchExact":false
-          }
+          },
+          "amounttrue":0
         }
       );
     } else {

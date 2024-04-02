@@ -551,6 +551,7 @@ function findRandomLevel() {
             })
             .catch(error => {
                 // Handle errors that occur during the fetch
+                window.api.send("toMain", {action:"write-to-log", message:'There was a problem with the fetch operation: '+error});
                 console.error('There was a problem with the fetch operation:', error);
             });
 }
@@ -607,6 +608,7 @@ function lazyLevelLoading(page) {
             })
             .catch(error => {
                 // Handle errors that occur during the fetch
+                window.api.send("toMain", {action:"write-to-log", message:'There was a problem with the fetch operation: '+error});
                 console.error('There was a problem with the fetch operation:', error);
             });
 }
@@ -678,7 +680,6 @@ function loadPage(page) {
 
 function loadPageScripts(page) {
     if (page == "../pages/settings.html") {
-        window.api.send("toMain", {action:"write-to-log", message:"This is a Test!"});
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
