@@ -401,7 +401,26 @@ async function processUrl(originalUrl, levelid, levelObj) {
     var jsonData;
     
     if (settings == "RESET") {
-      jsonData = JSON.stringify({"useCemuDir":false,"BackupLevels":false,"CemuDirPath":"","selectedProfile":"","useAPILink":true,"APILink":"https://api.bobac-analytics.com/smm1","lastSearchPhrase":"","recentFoundLevels":[],"searchParams":{"LevelName":false,"LevelID":false,"CreatorName":false,"CreatorID":false, "SearchExact":false}});
+      jsonData = JSON.stringify(
+        {
+          "useCemuDir":false,
+          "BackupLevels":false,
+          "CemuDirPath":"",
+          "selectedProfile":"",
+          "useAPILink":true,
+          "APILink":"https://api.bobac-analytics.com/smm1",
+          "lastSearchPhrase":"",
+          "recentFoundLevels":[],
+          "searchParams":
+          {
+            "LevelName":false,
+            "LevelID":false,
+            "CreatorName":false,
+            "CreatorID":false,
+            "SearchExact":false
+          }
+        }
+      );
     } else {
       jsonData = JSON.stringify(settings);
     }
