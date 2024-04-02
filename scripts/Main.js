@@ -378,7 +378,11 @@ async function processUrl(originalUrl, levelid, levelObj) {
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
-    mainWindow.loadFile('../pages/index.html');
+    if (folderExists(path.join(__dirname, "../../app"))) {
+      mainWindow.loadFile('../app/pages/index.html');
+    } else {
+      mainWindow.loadFile('../pages/index.html');
+    }
     checkNewRelease();
   }
 

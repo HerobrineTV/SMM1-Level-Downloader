@@ -285,8 +285,6 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 !node_modules/smm-course-viewer
-# node_modules/smm-course-viewer/layout/draw/monster/*
-# node_modules/smm-course-viewer/layout/draw/titleset/*
 
 # Visual Studio 6 build log
 *.plg
@@ -403,6 +401,4 @@ FodyWeavers.xsd
 # Custom Exceptions
 SMMDownloader/Data/DownloadCache/
 SMMDownloader/Data/BackupCache/
-# pages/layout/draw
-!SMMDownloader/Data/logs/example.txt
 SMMDownloader/Data/logs

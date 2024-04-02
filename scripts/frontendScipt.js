@@ -159,7 +159,7 @@ function loadFileInWindow(levelObj) {
     const modal = document.getElementById("myModal");
     const modalContent = document.querySelector(".modal-content");
     const levelInfo = document.getElementById("levelInfo");
-
+    //console.log(levelObj);
     checkIfLevelisAlreadyDownloaded(levelObj.levelid);
 
     // Modified part to include the custom dropdown instead of <select>
@@ -336,7 +336,7 @@ function changeDeleteMode() {
 
 function markLevelAsDeleting(levelObj){
     const clickedLevelObj = document.getElementById(`object-${levelObj.levelid}`);
-    console.log(levelObj.levelid, deleteArray)
+    //console.log(levelObj.levelid, deleteArray)
     if (deleteArray.includes(parseInt(levelObj.levelid))) {
         //console.log("NotInArray")
         const index = deleteArray.indexOf(parseInt(levelObj.levelid));
@@ -359,7 +359,7 @@ function markLevelAsDeleting(levelObj){
 }
 
 function objectClicked(levelid, levelObj) {
-    console.log("Clicked")
+    //console.log("Clicked")
     if (isDeleteMode == false) {
         loadFileInWindow(levelObj);
     } else {
@@ -399,8 +399,8 @@ function addObjects(levels) {
             <div class="downloaded-display"></div>
             <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
             `;
+            objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         }
-        objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
         objectsContainer.appendChild(objectDiv);
     });
 }
@@ -858,6 +858,7 @@ function loadDownloadedLevels() {
                 lastLoadedDownloads = data;
                 // loadDownloadedLevels()
                 window.api.send("toMain", {action:"get-smm1-cached-downloads"});
+                //console.log(objectToArray(data))
                 displayLevels(objectToArray(data));
             } else {
                 const levellistObj = document.getElementById('scrollable-objects');
@@ -1054,7 +1055,9 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})</b><br>`
             var courseInfoHTML = ``;
             if (lastLoadedDownloads[data.levelid]) {
-                courseInfoHTML += `<b>Uploader</b>: ${lastLoadedDownloads[data.levelid].creator}<br>`   
+                courseInfoHTML += `<b>Uploader</b>: ${lastLoadedDownloads[data.levelid].creator}<br>`
+                const objectDiv = document.getElementById(`object-${data.levelid}`)
+                objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
             }
 //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
 //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
