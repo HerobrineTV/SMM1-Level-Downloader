@@ -9,6 +9,9 @@
     </div>
     <div id="main-content">
         <h1 style="font-family: 'Times New Roman', Times, serif;">Search Level</h1>
+        <div id="randomlevlefromdb-button">
+            <button onclick="findRandomLevel()">Random Level</button>
+        </div>
         <h2>Select Search Options:</h2>
         <div class="checkbox-item">
             <input type="checkbox" id="usesearchLevelbyLevelName" name="search-option" onclick="searchCheckBoxesChanged('LevelName')">
@@ -24,10 +27,18 @@
             <label class="checkbox-label" for="useseExactSearch">Exact Search (Faster Level Search)</label>
         </div>
         <div id="searchLevel-item"></div>
-        <div id="searchLevel-button"></div>
+        <br>
+        <button onclick="searchLevel()" id="searchLevel-button" style='display: none;'>Search Level</button>
+        <button onclick="downloadAll()" id="downloadAllLevel-button" style='display: none;'>Download All</button>
+        <button onclick="showRandomLevel()" id="selectRandomLevel-button" style='display: none;'>Random found Level</button><br>
         <div id="scrollable-objects"></div>
         <br><br>
     </div>
+    <div class="loading-container" id="loadingholder" style="display: none;">
+        <img src="../pictures/smmdownloader/M1-groundblock.png" alt="Image 1" class="bounce1">
+        <img src="../pictures/smmdownloader/M1-groundblock.png" alt="Image 2" class="bounce2">
+        <img src="../pictures/smmdownloader/M1-groundblock.png" alt="Image 3" class="bounce3">
+      </div>
 </body>
 
 </html>

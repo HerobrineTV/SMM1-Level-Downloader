@@ -330,6 +330,24 @@ p2 {
     background-color:#ddd;
   }
   
+#download-actions {
+    display: flex; /* Enables flexbox layout */
+    justify-content: center; /* Horizontally centers the flex items */
+    align-items: center; /* Vertically centers the flex items */
+    gap: 10px; /* Optional: Adds space between the select and the button */
+}
+
+.actions {
+    display: flex;
+    justify-content: center; /* Horizontally center the #download-actions div */
+    align-items: center; /* Vertically center the #download-actions div */
+    flex-direction: column; /* Stack any child elements vertically */
+}
+
+#course-dropdown {
+    text-align: left;
+    box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+}
 
 
 
@@ -339,8 +357,71 @@ p2 {
 
 
 
+.custom-select {
+    position: relative;
+    width: 200px; /* Adjust as necessary */
+    font-family: Arial, sans-serif;
+  }
+  
+  .selected-option {
+    padding: 10px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+  }
+  
+  .options-container {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border: 1px solid #ccc;
+    z-index: 99;
+    background: white;
+    max-height: 150px; /* Adjust height as necessary */
+    overflow-y: auto;
+  }
+  
+  .option {
+    padding: 10px;
+    cursor: pointer;
+  }
+  
+  .option:hover {
+    background-color: #eee;
+  }
+  
 
 
 
-
-
+  .loading-container {
+    text-align: center;
+    margin-top: 50px;
+    margin-bottom: 30px;
+  }
+  
+  .bounce1, .bounce2, .bounce3 {
+    animation: bounce 1s infinite alternate ease-in-out;
+    width: 30px
+  }
+  
+  @keyframes bounce {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  .bounce1 {
+    animation-delay: 0s;
+  }
+  
+  .bounce2 {
+    animation-delay: 0.2s;
+  }
+  
+  .bounce3 {
+    animation-delay: 0.4s;
+  }
