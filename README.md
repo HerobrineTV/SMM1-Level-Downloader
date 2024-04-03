@@ -12,10 +12,11 @@ http://wiibrew.org/wiki/ASH_Extractor
 # First time setup
 For the first time setup u need to install axios
 "npm install axios"
+Might be not needed anymore?? have to check that
 
 # Usage
-Just open up the Programm and Search your Favourite Curses, which u then can easily Download!
-It should then try to get that level and decompile it for you.
+Just unzip the "SMM1Downloader.zip" from the releases Tab and start the "SMM1Downloader.exe"
+All should work from then.
 
 # How does this work?
 I packed my ElectronJS Application into a .exe format by using electron-packager, just run unzip the .zip File from the Releases
@@ -35,5 +36,5 @@ Now u can Press the "Open Folder" Button and u will see all your Saved Levels.
 Just copy the inside of the folders in your desired Mario Maker 1 Savefile in one of the course files.
 
 # Important Note
-U have to createthe course Files ingame and not by creating a Folder, else they wont show up!
+U have to create the course Files ingame and not by creating a Folder, else they wont show up!
 All Copyright of the Used Images goes to Nintendo
