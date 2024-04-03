@@ -14,6 +14,24 @@ var isAllSelectedForDel = false;
 let deleteArray = [];
 var isloadingLevels = false;
 var connerrorCooldown = false;
+var imageUrls = [
+    "../pictures/smmdownloader/WU-groundblock.png", 
+    "../pictures/smmdownloader/WU-questionmarkblock.png", 
+    "../pictures/smmdownloader/WU-noteblock.png",
+    "../pictures/smmdownloader/WU-brickblock.png",
+    "../pictures/smmdownloader/M1-groundblock.png", 
+    "../pictures/smmdownloader/M1-questionmarkblock.png", 
+    "../pictures/smmdownloader/M1-noteblock.png",
+    "../pictures/smmdownloader/M1-brickblock.png",
+];
+
+// Function to change image source after each bounce
+function changeImageSrc() {
+    var images = document.querySelectorAll('.loading-container img');
+    for (var i = 0; i < images.length; i++) {
+      images[i].src = imageUrls[Math.random() * imageUrls.length | 0];
+    }
+}
 
 var downloadingBar = {
     maxSteps: totalSteps, // Default max steps, can be overridden in initialize if needed
@@ -580,6 +598,7 @@ function lazyLevelLoading(page) {
     if (page === 1) {
         document.getElementById("scrollable-objects").innerHTML = "";
     }
+    changeImageSrc()
     isloadingLevels = true
     SettingsData.currentPage = page;
     const loadingholder = document.getElementById("loadingholder").cloneNode(true);
