@@ -15,9 +15,25 @@ For the first time setup u need to install axios
 
 # Usage
 Just open up the Programm and Search your Favourite Curses, which u then can easily Download!
-
 It should then try to get that level and decompile it for you.
 
 # How does this work?
-It just downloads the Level via Archive.org since theres alot or almost every level stored mentioned in this Post
-https://archive.org/details/super_mario_maker_courses_202105
+I packed my ElectronJS Application into a .exe format by using electron-packager, just run unzip the .zip File from the Releases
+
+It gathers the Archive.org download link for the Searched Level from my Database.
+
+Then it is downloading it from Archive.org
+(Information here: https://archive.org/details/super_mario_maker_courses_202105)
+
+After that u can View it in Saved Levels in the Programm.
+There u will be able to see the Curse display. Which was only possible through Leo's Course Viewer, which he allowed me to implement!
+(https://github.com/leomaurodesenv/smm-course-viewer)
+Big thanks to him!
+
+Now u can Press the "Open Folder" Button and u will see all your Saved Levels.
+
+Just copy the inside of the folders in your desired Mario Maker 1 Savefile in one of the course files.
+
+# Important Note
+U have to createthe course Files ingame and not by creating a Folder, else they wont show up!
+All Copyright of the Used Images goes to Nintendo
