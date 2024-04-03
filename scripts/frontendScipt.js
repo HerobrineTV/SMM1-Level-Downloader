@@ -12,6 +12,8 @@ let currentLoadedLevels = [];
 var isDeleteMode = false;
 var isAllSelectedForDel = false;
 let deleteArray = [];
+var isloadingLevels = false;
+var connerrorCooldown = false;
 
 var downloadingBar = {
     maxSteps: totalSteps, // Default max steps, can be overridden in initialize if needed
@@ -508,6 +510,8 @@ function transformToDict(array) {
 }
 
 function onScrollToBottom() {
+    if (isloadingLevels == true) {return;}
+    if (connerrorCooldown == true) {return;}
     lazyLevelLoading(SettingsData.currentPage + 1);
 }
 
@@ -571,14 +575,23 @@ function showRandomLevel() {
 }
 
 function lazyLevelLoading(page) {
+    if (isloadingLevels == true) {return;}
+    if (connerrorCooldown == true) {return;}
+    if (page === 1) {
+        document.getElementById("scrollable-objects").innerHTML = "";
+    }
+    isloadingLevels = true
     SettingsData.currentPage = page;
+    const loadingholder = document.getElementById("loadingholder").cloneNode(true);
     const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(SettingsData.lastSearchPhrase)}/${page}`
     +`?coursename=${SettingsData.searchParams.LevelName == true? 1 : 0}`
     +`&courseid=${SettingsData.searchParams.LevelID == true? 1 : 0}`
     +`&creatorname=${SettingsData.searchParams.CreatorName == true? 1 : 0}`
     +`&creatorid=${SettingsData.searchParams.CreatorID == true? 1 : 0}`
     +`&searchexact=${SettingsData.searchParams.SearchExact == true? 1 : 0}`;
-        
+
+    loadingholder.style.display = "";
+    document.getElementById("scrollable-objects").appendChild(loadingholder);
         // Make a GET request to the API
         fetch(apiUrl)
             .then(response => {
@@ -604,12 +617,26 @@ function lazyLevelLoading(page) {
                     document.getElementById("downloadAllLevel-button").style.display = ""
                     document.getElementById("selectRandomLevel-button").style.display = ""
                 }
+                loadingholder.style.display = "none";
+                isloadingLevels = false;
                 displayLevels(data);
             })
             .catch(error => {
+                if (page > 1) {
+                    SettingsData.currentPage--
+                }
+                connerrorCooldown = true;
                 // Handle errors that occur during the fetch
                 window.api.send("toMain", {action:"write-to-log", message:'There was a problem with the fetch operation: '+error});
                 console.error('There was a problem with the fetch operation:', error);
+                loadingholder.style = "font-size: x-large;"
+                loadingholder.style.color = "red";
+                loadingholder.textContent = "Couldn't connect to the server. Please Check your Connection or try again later.";
+                isloadingLevels = false;
+                delay(5000).then(() => {
+                    connerrorCooldown = false;
+                    loadingholder.remove();
+                })
             });
 }
 
@@ -645,6 +672,8 @@ function searchLevel() {
     
     // Check if the API link should be used
     if (SettingsData.useAPILink) {
+        isloadingLevels = false;
+        connerrorCooldown = false;
         lazyLevelLoading(1)
     }
 }
@@ -755,6 +784,9 @@ function loadSavedLevels(){
     const selectallbtn = document.getElementById('selectallmultidelete-btn')
     const cancelbtn = document.getElementById('cancelmultidelete-btn')
     const multideletebtn = document.getElementById('multidelete-btn')
+    const _downloadedFolderbtn = document.getElementById('openfolderdownload-btn')
+    const _backuppedFolderbtn = document.getElementById('openfolderbackup-btn')
+    const _cemuFolderbtn = document.getElementById('openfoldercemu-btn')
 
     if (multideletebtn) {
         multideletebtn.style.display = "";
@@ -773,18 +805,45 @@ function loadSavedLevels(){
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
+        _downloadedFolderbtn.style.display = ""
+        _backuppedFolderbtn.style.display = "none"
+        _cemuFolderbtn.style.display = "none"
         loadDownloadedLevels()
     } else if (savedLevelsDrop.value == "cemu") {
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
+        _downloadedFolderbtn.style.display = "none"
+        _backuppedFolderbtn.style.display = "none"
+        if (SettingsData.CemuDirPath != "") {
+            _cemuFolderbtn.style.display = ""
+        }
         loadLevelsfromCEMU()
     } else if (savedLevelsDrop.value == "backupped") {
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
+        _downloadedFolderbtn.style.display = "none"
+        _backuppedFolderbtn.style.display = ""
+        _cemuFolderbtn.style.display = "none"
         loadBackuppedLevels()
     }
+}
+
+function openFolderDownloaded() {
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/DownloadCache"})
+}
+
+function openFolderBackupped() {
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/BackupCache"})
+}
+
+function openFolderCemu() {
+    window.api.send("toMain", {action:"open-folder", path:SettingsData.CemuDirPath})
 }
 
 function increaseSettingvalue(val, amount) {

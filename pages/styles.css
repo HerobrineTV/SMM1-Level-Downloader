@@ -391,3 +391,37 @@ p2 {
     background-color: #eee;
   }
   
+
+
+
+  .loading-container {
+    text-align: center;
+    margin-top: 50px;
+    margin-bottom: 30px;
+  }
+  
+  .bounce1, .bounce2, .bounce3 {
+    animation: bounce 1s infinite alternate ease-in-out;
+    width: 30px
+  }
+  
+  @keyframes bounce {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  .bounce1 {
+    animation-delay: 0s;
+  }
+  
+  .bounce2 {
+    animation-delay: 0.2s;
+  }
+  
+  .bounce3 {
+    animation-delay: 0.4s;
+  }

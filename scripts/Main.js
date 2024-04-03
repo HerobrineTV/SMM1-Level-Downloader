@@ -538,6 +538,10 @@ function loadDownloadedCourses() {
   courseViewerExtract(outputDirectory);
 }
 
+function openFolder(folderPath) {
+  shell.openPath(folderPath);
+}
+
 function loadExistingCourses(cemupath, profileid) {
   //const profileFolder = cemupath;
   if (folderExists(cemupath) && folderExists(path.join(cemupath, "mlc01"))) {
@@ -610,6 +614,8 @@ function deleteCourseFile(levelid) {
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
+    } else if (args.action === "open-folder") {
+      openFolder(args.path);
     } else if (args.action === "download-level") {
       const outputDirectoryPath = outputDirectory + "/" + args.levelID;
 
