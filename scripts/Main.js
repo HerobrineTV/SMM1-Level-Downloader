@@ -590,6 +590,10 @@ function writeToLog(message) {
   const today = new Date();
   const dateString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
   const logFileName = `log_${dateString}.txt`;
+  if (!fs.existsSync(path.join(jsonDirectory, "logs"))){
+    fs.mkdirSync(path.join(jsonDirectory, "logs"), { recursive: true });
+    //console.log(`Created directory: ${outputDirectory}`);
+  }
   const logFilePath = path.join(jsonDirectory, "logs", logFileName);
 
   fs.appendFile(logFilePath, message + "\n", (err) => {

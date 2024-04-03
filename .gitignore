@@ -399,7 +399,7 @@ FodyWeavers.xsd
 *.sln.iml
 
 # Custom Exceptions
+SMMDownloader/Data/logs/*
+!SMMDownloader/Data/logs/example
 SMMDownloader/Data/DownloadCache/
 SMMDownloader/Data/BackupCache/
-!SMMDownloader/Data/logs/example.txt
-SMMDownloader/Data/logs
