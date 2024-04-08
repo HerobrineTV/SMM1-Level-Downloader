@@ -15,6 +15,13 @@
     height: 100%;
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.4);
+
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
 }
 
 .modal-content {
@@ -25,6 +32,12 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
 }
 
 .creator-info {
@@ -58,18 +71,27 @@ body {
 }
 
 h1, h2 {
-    color: #d90000; /* Red color */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Text shadow */
+    color: #bb1919; /* Red color */
+    text-shadow: 2px 2px 4px rgb(255 0 0 / 50%); /* Text shadow */
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: "bolder";
+    font-style: normal;
 }
 
 button {
-    background-color: #a7601f; /* Dark brown color */
+    background-color: #ad6f2f; /* Dark brown color */
     border: none;
-    color: white;
+    color: #000000;
     padding: 10px 20px;
     margin-right: 10px;
     cursor: pointer;
-    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+    border-radius: inherit;
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgb(0 0 0);
+    text-shadow: 0 0 black;
 }
 /*
 div {
@@ -81,13 +103,21 @@ p2 {
     color: green;
 }
 
+p {
+    text-shadow: 0 0 black;
+}
+
 #main-content {
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
     max-width: 80%;
     margin: 0 auto;
     padding: 1%;
     background-color: #f0f0f0; /* Light gray background */
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
 }
 
 /* Checkbox styles */
@@ -101,11 +131,13 @@ p2 {
 
 .checkbox-label {
     display: inline-block;
-    padding-left: 25px;
+    padding-left: 30px;
     padding-right: 30px;
-    padding-top: 0px;
     position: relative;
     cursor: pointer;
+    padding-top: 3px;
+    padding-bottom: 5px;
+    text-shadow: 0 0 black;
 }
 
 .checkbox-label:before {
@@ -128,18 +160,29 @@ p2 {
 
 /* Toolbar styles */
 .toolbar {
-    background-color: #d8d51b; /* Yellow color */
-    padding: 10px;
+    background-color: #d8b51b; /* Yellow color */
+    padding-top: 2vh;
+    padding-left: 1vw;
+    padding-right: 1vw;
+    text-align: center;
 }
 
 .toolbar button {
     background-color: #521313; /* Dark brown color */
     border: none;
-    color: white;
-    padding: 10px 20px;
-    margin-right: 10px;
+    color: rgb(255, 255, 255);
+    /*padding: 10px 20px;*/
+    margin-right: 0.23vw;
+    margin-left: 0.23vw;
+    padding-top: 2vh;
     cursor: pointer;
-    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+    border-radius: 2vh 2vh 0.5vh 0.5vh;
+    padding-inline: 4vw;
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 2.3vh;
 }
 
 .toolbar button:hover {
@@ -162,7 +205,7 @@ p2 {
     margin-bottom: 10px;
     padding: 5px;
     border-radius: 5px;
-    background-color: #d5d4cc;
+    background-color: #dddddd;
 }
 
 .object:hover {
@@ -179,6 +222,12 @@ p2 {
     height: 100%; /* Keep as is */
     overflow: auto; /* Keep as is */
     background-color: rgba(0, 0, 0, 0.4); /* Lighter overlay */
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
 }
 
 .modal-content {
@@ -188,7 +237,6 @@ p2 {
     border: 2px solid #d90000; /* Bold red border */
     width: 50%; /* Adjusted for a wider modal */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
-    font-family: 'Comic Sans MS', 'Arial', sans-serif; /* Playful font */
 }
 
 /* Adjust close button to be more Mario-themed */
@@ -247,13 +295,19 @@ p2 {
 }
 
 #savedlevelsDropdown {
-    background-color: #d7a67a;
+    background-color: #ad6f2f; /* Dark brown color */
     border: none;
-    color: white;
-    padding: 9px 20px;
+    color: #000000;
+    padding: 10px 20px;
     margin-right: 10px;
     cursor: pointer;
-    font-family: "Press Start 2P", cursive;
+    border-radius: inherit;
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgb(0 0 0);
+    text-shadow: 0 0 black;
 }
 
 #profile-Dropdown {
@@ -348,8 +402,6 @@ p2 {
     text-align: left;
     box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
 }
-
-
 
 
 

@@ -1133,7 +1133,7 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})</b><br>`
             var courseInfoHTML = ``;
             if (lastLoadedDownloads[data.levelid]) {
-                courseInfoHTML += `<b>Uploader</b>: ${lastLoadedDownloads[data.levelid].creator}<br>`
+                courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
                 const objectDiv = document.getElementById(`object-${data.levelid}`)
                 objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
             }
@@ -1149,3 +1149,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+
+// NPM SCRIPTS
