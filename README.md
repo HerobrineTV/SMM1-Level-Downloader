@@ -5,6 +5,8 @@ If u got any feature requests Dm me on Discord: nintendo_switch
 # SMM1-Level-Downloader
 A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection
 
+![Screenshot 2024-04-08 153652](https://github.com/HerobrineTV/SMM1-Level-Downloader/assets/70803896/d31ae25c-182e-429e-a553-c74e6e5c4195)
+
 # Features:
 - Download every existing SMM1 Level from the Archive
 - Download Multiple Levels at once
