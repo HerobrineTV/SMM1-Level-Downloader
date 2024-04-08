@@ -7,13 +7,16 @@
     "electron-packager": "^15.5.2"
   },
   "dependencies": {
-    "smm-course-viewer": "file:./smm-course-viewer",
     "axios": "^1.6.7",
-    "electron": "^29.0.1"
+    "electron": "^29.0.1",
+    "https-proxy-agent": "^7.0.4",
+    "smm-course-viewer": "file:./smm-course-viewer"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node_modules\\electron\\Electron.exe scripts/Main.js"
+    "start": "node_modules\\electron\\Electron.exe scripts/Main.js",
+    "start-home": "electron scripts/Main.js",
+    "build-electron": ""
   },
   "keywords": [],
   "author": "HerobrineTVv",

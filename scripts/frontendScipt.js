@@ -730,7 +730,10 @@ function runLevelDownloader(levelObj) {
 }
 
 function loadPage(page) {
-    saveSettings();
+    if (page != "../pages/settings.html") {
+        saveSettingsOnSettingsExit();
+    }
+    //saveSettings();
     fetch(page)
         .then(response => response.text())
         .then(data => {
@@ -910,7 +913,11 @@ function resetSettings() {
 }
 
 function saveSettings() {
-    window.api.send("toMain", {action:"save-settings", settings:SettingsData});
+    window.api.send("toMain", {action:"save-settings", settings:SettingsData, refreshProxies:false});
+}
+
+function saveSettingsOnSettingsExit() {
+    window.api.send("toMain", {action:"save-settings", settings:SettingsData, refreshProxies:true});
 }
 
 function loadSettings() {

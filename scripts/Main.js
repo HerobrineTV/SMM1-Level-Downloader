@@ -6,6 +6,7 @@ const { execSync } = require('child_process');
 const readline = require('readline');
 const smmCourseViewer = require('smm-course-viewer');
 const { EventEmitter } = require('events');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const queueEventEmitter = new EventEmitter();
 
@@ -15,7 +16,7 @@ let lastProcessedTimestamp = Date.now();
 let isProcessingQueue = false;
 let useProxy = false;
 let currentProxyIndex = 0;
-let proxies = null;
+let proxies = [];
 let proxy = null;
 
 const rl = readline.createInterface({
@@ -63,7 +64,9 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
         'Cache-Control': 'no-cache',
     };
     try {
-      const response = await axios.get(apiUrl, { headers, proxy: useProxy && proxy ? { host: proxy.host, port: proxy.port } : null });
+      const agent = useProxy && proxy ? new HttpsProxyAgent(`http://${proxy.host}:${proxy.port}`) : undefined;
+
+      const response = await axios.get(apiUrl, { headers, httpsAgent: agent });
       //console.log(`Fetched archive URL from Wayback Machine: ${JSON.stringify(response.data)}`);
       
       const archiveTimestamp = response.data.first_ts;
@@ -77,6 +80,7 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
       return archiveUrl;
     } catch (error) {
       console.error(error.message);
+      console.error(`http://${proxy.host}:${proxy.port}`)
       writeToLog('[Error] '+'Error fetching The Archive API! '+error.message);
       //console.error(error);
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
@@ -186,11 +190,13 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     };
   
     try {
+      const agent = useProxy && proxy ? new HttpsProxyAgent(`http://${proxy.host}:${proxy.port}`) : undefined;
+
       const response = await axios.get(fileUrl, {
         headers: headers,
         responseType: 'arraybuffer',
         decompress: true, 
-        proxy: useProxy && proxy ? { host: proxy.host, port: proxy.port } : null 
+        httpsAgent: agent
       });
       fs.writeFileSync(outputPath, response.data);
       //console.log(`File downloaded at: ${outputPath}`);
@@ -385,10 +391,9 @@ async function loadProxiesFromFile(filePath) {
               const [host, port] = line.split(':');
               return { host, port };
           }).filter(proxy => proxy !== null);
-          resolve(proxies);
           proxy = proxies[0];
           currentProxyIndex = 0;
-          return proxies;
+          resolve(proxies);
       });
   });
 }
@@ -434,7 +439,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
       mainWindow.loadFile('../pages/index.html');
     }
     checkNewRelease();
-    proxies = loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
+    loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
   }
 
   app.whenReady().then(() => {
@@ -708,7 +713,9 @@ function deleteCourseFile(levelid) {
         });
       }
     } else if (args.action === "save-settings") {
-      proxies = loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
+      if (args.refreshProxies == true) {
+        loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
+      }
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
