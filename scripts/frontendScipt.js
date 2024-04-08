@@ -144,6 +144,19 @@ function CEMUcheckBoxChanged() {
     }
 }
 
+function proxyCheckBoxChanged() {
+    if (SettingsData.useProxy == false) {
+        document.getElementById('optionalProxy').innerHTML = `<h2>Open Proxy File</h2><button onclick="openProxiesFile()">Open</button><br><br>`
+        setSetting("useProxy", true)
+    } else if (SettingsData.useProxy == true) {
+        document.getElementById('optionalProxy').innerHTML = ``
+        setSetting("useProxy", false)
+    } else {
+        document.getElementById('optionalProxy').innerHTML = ``
+        setSetting("useProxy", false)
+    }
+}
+
 function overwriteCheckBoxChanged() {
     if (SettingsData.BackupLevels == false) {
         setSetting("BackupLevels", true)
@@ -713,10 +726,11 @@ function runLevelDownloader(levelObj) {
     link = levelObj.url;
     levelID = levelObj.levelid;
     currentStep[levelObj.levelid] = 1;
-    window.api.send("toMain", {action:"download-level", url:link, levelID:levelID, levelObj:levelObj});
+    window.api.send("toMain", {action:"download-level", url:link, levelID:levelID, levelObj:levelObj, useProxy:SettingsData.useProxy});
 }
 
 function loadPage(page) {
+    saveSettings();
     fetch(page)
         .then(response => response.text())
         .then(data => {
@@ -736,6 +750,10 @@ function loadPageScripts(page) {
             window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
             document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
+        }
+        if (SettingsData.useProxy == true) {
+            document.getElementById("useProxy").checked = true;
+            document.getElementById('optionalProxy').innerHTML = `<h2>Open Proxy File</h2><button onclick="openProxiesFile()">Open</button><br><br>`
         }
         if (SettingsData.BackupLevels == true) {
             document.getElementById("autoBackupLevels").checked = true;
@@ -990,6 +1008,10 @@ function openURL(url) {
     window.api.send("toMain", {action:"openURL", url:url});
 }
 
+function openProxiesFile() {
+    window.api.send("toMain", {action:"openProxies"});
+}
+
 function deleteLevel(levelid) {
     window.api.send("toMain", {action:"delete-course-file", levelid:levelid});
 }
@@ -1033,6 +1055,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (data.action == "saveing") {
             //console.log(data.result)
         }
+        //TODO: add a mark if it is a mass download (A Download for every level in whole SMM1)
         if (data.action == "download-info") {
             if (data.resultType == "INIT") {
                 //console.log(data.resultType);

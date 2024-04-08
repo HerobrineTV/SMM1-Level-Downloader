@@ -13,6 +13,10 @@ const downloadQueue = [];
 let tasksProcessedThisMinute = 0;
 let lastProcessedTimestamp = Date.now();
 let isProcessingQueue = false;
+let useProxy = false;
+let currentProxyIndex = 0;
+let proxies = null;
+let proxy = null;
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -44,6 +48,10 @@ if (!fs.existsSync(outputDirectory)){
 const ashextractorExecutable = path.join(__dirname, '../SMMDownloader', 'ashextractor.exe');
 
 async function fetchArchiveUrl(originalUrl, levelObj) {
+    //console.log(proxies);  
+    //console.log(proxy);
+    //console.log(useProxy && proxy ? { host: proxy.host, port: proxy.port } : null);
+    //console.log("------------------------------------------");
     const encodedUrl = encodeURIComponent(originalUrl);
     const apiUrl = `https://web.archive.org/__wb/sparkline?output=json&url=${encodedUrl}&collection=web`;
   
@@ -55,20 +63,21 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
         'Cache-Control': 'no-cache',
     };
     try {
-      const response = await axios.get(apiUrl, { headers });
+      const response = await axios.get(apiUrl, { headers, proxy: useProxy && proxy ? { host: proxy.host, port: proxy.port } : null });
       //console.log(`Fetched archive URL from Wayback Machine: ${JSON.stringify(response.data)}`);
       
       const archiveTimestamp = response.data.first_ts;
       if (!archiveTimestamp) {
           console.error('No archived version found.');
-          writeToLog('[Error] '+'No archived Version on GitHub found!');
+          writeToLog('[Error] '+'No archived Version on The Archive found!');
           return null;
       }
     
       const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
       return archiveUrl;
     } catch (error) {
-      writeToLog('[Error] '+'Error fetching Github API! '+error.message);
+      console.error(error.message);
+      writeToLog('[Error] '+'Error fetching The Archive API! '+error.message);
       //console.error(error);
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
@@ -76,41 +85,59 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
 
 async function processQueue() {
   while (true) {
-    if (downloadQueue.length > 0) {
-      const currentTime = Date.now();
-      const timeSinceLastProcessed = currentTime - lastProcessedTimestamp;
-      
-      // Check if a new minute has started
-      if (timeSinceLastProcessed >= 60000) {
-        // Reset the counter and timestamp if a new minute has started
-        tasksProcessedThisMinute = 0;
-        lastProcessedTimestamp = currentTime;
-      }
+      if (downloadQueue.length > 0) {
+          const currentTime = Date.now();
+          const timeSinceLastProcessed = currentTime - lastProcessedTimestamp;
 
-      if (tasksProcessedThisMinute == 10) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
+          if (useProxy) {
+            //await loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
+          }
+
+          // Check if a new minute has started
+          if (timeSinceLastProcessed >= 60000) {
+              // Reset the counter and timestamp if a new minute has started
+              tasksProcessedThisMinute = 0;
+              lastProcessedTimestamp = currentTime;
+          }
+
+          if (tasksProcessedThisMinute == 10) {
+              if (!useProxy) {
+                  await new Promise(resolve => setTimeout(resolve, 10000));
+              }
+          }
+
+          // Check if the rate limit is reached
+          if (tasksProcessedThisMinute >= 20) {
+              // Calculate wait time until the next minute
+              if (!useProxy) {
+                  const waitTime = 120000 - timeSinceLastProcessed;
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+              } else {
+                  await switchProxy();
+              }
+              tasksProcessedThisMinute = 0; // Reset the counter after waiting
+              lastProcessedTimestamp = Date.now(); // Update last processed timestamp
+          }
+
+          // Process the next task in the queue
+          const task = downloadQueue.shift();
+          //console.log(task.levelID);
+          await processUrlWithDelay(task.url, task.levelID, task.levelObj);
+          tasksProcessedThisMinute++;
+
+      } else {
+          // Wait for a new task event before continuing the loop
+          await new Promise(resolve => queueEventEmitter.once('newTask', resolve));
       }
-      
-      // Check if the rate limit is reached
-      if (tasksProcessedThisMinute >= 20) {
-        // Calculate wait time until the next minute
-        const waitTime = 120000 - timeSinceLastProcessed;
-        //const waitTime = 60000;
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        tasksProcessedThisMinute = 0; // Reset the counter after waiting
-        lastProcessedTimestamp = Date.now(); // Update last processed timestamp
-      }
-      
-      // Process the next task in the queue
-      const task = downloadQueue.shift();
-      //console.log(task.levelID);
-      await processUrlWithDelay(task.url, task.levelID, task.levelObj);
-      tasksProcessedThisMinute++;
-      
-    } else {
-      // Wait for a new task event before continuing the loop
-      await new Promise(resolve => queueEventEmitter.once('newTask', resolve));
-    }
+  }
+}
+
+async function switchProxy() {
+  currentProxyIndex = (currentProxyIndex + 1) % proxies.length;
+  // If proxies are exhausted, reset index
+  proxy = proxies[currentProxyIndex];
+  if (currentProxyIndex === 0) {
+      console.log('All proxies exhausted. Resetting.');
   }
 }
 
@@ -159,10 +186,11 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     };
   
     try {
-      const response = await axios.get(fileUrl, { 
+      const response = await axios.get(fileUrl, {
         headers: headers,
         responseType: 'arraybuffer',
-        decompress: true 
+        decompress: true, 
+        proxy: useProxy && proxy ? { host: proxy.host, port: proxy.port } : null 
       });
       fs.writeFileSync(outputPath, response.data);
       //console.log(`File downloaded at: ${outputPath}`);
@@ -343,6 +371,27 @@ async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
   return null;
 }
 
+async function loadProxiesFromFile(filePath) {
+  return new Promise((resolve, reject) => {
+      fs.readFile(filePath, (error, data) => {
+          if (error) {
+              reject(new Error(`Failed to read file: ${error.message}`));
+              return;
+          }
+          
+          const lines = data.toString().split('\n').map(line => line.trim()).filter(line => line); // Filter out empty lines
+          const proxies = lines.map(line => {
+              if (line.startsWith('#')) return null;
+              const [host, port] = line.split(':');
+              return { host, port };
+          }).filter(proxy => proxy !== null);
+          resolve(proxies);
+          proxy = proxies[0];
+          currentProxyIndex = 0;
+          return proxies;
+      });
+  });
+}
 
 async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Trying to fetch archive URL from Wayback Machine."});
@@ -374,6 +423,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
       menu: false
     });
 
+    app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
     //mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
@@ -384,6 +434,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
       mainWindow.loadFile('../pages/index.html');
     }
     checkNewRelease();
+    proxies = loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
   }
 
   app.whenReady().then(() => {
@@ -415,6 +466,8 @@ async function processUrl(originalUrl, levelid, levelObj) {
           "APILink":"https://api.bobac-analytics.com/smm1",
           "lastSearchPhrase":"",
           "recentFoundLevels":[],
+          "amounttrue":0,
+          "useProxy":false,
           "searchParams":
           {
             "LevelName":false,
@@ -423,7 +476,6 @@ async function processUrl(originalUrl, levelid, levelObj) {
             "CreatorID":false,
             "SearchExact":false
           },
-          "amounttrue":0
         }
       );
     } else {
@@ -622,6 +674,7 @@ function deleteCourseFile(levelid) {
       openFolder(args.path);
     } else if (args.action === "download-level") {
       const outputDirectoryPath = outputDirectory + "/" + args.levelID;
+      useProxy = args.useProxy;
 
       if (folderExists(outputDirectoryPath)) {
         mainWindow.webContents.send("fromMain", {
@@ -655,6 +708,7 @@ function deleteCourseFile(levelid) {
         });
       }
     } else if (args.action === "save-settings") {
+      proxies = loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
@@ -662,6 +716,8 @@ function deleteCourseFile(levelid) {
       app.quit();
     } else if (args.action === "openURL") {
       shell.openExternal(args.url);
+    } else if (args.action === "openProxies") {
+      shell.openExternal(path.join(jsonDirectory,"/proxies.txt"));
     } else if (args.action === "checkIfAlreadyDownloaded") {
       if (folderExists(outputDirectory+"/"+args.levelID)) {
         mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID});
