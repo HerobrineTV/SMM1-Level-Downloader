@@ -5,6 +5,16 @@ If u got any feature requests Dm me on Discord: nintendo_switch
 # SMM1-Level-Downloader
 A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection
 
+# Features:
+- Download every existing SMM1 Level from the Archive
+- Download Multiple Levels at once
+- Have a course Preview for saved Courses
+- Have a WildCard Search for Levels (Takes sometimes a bit, but working)
+- Use Proxies to download Levels even faster (needs to be enabled in Settings)
+- Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
+- Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
+- Delete Levels (Currently Downloads only!!!)
+
 # Decompilation
 To Decompile the Levels I used ASH Extractor which is already In this Repository
 http://wiibrew.org/wiki/ASH_Extractor
