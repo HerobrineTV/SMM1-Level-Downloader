@@ -52,6 +52,10 @@ The Testing Levels come from 2 Archives which tell theyre Official Testing Level
 https://archive.org/details/smm1-game-dev
 https://archive.org/details/smm1staging
 
+# Can I add more Levels if I only got the File without Definition?
+Yes you can, just put it in this Folder: "SMMDownloader\Data\OfficialCourses\CourseFiles"
+And next time u press "Reset Official Courses", it will get loaded if it is a valid File (or if its a broken one it could crash xD)
+
 # Important Note
 U have to create the course Files ingame and not by creating a Folder, else they wont show up!
 All Copyright of the Used Images goes to Nintendo
