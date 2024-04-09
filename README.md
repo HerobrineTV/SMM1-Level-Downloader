@@ -21,6 +21,7 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 # Planned Features
 - Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
 - Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
+- REWORK OF UI
   
 # Decompilation
 To Decompile the Levels I used ASH Extractor which is already In this Repository
