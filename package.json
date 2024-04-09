@@ -16,7 +16,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node_modules\\electron\\Electron.exe scripts/Main.js",
     "start-home": "electron scripts/Main.js",
-    "build-electron": ""
+    "build-electron": "electron-packager . smm1-level-downloader --platform=win32 --arch=x64 --overwrite --out=../Build --executable-name=SMM1Downloader --icon=SMMDownloader/Data/Icon.png"
   },
   "keywords": [],
   "author": "HerobrineTVv",
