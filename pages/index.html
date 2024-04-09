@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Super Mario Maker 1 Level Downloader</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+
+    <body>
+        <div class="toolbar">
+            <button onclick="loadPage('../pages/main.html')">Search Courses</button>
+            <button onclick="loadPage(`../pages/savedLevels.html`)">Saved Courses</button>
+            <button onclick="loadPage('../pages/settings.html')">Settings</button>
+            <button onclick="loadPage(`../pages/info.html`)">About</button>
+            <button onclick="exitApp()">Exit</button>
+        </div>
+        <div id="values">
+            <div id="settings">
+                <div id="selectedFolderValue"></div>
+                <div id="useCEMUfolderValue"></div>
+            </div>
+            <div id="main">
+                <div id="searchLevelbyLevelName"></div>
+                <div id="searchLevelbyLevelID"></div>
+                <div id="searchLevelbyCreatorName"></div>
+                <div id="searchLevelbyCreatorID"></div>
+                <div id="searchLevelValue"></div>
+            </div>
+        </div>
+        <div id="main-content">
+            <h2>Welcome to the SMM1 Level Downloader</h2>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+        <script src="../node_modules/smm-course-viewer/lib/CourseObject.js"></script>
+        <script src="../node_modules/smm-course-viewer/lib/BlockObject.js"></script>
+        <script src="../node_modules/smm-course-viewer/lib/MonsterObject.js"></script>
+        <script src="../node_modules/smm-course-viewer/lib/Course.js"></script>
+        <script src="../node_modules/smm-course-viewer/draw/BlockDraw.js"></script>
+        <script src="../node_modules/smm-course-viewer/draw/MonsterDraw.js"></script>
+        <script src="../node_modules/smm-course-viewer/draw/Draw.js"></script>
+        <script src="../scripts/frontendScipt.js"></script>
+        <script>
+            loadSettings();
+        </script>
+    </body>
+
+</html>

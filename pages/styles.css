@@ -1,0 +1,479 @@
+/* Dropdown styles */
+#dropdown {
+    padding: 5px;
+    font-size: 16px;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
+}
+
+.modal-content {
+    background-color: #f0f0f0; /* Light gray background */
+    margin: 15% auto;
+    left: 5%;
+    width: 90%;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
+}
+
+.creator-info {
+    display: flex;
+    justify-content: space-between;
+}
+
+.creator {
+    margin-left: auto; /* Pushes the creator name to the right */
+}
+
+.close {
+    color: #d90000; /* Red color */
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Main content styles */
+body {
+    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+    margin: 0;
+    padding: 0;
+}
+
+h1, h2 {
+    color: #bb1919; /* Red color */
+    text-shadow: 2px 2px 4px rgb(255 0 0 / 50%); /* Text shadow */
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: "bolder";
+    font-style: normal;
+}
+
+button {
+    background-color: #ad6f2f; /* Dark brown color */
+    border: none;
+    color: #000000;
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    border-radius: inherit;
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgb(0 0 0);
+    text-shadow: 0 0 black;
+}
+/*
+div {
+    font-size: 20px;
+}
+*/
+p2 {
+    font-size: 20px;
+    color: green;
+}
+
+p {
+    text-shadow: 0 0 black;
+}
+
+#main-content {
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    max-width: 80%;
+    margin: 0 auto;
+    padding: 1%;
+    background-color: #f0f0f0; /* Light gray background */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
+}
+
+/* Checkbox styles */
+.checkbox-item {
+    margin-bottom: 10px;
+}
+
+.checkbox-item input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-label {
+    display: inline-block;
+    padding-left: 30px;
+    padding-right: 30px;
+    position: relative;
+    cursor: pointer;
+    padding-top: 3px;
+    padding-bottom: 5px;
+    text-shadow: 0 0 black;
+}
+
+.checkbox-label:before {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 3px;
+    position: absolute;
+    left: 0;
+    top: 2px;
+}
+
+.checkbox-item input[type="checkbox"]:checked + .checkbox-label:before {
+    background-color: #d8d51b; /* Yellow color */
+    border-color: #d8d51b;
+}
+
+/* Toolbar styles */
+.toolbar {
+    background-color: #d8b51b; /* Yellow color */
+    padding-top: 2vh;
+    padding-left: 1vw;
+    padding-right: 1vw;
+    text-align: center;
+}
+
+.toolbar button {
+    background-color: #521313; /* Dark brown color */
+    border: none;
+    color: rgb(255, 255, 255);
+    /*padding: 10px 20px;*/
+    margin-right: 0.23vw;
+    margin-left: 0.23vw;
+    padding-top: 2vh;
+    cursor: pointer;
+    border-radius: 2vh 2vh 0.5vh 0.5vh;
+    padding-inline: 4vw;
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 2.3vh;
+}
+
+.toolbar button:hover {
+    background-color: #777;
+    color: #fff;
+}
+
+/* Scrollable objects */
+#scrollable-objects {
+    max-height: 80vh; /* Adjust height as needed, using vh for viewport height */
+    overflow-y: auto; /* Enable vertical scroll */
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-top: 20px;
+}
+
+/* Object styles */
+.object {
+    cursor: pointer;
+    margin-bottom: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    background-color: #dddddd;
+}
+
+.object:hover {
+    background-color: #e0e0e0;
+}
+/* Base Modal Styles */
+.modal {
+    display: none; /* Keep as is */
+    position: fixed; /* Keep as is */
+    z-index: 1; /* Keep as is */
+    left: 0; /* Keep as is */
+    top: 0; /* Keep as is */
+    width: 100%; /* Keep as is */
+    height: 100%; /* Keep as is */
+    overflow: auto; /* Keep as is */
+    background-color: rgba(0, 0, 0, 0.4); /* Lighter overlay */
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
+}
+
+.modal-content {
+    background-color: #fdfdfd;
+    margin: 15% auto; /* Increased margin for more centered content */
+    padding: 20px;
+    border: 2px solid #d90000; /* Bold red border */
+    width: 50%; /* Adjusted for a wider modal */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5); /* More pronounced shadow */
+}
+
+/* Adjust close button to be more Mario-themed */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #d90000; /* Mario red */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Content and Typography Adjustments */
+.level-info h2 {
+    color: #d90000; /* Bright red */
+    font-size: 24px; /* Larger font size */
+}
+
+.level-details, .level-stats {
+    margin-bottom: 20px;
+    background-color: #fff; /* Added for contrast */
+    padding: 10px; /* Padding for visual space */
+    border-radius: 5px; /* Rounded corners */
+}
+
+.level-stats p, .level-details p {
+    font-size: 16px; /* Larger text for readability */
+}
+
+/* Button Adjustments for a Mario Feel */
+.play-btn, .download-btn {
+    background-color: #ff6b6b; /* Bright red */
+    border: 2px solid #555; /* Dark border for contrast */
+    font-weight: bold; /* Bold text */
+    text-transform: uppercase; /* UPPERCASE text for emphasis */
+}
+
+.play-btn:hover, .download-btn:hover {
+    background-color: #ff4747; /* Darker red on hover */
+}
+
+#course-dropdown {
+    text-align: center;
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
+#savedlevelsDropdown {
+    background-color: #ad6f2f; /* Dark brown color */
+    border: none;
+    color: #000000;
+    padding: 10px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    border-radius: inherit;
+
+    font-family: "Rubik Doodle Shadow", system-ui;
+    font-weight: 400;
+    font-style: normal;
+    box-shadow: 0 0 10px rgb(0 0 0);
+    text-shadow: 0 0 black;
+}
+
+#profile-Dropdown {
+    background-color: #d7a67a;
+    border: none;
+    color: white;
+    padding: 9px 20px;
+    margin-right: 10px;
+    cursor: pointer;
+    font-family: "Press Start 2P", cursive;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+    margin-top: 20px;
+}
+
+.profile img {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 14px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 5px;
+  }
+
+  body{margin: 0;padding: 0;}
+
+.courseInfoDisplay {
+    text-transform: capitalize;
+}
+
+.courseDrawMain {
+    width: 99%;
+    height: 235px;
+    overflow: auto;
+    background: none;
+    border: 3px solid #bd851f;
+}
+
+.courseDraw {
+    width: auto;
+    height: auto;
+    margin: 0; padding: 0;
+    background: none;
+    font-size: 0;
+}
+
+#downloadingBarProgress {
+    transition: width 0.5s ease-in-out;
+    height: 24px;
+    background-color: #4CAF50;
+  }
+
+.downloadingBarContainerClass {
+    margin-left: 2.5%;
+    margin-top: 2.5%;
+    margin-bottom: 2.5%;
+    width: 95%; 
+    display: none;
+    background-color:#ddd;
+  }
+  
+#download-actions {
+    display: flex; /* Enables flexbox layout */
+    justify-content: center; /* Horizontally centers the flex items */
+    align-items: center; /* Vertically centers the flex items */
+    gap: 10px; /* Optional: Adds space between the select and the button */
+}
+
+.actions {
+    display: flex;
+    justify-content: center; /* Horizontally center the #download-actions div */
+    align-items: center; /* Vertically center the #download-actions div */
+    flex-direction: column; /* Stack any child elements vertically */
+}
+
+#course-dropdown {
+    text-align: left;
+    box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+}
+
+
+
+
+
+
+
+.custom-select {
+    position: relative;
+    width: 200px; /* Adjust as necessary */
+    font-family: Arial, sans-serif;
+  }
+  
+  .selected-option {
+    padding: 10px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+  }
+  
+  .options-container {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    border: 1px solid #ccc;
+    z-index: 99;
+    background: white;
+    max-height: 150px; /* Adjust height as necessary */
+    overflow-y: auto;
+  }
+  
+  .option {
+    padding: 10px;
+    cursor: pointer;
+  }
+  
+  .option:hover {
+    background-color: #eee;
+  }
+  
+
+
+
+  .loading-container {
+    text-align: center;
+    margin-top: 50px;
+    margin-bottom: 30px;
+  }
+  
+  .bounce1, .bounce2, .bounce3 {
+    animation: bounce 1s infinite alternate ease-in-out;
+    width: 30px
+  }
+  
+  @keyframes bounce {
+    0% {
+      transform: translateY(0);
+    }
+    100% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  .bounce1 {
+    animation-delay: 0s;
+  }
+  
+  .bounce2 {
+    animation-delay: 0.2s;
+  }
+  
+  .bounce3 {
+    animation-delay: 0.4s;
+  }

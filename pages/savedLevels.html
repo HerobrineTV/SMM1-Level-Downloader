@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Super Mario Maker 1 Level Downloader</title>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+
+    <body>
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+              <span class="close">&times;</span>
+              <p id="levelInfo"></p>
+            </div>
+          </div>
+        <div id="main-content">
+            <h2>Select which Levels u want to See:</h2>
+            <select id="savedlevelsDropdown" onchange="loadSavedLevels()">
+                <option value="downloaded">Downloaded in Cache</option>
+                <option value="official-testing">Official Testing Courses</option>
+                <option value="backupped">Backupped in Cache</option>
+                <option value="cemu">Loaded to Cemu</option>
+            </select>
+            <button id="openfolderdownload-btn" onclick="openFolderDownloaded()">Open Folder</button>
+            <button id="openfolderofficial-btn" onclick="openFolderOfficial()" style="display: none;">Open Folder</button>
+            <button id="openfolderbackup-btn" onclick="openFolderBackupped()" style="display: none;">Open Folder</button>
+            <button id="openfoldercemu-btn" onclick="openFolderCemu()" style="display: none;">Open Folder</button>
+            <br>
+            <div id="searchSavedLevel-item" style="margin-top: 15px;">
+                <label class="searchLevel-label" for="searchSavedLevelText">Search: </label><input type="text" id="searchSavedLevelText" name="searchLevel-option" value="">
+            </div>
+            <div id="searchSavedLevel-button" style="border-radius: inherit;">
+                <br><button>Search Level</button><br><br>
+            </div>
+            <button id="multidelete-btn" onclick="changeDeleteMode()">Multi Delete</button>
+            <button id="cancelmultidelete-btn" onclick="changeDeleteMode()" style="display: none;">Cancel</button>
+            <button id="confirmmultidelete-btn" onclick="deleteSelected()" style="display: none;">Delete Selected</button>
+            <button id="selectallmultidelete-btn" onclick="selectAllToDelete()" style="display: none;">Select All</button>
+            <div id="scrollable-objects"></div>
+        </div>
+    </body>
+
+</html>
