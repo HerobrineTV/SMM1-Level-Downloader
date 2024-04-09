@@ -452,7 +452,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     });
 
     app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
-    //mainWindow.setMenu(null);
+    mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
