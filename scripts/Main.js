@@ -209,9 +209,14 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
   }
 
   function splitFile(filePath, levelid, levelObj) {
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:"Starting to split file"});
+    if (levelObj.info != "IGNORE") {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:"Starting to split file"});
+    }
     //console.log(`Splitting file: ${filePath}`);
     const data = fs.readFileSync(filePath);
+    //console.log(data)
+    //writeToLog(data)
+    //console.log(data)
 
     // ASH0 in hexadecimal byte representation
     const separator = Buffer.from([0x41, 0x53, 0x48, 0x30]); // ASCII for 'ASH0'
@@ -237,10 +242,16 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
         }
         lastIndex = endOfPart;
     }
-
     // Ensure we have a directory to save the parts
     //const partsDirectory = path.join(outputDirectory, `${path.basename(filePath, path.extname(filePath))}_Extracted`);
-    const partsDirectory = path.join(outputDirectory, `${levelid}`);
+    var partsDirectory
+
+    if (levelObj.info != "IGNORE") {
+      partsDirectory = path.join(outputDirectory, `${levelid}`);
+    } else {
+      partsDirectory = path.join(path.join(__dirname, "../SMMDownloader/Data/"+levelObj.coursefolder+"/CourseFiles"), `${levelid}`);
+    }
+
     if (!fs.existsSync(partsDirectory)) {
         fs.mkdirSync(partsDirectory, { recursive: true });
     }
@@ -251,8 +262,10 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
             const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
             fs.writeFileSync(partFilePath, part);
             //console.log(`Saved: ${partFilePath}`);
-            mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:`Saved part ${partNamesFirst[i]}`});
-        }
+            if (levelObj.info != "IGNORE") {
+              mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:`Saved part ${partNamesFirst[i]}`});
+            }       
+          }
     });
 
     decompressAndRenameFiles(partsDirectory, parts.length, partNamesFirst, levelObj);
@@ -284,10 +297,11 @@ function containsSpecificFile(directory, fileName) {
 
 // Function to decompress a file if a file using ASH Extractor http://wiibrew.org/wiki/ASH_Extractor
   async function decompressAndRenameFiles(partsDirectory, partCount, partNamesFirst, levelObj) {
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:`Starting Decompressing and Renaming Files`});
+    if (levelObj.info != "IGNORE") {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:`Starting Decompressing and Renaming Files`});
+    }
     for (let i = 0; i < partCount; i++) {
-        const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
-
+        var partFilePath = path.join(partsDirectory, partNamesFirst[i]);
         try {
             //console.log(`Decompressing: ${partFilePath}`);
             //console.log(ashextractorExecutable, partFilePath);
@@ -311,13 +325,22 @@ function containsSpecificFile(directory, fileName) {
             }
         }
     }
-    const partFilePath = path.join(outputDirectory, levelObj.levelid+'-00001');
-    fs.unlink(partFilePath, (err) => {
-      if (err) throw err;
-      //console.log('File deleted successfully!');
-    });
-    addLevelToJson(levelObj)
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
+    var partFilePath
+    if (levelObj.info != "IGNORE") {
+      partFilePath = path.join(outputDirectory, levelObj.levelid+'-00001');
+    } else {
+      partFilePath = path.join(path.join(__dirname, "../SMMDownloader/Data/"+levelObj.coursefolder+"/CourseFiles"), levelObj.levelid+'');
+    }
+    if (levelObj.info != "IGNORE") {
+      fs.unlink(partFilePath, (err) => {
+        if (err) throw err;
+        //console.log('File deleted successfully!: '+partFilePath);
+      });
+    }
+    if (levelObj.info != "IGNORE") {
+      addLevelToJson(levelObj)
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
+    }
     //console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
 }
 
@@ -609,6 +632,15 @@ function loadExistingCourses(cemupath, profileid) {
   }
 }
 
+function loadOfficialCourses(coursefolder) {
+  //const profileFolder = cemupath;
+  if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"))) {
+    courseViewerExtract(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"));
+  } else {
+    // mainWindow.webContents.send("fromMain", {action:"currentLevelsInOfficialDir",levels:null, problem:"Official Dir Missing"});
+  }
+}
+
 let operationQueue = Promise.resolve();
 
 function removeKeyFromJSONFileSafe(keyToRemove) {
@@ -672,6 +704,32 @@ function deleteCourseFile(levelid) {
     });
 }
 
+async function resetOfficialCoursefiles(coursefolder) {
+  // First Delete all Files inside of CourseFiles Folder
+  if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"))) {
+    fs.rm(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), { recursive: true, force: true }, (err) => {
+        if (err) throw err;
+        //console.log('File deleted successfully!');
+        fs.mkdirSync(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), { recursive: true });
+      });
+  } else {
+    fs.mkdirSync(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), { recursive: true });
+  }
+  await delay(1000);
+  // For each File in Folder OriginalFiles run splitFile(path, increasingnumber from 0, "IGNORE")
+  if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles"))) {
+    fs.readdir(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles"), (err, files) => {
+      if (err) throw err;
+      for (let i = 0; i < files.length; i++) {
+        //console.log(path.join(__dirname, "../SMMDownloader/Data/OfficialCourses/OriginalFiles", files[i]))
+        splitFile(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles", files[i]), i, {info : "IGNORE", levelid : i, coursefolder: coursefolder});
+      }
+    });
+  } else {
+    fs.mkdirSync(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles"), { recursive: true });
+  }
+}
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
@@ -719,6 +777,10 @@ function deleteCourseFile(levelid) {
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
+    } else if (args.action === "get-smm1-cached-officials-testing") {
+      loadOfficialCourses("OfficialCourses");
+    } else if (args.action === "reset-official-courses") {
+      resetOfficialCoursefiles("OfficialCourses");
     } else if (args.action === "exit-app") {
       app.quit();
     } else if (args.action === "openURL") {

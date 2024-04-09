@@ -849,12 +849,22 @@ function loadSavedLevels(){
         _backuppedFolderbtn.style.display = "none"
         _cemuFolderbtn.style.display = "none"
         loadDownloadedLevels()
+    } else if (savedLevelsDrop.value == "official-testing") {
+        deleteArray = [];
+        isDeleteMode = false;
+        isAllSelectedForDel = false;
+        _downloadedFolderbtn.style.display = "none"
+        _backuppedFolderbtn.style.display = "none"
+        _cemuFolderbtn.style.display = "none"
+        multideletebtn.style.display = "none"
+        loadOfficialLevels("testing")
     } else if (savedLevelsDrop.value == "cemu") {
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
         _downloadedFolderbtn.style.display = "none"
         _backuppedFolderbtn.style.display = "none"
+        multideletebtn.style.display = "none"
         if (SettingsData.CemuDirPath != "") {
             _cemuFolderbtn.style.display = ""
         }
@@ -984,6 +994,10 @@ function loadLevelsfromCEMU() {
     }
 }
 
+function loadOfficialLevels(kind) {
+    window.api.send("toMain", {action:"get-smm1-cached-officials-"+kind});
+}
+
 function loadBackuppedLevels() {
     const levellistObj = document.getElementById('scrollable-objects');
     if (SettingsData.BackupLevels == true) {
@@ -1031,6 +1045,10 @@ function checkIfLevelisAlreadyDownloaded(levelid){
 function changedProfileDropdown(){
     const currentProfile = document.getElementById('profile-Dropdown').value;
     setSetting("selectedProfile", currentProfile);
+}
+
+function resetOfficialCourses() {
+    window.api.send("toMain", {action:"reset-official-courses"});
 }
 
 function enqueueDrawTask(levelid, course, objects) {
@@ -1113,6 +1131,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (data.answer == true){
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions-button-1`)
+                const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
                 if (levelHTMLObj && currentHTMLPage == "main") {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
                     if (barcontainer) {
@@ -1121,7 +1140,7 @@ window.addEventListener('DOMContentLoaded', () => {
                         barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
                     }
                 }
-                if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
+                if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid) && (savedLevelsDrop.value == "downloaded" || savedLevelsDrop.value == "backupped")) {
                     levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
