@@ -24,6 +24,9 @@ var imageUrls = [
     "../pictures/smmdownloader/M1-noteblock.png",
     "../pictures/smmdownloader/M1-brickblock.png",
 ];
+const formatCodes = {
+    'Q': 8
+  };
 
 // Function to change image source after each bounce
 function changeImageSrc() {
@@ -198,7 +201,7 @@ function loadFileInWindow(levelObj) {
     // Modified part to include the custom dropdown instead of <select>
     levelInfo.innerHTML = `
     <div class="level-info">
-        <h2 id="levelName">${levelObj.name}</h2>
+        <h2 id="levelName">${levelObj.name} <br>${generateCode(levelObj.levelid)}</h2>
     </div>
     <div class="level-details">
         <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator || null}</span></p>
@@ -416,7 +419,7 @@ function addObjects(levels) {
         objectDiv.setAttribute('data-name', obj.name);
         if (obj.folder) {
             objectDiv.innerHTML = ``
-            +`<div id="courseName-${obj.levelid}">${obj.name}</div>`
+            +`<div id="courseName-${obj.levelid}">${obj.name} <br>${generateCode(obj.levelid)}</div>`
             +`<div></div>`
             +`<div id="courseDisplay-${obj.levelid}"></div>`
             +`<div id="courseInfoDisplay-${obj.levelid}"></div>`
@@ -425,7 +428,7 @@ function addObjects(levels) {
             +`<div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>`;
         } else {
             objectDiv.innerHTML = `
-            <div id="courseName-${obj.levelid}">${obj.name}</div>
+            <div id="courseName-${obj.levelid}">${obj.name} <br>${generateCode(obj.levelid)}</div>
             <div>Stars: ${obj.stars}</div>
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
@@ -546,6 +549,7 @@ function onScrollToBottom() {
     lazyLevelLoading(SettingsData.currentPage + 1);
 }
 
+// Following needs to be reworked, since it has to use the EntryID instead of the LevelID
 function findRandomLevel() {
     const ranID = getRandomInt(12000000)
 
@@ -605,6 +609,70 @@ function showRandomLevel() {
     //runLevelDownloader(SettingsData.recentFoundLevels[arrayIndex])
 }
 
+// Function to calculate the checksum
+function calculateChecksum(idno) {
+    const key = CryptoJS.MD5("9f2b4678");
+    const data = structPack('<Q', idno);
+    const hmac = CryptoJS.HmacMD5(data, key);
+    const checksum = hmac.toString(CryptoJS.enc.Hex).substring(2, 6).toUpperCase();
+    return checksum;
+}
+
+// Function to pack data into struct
+function structPack(format, value) {
+    let littleEndian = true;
+    let size = formatCodes[format];
+
+    // Ensure value is within bounds
+    if (value < 0 || value > Math.pow(2, 8 * size)) {
+        throw new Error('Value out of bounds for format ' + format);
+    }
+
+    // Pack the value into bytes
+    let packed = [];
+    for (let i = 0; i < size; i++) {
+        packed.push(value & 0xff);
+        value >>= 8;
+    }
+
+    // Reverse if littleEndian
+    if (littleEndian) {
+        packed.reverse();
+    }
+
+    // Convert to string of hex digits
+    return packed.map(b => {
+        let hex = b.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('').toUpperCase();
+}
+
+
+// Main function
+function generateCode(levelid) {
+    const idno = parseInt(levelid);
+    const checksum = calculateChecksum(idno);
+    let idstring = idno.toString(16).toUpperCase();
+    idstring = idstring.padStart(16, '0');
+    const code = checksum.substring(0, 4) + '-0000-' + idstring.substring(8, 12) + '-' + idstring.substring(12);
+    console.log(code);
+    return code;
+}
+
+function isOnlyNumbers(str) {
+    return /^[0-9]+$/.test(str);
+  }
+
+  function extractIdFromCode(code) {
+    // Assuming the code format: [checksum][0000][idstring]
+    const idstring = removeDashes(code).substring(8);
+    return parseInt(idstring, 16); // Parse the hexadecimal string to integer
+}
+
+function removeDashes(input) {
+    return input.replace(/-/g, ''); // Remove all dashes using regex
+}
+
 function lazyLevelLoading(page) {
     if (isloadingLevels == true) {return;}
     if (connerrorCooldown == true) {return;}
@@ -614,8 +682,18 @@ function lazyLevelLoading(page) {
     changeImageSrc()
     isloadingLevels = true
     SettingsData.currentPage = page;
+
+    var search = SettingsData.lastSearchPhrase;
+
+    if (SettingsData.searchParams.LevelID == true 
+        && !isOnlyNumbers(SettingsData.lastSearchPhrase) 
+        && SettingsData.searchParams.LevelName == false
+        && SettingsData.searchParams.CreatorName == false
+        && SettingsData.searchParams.CreatorID == false) {
+        search = extractIdFromCode(SettingsData.lastSearchPhrase)
+    }
     const loadingholder = document.getElementById("loadingholder").cloneNode(true);
-    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(SettingsData.lastSearchPhrase)}/${page}`
+    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(search)}/${page}`
     +`?coursename=${SettingsData.searchParams.LevelName == true? 1 : 0}`
     +`&courseid=${SettingsData.searchParams.LevelID == true? 1 : 0}`
     +`&creatorname=${SettingsData.searchParams.CreatorName == true? 1 : 0}`

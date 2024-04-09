@@ -1,4 +1,34 @@
 {
+  "6337515": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00006337515-00001?Expires=1624430995&Signature=tt4UgS1mWRvvQK1Rlg7wjflL7DmOZkscCB9h2T0NLGzrYYImd4hYt0vwvOa-Xj~BuetB297TidmznIKPOUZIccQ~AAHUnliV03ZwV-EQ5pPLfp5yFgoDm33XgC7q-MXzfAk5aUqRgIjZ6HbO7YxA9Oqe4OdRqUKKCLxaUK5Ka~ndF3njJpObaIv2k-mLsxW~024Uq8qBRjLvfdRuU9eKu6n~DCulQGGWAWpTaASwW9GbIsDzjqO~RDqx1SfDCKKSnaVQMYnwR8~Csqq8qrt1UAULO7CGFbkxQfWTLHG9DKBShCesimquAMwrcaGa~89h959MqsGpRdgd2mLGwn4cKw__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Bowser's Castle Ruins",
+    "creator": "LOLJEISTER",
+    "levelid": 6337515,
+    "creatorid": 1783499151,
+    "clears": 43,
+    "failures": 756,
+    "total_attempts": 799,
+    "clearrate": 0.05381727158948686,
+    "uploadTime": "2015-09-22T09:03:45.000Z",
+    "world_record_ms": 37827,
+    "world_record_holder_nnid": "sulac0",
+    "stars": 4
+  },
+  "26053994": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00026053994-00001?Expires=1624375440&Signature=b3ppz5Uhx3JHEPNPfKBq3bU3pBgF9WBvQEF2664cUG8zGoxWplumf6HnP3lLtgtGRc9ZlyYkm9LtOOAVEAOgwtBQcTn9TYgqlfmBtQthVkpm0EFuFok0w1xqWZcMlBiAjTlkPlLqRhNnItTT9E43StynL62aZkYyLMeaSxZgPgVP~sTCtVEufLi7Udb1Oam4zUPkS8fAO-YJzDslhIslOcD7G~0~mXsABaaP1ehfck5e2sRRxhEcti9nNm~yFY0HepL2kXUIfJ1fs26Pi0h-RARQNbyKlESfSoJ4Dei~wwGBrtBBVJtsPqahDR2nVOVGpjV8Gypiyqe-tlVOBRhERg__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "The Den Of Trials",
+    "creator": "LOLJEISTER",
+    "levelid": 26053994,
+    "creatorid": 1783499151,
+    "clears": 1,
+    "failures": 400,
+    "total_attempts": 401,
+    "clearrate": 0.0024937655860349127,
+    "uploadTime": "2016-01-13T21:20:48.000Z",
+    "world_record_ms": 152134,
+    "world_record_holder_nnid": "tiyoden",
+    "stars": 5
+  },
   "69466299": {
     "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00069466299-00001?Expires=1625261814&Signature=Lt0o3uPeuICCtpv9kHTaei-8SfymlOtEOTJolfuxuvuVRHkJ1LEpJY8VEvtrP9zuA329yHaJjd82WPwqWsMUzIDoIZi0pfHBvhLHxHTYD98xaizbmP2YsGAQx9ikDwH4Haw9HwvP~o9wWGh~0Gq3FgSZREc4yvst1ZepBhauAFSDfODIgYn1RZeCyy9h1lvTEMgvoq05vuMqogi4FsXohnlTfI9BZkUbqDqtT7sy3aT82gCxNCIay3--kHs1OzM9z5qFWKx3qg~Bk5eF9FjB5MaBe58tERUtPPttbKei3DtxhwozbcoxrocmrgCGVqZ-Joi2v11Sh9iBmJzAqboYew__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
     "name": "amibo test 2",
