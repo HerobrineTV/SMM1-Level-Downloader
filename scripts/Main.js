@@ -6,6 +6,7 @@ const { execSync } = require('child_process');
 const readline = require('readline');
 const smmCourseViewer = require('smm-course-viewer');
 const { EventEmitter } = require('events');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 const queueEventEmitter = new EventEmitter();
 
@@ -13,6 +14,10 @@ const downloadQueue = [];
 let tasksProcessedThisMinute = 0;
 let lastProcessedTimestamp = Date.now();
 let isProcessingQueue = false;
+let useProxy = false;
+let currentProxyIndex = 0;
+let proxies = [];
+let proxy = null;
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -26,7 +31,7 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
-const thisReleaseTag = "V2.0-Pre"
+const thisReleaseTag = "Alpha V1.0.0";
 
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
@@ -44,6 +49,10 @@ if (!fs.existsSync(outputDirectory)){
 const ashextractorExecutable = path.join(__dirname, '../SMMDownloader', 'ashextractor.exe');
 
 async function fetchArchiveUrl(originalUrl, levelObj) {
+    //console.log(proxies);  
+    //console.log(proxy);
+    //console.log(useProxy && proxy ? { host: proxy.host, port: proxy.port } : null);
+    //console.log("------------------------------------------");
     const encodedUrl = encodeURIComponent(originalUrl);
     const apiUrl = `https://web.archive.org/__wb/sparkline?output=json&url=${encodedUrl}&collection=web`;
   
@@ -55,20 +64,24 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
         'Cache-Control': 'no-cache',
     };
     try {
-      const response = await axios.get(apiUrl, { headers });
+      const agent = useProxy && proxy ? new HttpsProxyAgent(`http://${proxy.host}:${proxy.port}`) : undefined;
+
+      const response = await axios.get(apiUrl, { headers, httpsAgent: agent });
       //console.log(`Fetched archive URL from Wayback Machine: ${JSON.stringify(response.data)}`);
       
       const archiveTimestamp = response.data.first_ts;
       if (!archiveTimestamp) {
           console.error('No archived version found.');
-          writeToLog('[Error] '+'No archived Version on GitHub found!');
+          writeToLog('[Error] '+'No archived Version on The Archive found!');
           return null;
       }
     
       const archiveUrl = `https://web.archive.org/web/${archiveTimestamp}if_/${originalUrl}`;
       return archiveUrl;
     } catch (error) {
-      writeToLog('[Error] '+'Error fetching Github API! '+error.message);
+      console.error(error.message);
+      console.error(`http://${proxy.host}:${proxy.port}`)
+      writeToLog('[Error] '+'Error fetching The Archive API! '+error.message);
       //console.error(error);
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
@@ -76,41 +89,59 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
 
 async function processQueue() {
   while (true) {
-    if (downloadQueue.length > 0) {
-      const currentTime = Date.now();
-      const timeSinceLastProcessed = currentTime - lastProcessedTimestamp;
-      
-      // Check if a new minute has started
-      if (timeSinceLastProcessed >= 60000) {
-        // Reset the counter and timestamp if a new minute has started
-        tasksProcessedThisMinute = 0;
-        lastProcessedTimestamp = currentTime;
-      }
+      if (downloadQueue.length > 0) {
+          const currentTime = Date.now();
+          const timeSinceLastProcessed = currentTime - lastProcessedTimestamp;
 
-      if (tasksProcessedThisMinute == 10) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
+          if (useProxy) {
+            //await loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
+          }
+
+          // Check if a new minute has started
+          if (timeSinceLastProcessed >= 60000) {
+              // Reset the counter and timestamp if a new minute has started
+              tasksProcessedThisMinute = 0;
+              lastProcessedTimestamp = currentTime;
+          }
+
+          if (tasksProcessedThisMinute == 10) {
+              if (!useProxy) {
+                  await new Promise(resolve => setTimeout(resolve, 10000));
+              }
+          }
+
+          // Check if the rate limit is reached
+          if (tasksProcessedThisMinute >= 20) {
+              // Calculate wait time until the next minute
+              if (!useProxy) {
+                  const waitTime = 120000 - timeSinceLastProcessed;
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+              } else {
+                  await switchProxy();
+              }
+              tasksProcessedThisMinute = 0; // Reset the counter after waiting
+              lastProcessedTimestamp = Date.now(); // Update last processed timestamp
+          }
+
+          // Process the next task in the queue
+          const task = downloadQueue.shift();
+          //console.log(task.levelID);
+          await processUrlWithDelay(task.url, task.levelID, task.levelObj);
+          tasksProcessedThisMinute++;
+
+      } else {
+          // Wait for a new task event before continuing the loop
+          await new Promise(resolve => queueEventEmitter.once('newTask', resolve));
       }
-      
-      // Check if the rate limit is reached
-      if (tasksProcessedThisMinute >= 20) {
-        // Calculate wait time until the next minute
-        const waitTime = 120000 - timeSinceLastProcessed;
-        //const waitTime = 60000;
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        tasksProcessedThisMinute = 0; // Reset the counter after waiting
-        lastProcessedTimestamp = Date.now(); // Update last processed timestamp
-      }
-      
-      // Process the next task in the queue
-      const task = downloadQueue.shift();
-      //console.log(task.levelID);
-      await processUrlWithDelay(task.url, task.levelID, task.levelObj);
-      tasksProcessedThisMinute++;
-      
-    } else {
-      // Wait for a new task event before continuing the loop
-      await new Promise(resolve => queueEventEmitter.once('newTask', resolve));
-    }
+  }
+}
+
+async function switchProxy() {
+  currentProxyIndex = (currentProxyIndex + 1) % proxies.length;
+  // If proxies are exhausted, reset index
+  proxy = proxies[currentProxyIndex];
+  if (currentProxyIndex === 0) {
+      console.log('All proxies exhausted. Resetting.');
   }
 }
 
@@ -159,10 +190,13 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     };
   
     try {
-      const response = await axios.get(fileUrl, { 
+      const agent = useProxy && proxy ? new HttpsProxyAgent(`http://${proxy.host}:${proxy.port}`) : undefined;
+
+      const response = await axios.get(fileUrl, {
         headers: headers,
         responseType: 'arraybuffer',
-        decompress: true 
+        decompress: true, 
+        httpsAgent: agent
       });
       fs.writeFileSync(outputPath, response.data);
       //console.log(`File downloaded at: ${outputPath}`);
@@ -175,9 +209,14 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
   }
 
   function splitFile(filePath, levelid, levelObj) {
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:"Starting to split file"});
+    if (levelObj.info != "IGNORE") {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:"Starting to split file"});
+    }
     //console.log(`Splitting file: ${filePath}`);
     const data = fs.readFileSync(filePath);
+    //console.log(data)
+    //writeToLog(data)
+    //console.log(data)
 
     // ASH0 in hexadecimal byte representation
     const separator = Buffer.from([0x41, 0x53, 0x48, 0x30]); // ASCII for 'ASH0'
@@ -203,10 +242,16 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
         }
         lastIndex = endOfPart;
     }
-
     // Ensure we have a directory to save the parts
     //const partsDirectory = path.join(outputDirectory, `${path.basename(filePath, path.extname(filePath))}_Extracted`);
-    const partsDirectory = path.join(outputDirectory, `${levelid}`);
+    var partsDirectory
+
+    if (levelObj.info != "IGNORE") {
+      partsDirectory = path.join(outputDirectory, `${levelid}`);
+    } else {
+      partsDirectory = path.join(path.join(__dirname, "../SMMDownloader/Data/"+levelObj.coursefolder+"/CourseFiles"), `${levelid}`);
+    }
+
     if (!fs.existsSync(partsDirectory)) {
         fs.mkdirSync(partsDirectory, { recursive: true });
     }
@@ -217,8 +262,10 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
             const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
             fs.writeFileSync(partFilePath, part);
             //console.log(`Saved: ${partFilePath}`);
-            mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:`Saved part ${partNamesFirst[i]}`});
-        }
+            if (levelObj.info != "IGNORE") {
+              mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:`Saved part ${partNamesFirst[i]}`});
+            }       
+          }
     });
 
     decompressAndRenameFiles(partsDirectory, parts.length, partNamesFirst, levelObj);
@@ -250,10 +297,11 @@ function containsSpecificFile(directory, fileName) {
 
 // Function to decompress a file if a file using ASH Extractor http://wiibrew.org/wiki/ASH_Extractor
   async function decompressAndRenameFiles(partsDirectory, partCount, partNamesFirst, levelObj) {
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:`Starting Decompressing and Renaming Files`});
+    if (levelObj.info != "IGNORE") {
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:`Starting Decompressing and Renaming Files`});
+    }
     for (let i = 0; i < partCount; i++) {
-        const partFilePath = path.join(partsDirectory, partNamesFirst[i]);
-
+        var partFilePath = path.join(partsDirectory, partNamesFirst[i]);
         try {
             //console.log(`Decompressing: ${partFilePath}`);
             //console.log(ashextractorExecutable, partFilePath);
@@ -277,13 +325,22 @@ function containsSpecificFile(directory, fileName) {
             }
         }
     }
-    const partFilePath = path.join(outputDirectory, levelObj.levelid+'-00001');
-    fs.unlink(partFilePath, (err) => {
-      if (err) throw err;
-      //console.log('File deleted successfully!');
-    });
-    addLevelToJson(levelObj)
-    mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
+    var partFilePath
+    if (levelObj.info != "IGNORE") {
+      partFilePath = path.join(outputDirectory, levelObj.levelid+'-00001');
+    } else {
+      partFilePath = path.join(path.join(__dirname, "../SMMDownloader/Data/"+levelObj.coursefolder+"/CourseFiles"), levelObj.levelid+'');
+    }
+    if (levelObj.info != "IGNORE") {
+      fs.unlink(partFilePath, (err) => {
+        if (err) throw err;
+        //console.log('File deleted successfully!: '+partFilePath);
+      });
+    }
+    if (levelObj.info != "IGNORE") {
+      addLevelToJson(levelObj)
+      mainWindow.webContents.send("fromMain", {action:"download-info",resultType:"SUCCESS",step:"decompressAndRenameFiles",levelid:levelObj.levelid,info:"All files have been decompressed and Downloaded!"});
+    }
     //console.log(`All files have been decompressed, u find them here ${partsDirectory}`);
 }
 
@@ -343,6 +400,26 @@ async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
   return null;
 }
 
+async function loadProxiesFromFile(filePath) {
+  return new Promise((resolve, reject) => {
+      fs.readFile(filePath, (error, data) => {
+          if (error) {
+              reject(new Error(`Failed to read file: ${error.message}`));
+              return;
+          }
+          
+          const lines = data.toString().split('\n').map(line => line.trim()).filter(line => line); // Filter out empty lines
+          const proxies = lines.map(line => {
+              if (line.startsWith('#')) return null;
+              const [host, port] = line.split(':');
+              return { host, port };
+          }).filter(proxy => proxy !== null);
+          proxy = proxies[0];
+          currentProxyIndex = 0;
+          resolve(proxies);
+      });
+  });
+}
 
 async function processUrl(originalUrl, levelid, levelObj) {
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Trying to fetch archive URL from Wayback Machine."});
@@ -374,6 +451,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
       menu: false
     });
 
+    app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
     //mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
@@ -384,6 +462,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
       mainWindow.loadFile('../pages/index.html');
     }
     checkNewRelease();
+    loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
   }
 
   app.whenReady().then(() => {
@@ -415,6 +494,8 @@ async function processUrl(originalUrl, levelid, levelObj) {
           "APILink":"https://api.bobac-analytics.com/smm1",
           "lastSearchPhrase":"",
           "recentFoundLevels":[],
+          "amounttrue":0,
+          "useProxy":false,
           "searchParams":
           {
             "LevelName":false,
@@ -423,7 +504,6 @@ async function processUrl(originalUrl, levelid, levelObj) {
             "CreatorID":false,
             "SearchExact":false
           },
-          "amounttrue":0
         }
       );
     } else {
@@ -552,6 +632,15 @@ function loadExistingCourses(cemupath, profileid) {
   }
 }
 
+function loadOfficialCourses(coursefolder) {
+  //const profileFolder = cemupath;
+  if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"))) {
+    courseViewerExtract(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"));
+  } else {
+    // mainWindow.webContents.send("fromMain", {action:"currentLevelsInOfficialDir",levels:null, problem:"Official Dir Missing"});
+  }
+}
+
 let operationQueue = Promise.resolve();
 
 function removeKeyFromJSONFileSafe(keyToRemove) {
@@ -615,6 +704,32 @@ function deleteCourseFile(levelid) {
     });
 }
 
+async function resetOfficialCoursefiles(coursefolder) {
+  // First Delete all Files inside of CourseFiles Folder
+  if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"))) {
+    fs.rm(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), { recursive: true, force: true }, (err) => {
+        if (err) throw err;
+        //console.log('File deleted successfully!');
+        fs.mkdirSync(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), { recursive: true });
+      });
+  } else {
+    fs.mkdirSync(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), { recursive: true });
+  }
+  await delay(1000);
+  // For each File in Folder OriginalFiles run splitFile(path, increasingnumber from 0, "IGNORE")
+  if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles"))) {
+    fs.readdir(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles"), (err, files) => {
+      if (err) throw err;
+      for (let i = 0; i < files.length; i++) {
+        //console.log(path.join(__dirname, "../SMMDownloader/Data/OfficialCourses/OriginalFiles", files[i]))
+        splitFile(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles", files[i]), files[i], {info : "IGNORE", levelid : files[i], coursefolder: coursefolder});
+      }
+    });
+  } else {
+    fs.mkdirSync(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles"), { recursive: true });
+  }
+}
+
   ipcMain.on("toMain", (event, args) => {
     if (args.action === "select-folder") {
       selectFolder();
@@ -622,6 +737,7 @@ function deleteCourseFile(levelid) {
       openFolder(args.path);
     } else if (args.action === "download-level") {
       const outputDirectoryPath = outputDirectory + "/" + args.levelID;
+      useProxy = args.useProxy;
 
       if (folderExists(outputDirectoryPath)) {
         mainWindow.webContents.send("fromMain", {
@@ -655,13 +771,22 @@ function deleteCourseFile(levelid) {
         });
       }
     } else if (args.action === "save-settings") {
+      if (args.refreshProxies == true) {
+        loadProxiesFromFile(path.join(jsonDirectory,"/proxies.txt"));
+      }
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
+    } else if (args.action === "get-smm1-cached-officials-testing") {
+      loadOfficialCourses("OfficialCourses");
+    } else if (args.action === "reset-official-courses") {
+      resetOfficialCoursefiles("OfficialCourses");
     } else if (args.action === "exit-app") {
       app.quit();
     } else if (args.action === "openURL") {
       shell.openExternal(args.url);
+    } else if (args.action === "openProxies") {
+      shell.openExternal(path.join(jsonDirectory,"/proxies.txt"));
     } else if (args.action === "checkIfAlreadyDownloaded") {
       if (folderExists(outputDirectory+"/"+args.levelID)) {
         mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID});

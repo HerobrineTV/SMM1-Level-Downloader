@@ -24,6 +24,9 @@ var imageUrls = [
     "../pictures/smmdownloader/M1-noteblock.png",
     "../pictures/smmdownloader/M1-brickblock.png",
 ];
+const formatCodes = {
+    'Q': 8
+  };
 
 // Function to change image source after each bounce
 function changeImageSrc() {
@@ -144,6 +147,19 @@ function CEMUcheckBoxChanged() {
     }
 }
 
+function proxyCheckBoxChanged() {
+    if (SettingsData.useProxy == false) {
+        document.getElementById('optionalProxy').innerHTML = `<h2>Open Proxy File</h2><button onclick="openProxiesFile()">Open</button><br><br>`
+        setSetting("useProxy", true)
+    } else if (SettingsData.useProxy == true) {
+        document.getElementById('optionalProxy').innerHTML = ``
+        setSetting("useProxy", false)
+    } else {
+        document.getElementById('optionalProxy').innerHTML = ``
+        setSetting("useProxy", false)
+    }
+}
+
 function overwriteCheckBoxChanged() {
     if (SettingsData.BackupLevels == false) {
         setSetting("BackupLevels", true)
@@ -185,7 +201,7 @@ function loadFileInWindow(levelObj) {
     // Modified part to include the custom dropdown instead of <select>
     levelInfo.innerHTML = `
     <div class="level-info">
-        <h2 id="levelName">${levelObj.name}</h2>
+        <h2 id="levelName">${levelObj.name} <br>${generateCode(levelObj.levelid)}</h2>
     </div>
     <div class="level-details">
         <p><strong>Uploader:</strong> <span id="uploader">${levelObj.creator || null}</span></p>
@@ -212,6 +228,7 @@ function loadFileInWindow(levelObj) {
             </div>
             <div id="download-actions-button-1">
                 <button class="searchdownload-btn">Download</button>
+                <button class="openCourseFolder-btn">Open Folder</button>
             </div>
         </div>
     </div>
@@ -223,6 +240,13 @@ function loadFileInWindow(levelObj) {
     document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
     downloadingBar.updateWindow(levelObj.levelid);
 
+    if (currentHTMLPage === "savedLevels") {
+        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
+        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(levelObj.levelid)})
+    } else {
+        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+    }
+
     if (SettingsData.useCemuDir == false || SettingsData.CemuDirPath == "") {
         if (document.getElementsByClassName("selected-option")[0]) {
             document.getElementsByClassName("selected-option")[0].style.display = "none";
@@ -231,6 +255,49 @@ function loadFileInWindow(levelObj) {
         if (document.getElementsByClassName("selected-option")[0]) {
             document.getElementsByClassName("selected-option")[0].style.display = "block";   
         }
+    }
+
+    modal.style.display = "block";
+
+    const closeModal = () => {
+        modal.style.display = "none";
+    };
+
+    const span = document.getElementsByClassName("close")[0];
+
+    span.onclick = closeModal;
+
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    };
+}
+
+function loadFileInWindowLight(levelObj) {
+    const modal = document.getElementById("myModal");
+    const modalContent = document.querySelector(".modal-content");
+    const levelInfo = document.getElementById("levelInfo");
+
+    // Modified part to include the custom dropdown instead of <select>
+    levelInfo.innerHTML = `
+    <div class="level-info">
+        <h2 id="levelName">${levelObj.name}</h2>
+    </div>
+    <div class="level-details">
+        <p><strong>Level ID:</strong> <span id="levelID">${levelObj.levelid}</span></p>
+    </div>
+    <div class="actions">
+        <div id="download-actions" class="custom-select">
+            <div id="download-actions-button-1">
+                <button class="openCourseFolder-btn">Open Folder</button>
+            </div>
+        </div>
+    </div>
+    `;
+
+    if (currentHTMLPage === "savedLevels") {
+        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(levelObj.levelid)})
     }
 
     modal.style.display = "block";
@@ -380,11 +447,15 @@ function markLevelAsDeleting(levelObj){
 
 function objectClicked(levelid, levelObj) {
     //console.log("Clicked")
-    if (isDeleteMode == false) {
-        loadFileInWindow(levelObj);
+    if (levelObj.mode === "light") {
+        loadFileInWindowLight(levelObj);
     } else {
-        isAllSelectedForDel = false;
-        markLevelAsDeleting(levelObj);
+        if (isDeleteMode == false) {
+            loadFileInWindow(levelObj);
+        } else {
+            isAllSelectedForDel = false;
+            markLevelAsDeleting(levelObj);
+        }
     }
 }
 
@@ -403,7 +474,7 @@ function addObjects(levels) {
         objectDiv.setAttribute('data-name', obj.name);
         if (obj.folder) {
             objectDiv.innerHTML = ``
-            +`<div id="courseName-${obj.levelid}">${obj.name}</div>`
+            +`<div id="courseName-${obj.levelid}">${obj.name} <br>${generateCode(obj.levelid)}</div>`
             +`<div></div>`
             +`<div id="courseDisplay-${obj.levelid}"></div>`
             +`<div id="courseInfoDisplay-${obj.levelid}"></div>`
@@ -412,7 +483,7 @@ function addObjects(levels) {
             +`<div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>`;
         } else {
             objectDiv.innerHTML = `
-            <div id="courseName-${obj.levelid}">${obj.name}</div>
+            <div id="courseName-${obj.levelid}">${obj.name} <br>${generateCode(obj.levelid)}</div>
             <div>Stars: ${obj.stars}</div>
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
@@ -533,6 +604,7 @@ function onScrollToBottom() {
     lazyLevelLoading(SettingsData.currentPage + 1);
 }
 
+// Following needs to be reworked, since it has to use the EntryID instead of the LevelID
 function findRandomLevel() {
     const ranID = getRandomInt(12000000)
 
@@ -592,6 +664,70 @@ function showRandomLevel() {
     //runLevelDownloader(SettingsData.recentFoundLevels[arrayIndex])
 }
 
+// Function to calculate the checksum
+function calculateChecksum(idno) {
+    const key = CryptoJS.MD5("9f2b4678");
+    const data = structPack('<Q', idno);
+    const hmac = CryptoJS.HmacMD5(data, key);
+    const checksum = hmac.toString(CryptoJS.enc.Hex).substring(2, 6).toUpperCase();
+    return checksum;
+}
+
+// Function to pack data into struct
+function structPack(format, value) {
+    let littleEndian = true;
+    let size = formatCodes[format];
+
+    // Ensure value is within bounds
+    if (value < 0 || value > Math.pow(2, 8 * size)) {
+        throw new Error('Value out of bounds for format ' + format);
+    }
+
+    // Pack the value into bytes
+    let packed = [];
+    for (let i = 0; i < size; i++) {
+        packed.push(value & 0xff);
+        value >>= 8;
+    }
+
+    // Reverse if littleEndian
+    if (littleEndian) {
+        packed.reverse();
+    }
+
+    // Convert to string of hex digits
+    return packed.map(b => {
+        let hex = b.toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+    }).join('').toUpperCase();
+}
+
+
+// Main function
+function generateCode(levelid) {
+    const idno = parseInt(levelid);
+    const checksum = calculateChecksum(idno);
+    let idstring = idno.toString(16).toUpperCase();
+    idstring = idstring.padStart(16, '0');
+    const code = checksum.substring(0, 4) + '-0000-' + idstring.substring(8, 12) + '-' + idstring.substring(12);
+    //console.log(code);
+    return code;
+}
+
+function isOnlyNumbers(str) {
+    return /^[0-9]+$/.test(str);
+  }
+
+  function extractIdFromCode(code) {
+    // Assuming the code format: [checksum][0000][idstring]
+    const idstring = removeDashes(code).substring(8);
+    return parseInt(idstring, 16); // Parse the hexadecimal string to integer
+}
+
+function removeDashes(input) {
+    return input.replace(/-/g, ''); // Remove all dashes using regex
+}
+
 function lazyLevelLoading(page) {
     if (isloadingLevels == true) {return;}
     if (connerrorCooldown == true) {return;}
@@ -601,8 +737,18 @@ function lazyLevelLoading(page) {
     changeImageSrc()
     isloadingLevels = true
     SettingsData.currentPage = page;
+
+    var search = SettingsData.lastSearchPhrase;
+
+    if (SettingsData.searchParams.LevelID == true 
+        && !isOnlyNumbers(SettingsData.lastSearchPhrase) 
+        && SettingsData.searchParams.LevelName == false
+        && SettingsData.searchParams.CreatorName == false
+        && SettingsData.searchParams.CreatorID == false) {
+        search = extractIdFromCode(SettingsData.lastSearchPhrase)
+    }
     const loadingholder = document.getElementById("loadingholder").cloneNode(true);
-    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(SettingsData.lastSearchPhrase)}/${page}`
+    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(search)}/${page}`
     +`?coursename=${SettingsData.searchParams.LevelName == true? 1 : 0}`
     +`&courseid=${SettingsData.searchParams.LevelID == true? 1 : 0}`
     +`&creatorname=${SettingsData.searchParams.CreatorName == true? 1 : 0}`
@@ -713,10 +859,14 @@ function runLevelDownloader(levelObj) {
     link = levelObj.url;
     levelID = levelObj.levelid;
     currentStep[levelObj.levelid] = 1;
-    window.api.send("toMain", {action:"download-level", url:link, levelID:levelID, levelObj:levelObj});
+    window.api.send("toMain", {action:"download-level", url:link, levelID:levelID, levelObj:levelObj, useProxy:SettingsData.useProxy});
 }
 
 function loadPage(page) {
+    if (page != "../pages/settings.html") {
+        saveSettingsOnSettingsExit();
+    }
+    //saveSettings();
     fetch(page)
         .then(response => response.text())
         .then(data => {
@@ -736,6 +886,10 @@ function loadPageScripts(page) {
             window.api.send("toMain", {action:"get-smm1-profiles", path:SettingsData.CemuDirPath});
             document.getElementById("useCEMUfolder").checked = true;
             document.getElementById('optionalCEMU').innerHTML = `<h2>Select Cemu Folder:</h2><button onclick="selectFolder()">Select Folder</button><br><br>`
+        }
+        if (SettingsData.useProxy == true) {
+            document.getElementById("useProxy").checked = true;
+            document.getElementById('optionalProxy').innerHTML = `<h2>Open Proxy File</h2><button onclick="openProxiesFile()">Open</button><br><br>`
         }
         if (SettingsData.BackupLevels == true) {
             document.getElementById("autoBackupLevels").checked = true;
@@ -806,6 +960,7 @@ function loadSavedLevels(){
     const _downloadedFolderbtn = document.getElementById('openfolderdownload-btn')
     const _backuppedFolderbtn = document.getElementById('openfolderbackup-btn')
     const _cemuFolderbtn = document.getElementById('openfoldercemu-btn')
+    const _officialFolderbtn = document.getElementById('openfolderofficial-btn')
 
     if (multideletebtn) {
         multideletebtn.style.display = "";
@@ -827,13 +982,26 @@ function loadSavedLevels(){
         _downloadedFolderbtn.style.display = ""
         _backuppedFolderbtn.style.display = "none"
         _cemuFolderbtn.style.display = "none"
+        _officialFolderbtn.style.display = "none"
         loadDownloadedLevels()
+    } else if (savedLevelsDrop.value == "official-testing") {
+        deleteArray = [];
+        isDeleteMode = false;
+        isAllSelectedForDel = false;
+        _downloadedFolderbtn.style.display = "none"
+        _backuppedFolderbtn.style.display = "none"
+        _cemuFolderbtn.style.display = "none"
+        multideletebtn.style.display = "none"
+        _officialFolderbtn.style.display = ""
+        loadOfficialLevels("testing")
     } else if (savedLevelsDrop.value == "cemu") {
         deleteArray = [];
         isDeleteMode = false;
         isAllSelectedForDel = false;
         _downloadedFolderbtn.style.display = "none"
         _backuppedFolderbtn.style.display = "none"
+        multideletebtn.style.display = "none"
+        _officialFolderbtn.style.display = "none"
         if (SettingsData.CemuDirPath != "") {
             _cemuFolderbtn.style.display = ""
         }
@@ -845,8 +1013,15 @@ function loadSavedLevels(){
         _downloadedFolderbtn.style.display = "none"
         _backuppedFolderbtn.style.display = ""
         _cemuFolderbtn.style.display = "none"
+        _officialFolderbtn.style.display = "none"
         loadBackuppedLevels()
     }
+}
+
+function openFolderOfficial() {
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/OfficialCourses/CourseFiles"})
 }
 
 function openFolderDownloaded() {
@@ -863,6 +1038,24 @@ function openFolderBackupped() {
 
 function openFolderCemu() {
     window.api.send("toMain", {action:"open-folder", path:SettingsData.CemuDirPath})
+}
+
+function openCourseFolder(levelid) {
+    const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    if (savedLevelsDrop.value == "official-testing") {
+        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/OfficialCourses/CourseFiles/"+levelid})
+    }
+    if (savedLevelsDrop.value == "downloaded") {
+        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/DownloadCache/"+levelid})
+    }
+    if (savedLevelsDrop.value == "backupped") {
+        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/BackupCache/"+levelid})
+    }
+    if (savedLevelsDrop.value == "cemu") {
+        window.api.send("toMain", {action:"open-folder", path: SettingsData.CemuDirPath+"/"+levelid})
+    }
 }
 
 function increaseSettingvalue(val, amount) {
@@ -892,7 +1085,11 @@ function resetSettings() {
 }
 
 function saveSettings() {
-    window.api.send("toMain", {action:"save-settings", settings:SettingsData});
+    window.api.send("toMain", {action:"save-settings", settings:SettingsData, refreshProxies:false});
+}
+
+function saveSettingsOnSettingsExit() {
+    window.api.send("toMain", {action:"save-settings", settings:SettingsData, refreshProxies:true});
 }
 
 function loadSettings() {
@@ -959,6 +1156,10 @@ function loadLevelsfromCEMU() {
     }
 }
 
+function loadOfficialLevels(kind) {
+    window.api.send("toMain", {action:"get-smm1-cached-officials-"+kind});
+}
+
 function loadBackuppedLevels() {
     const levellistObj = document.getElementById('scrollable-objects');
     if (SettingsData.BackupLevels == true) {
@@ -990,6 +1191,10 @@ function openURL(url) {
     window.api.send("toMain", {action:"openURL", url:url});
 }
 
+function openProxiesFile() {
+    window.api.send("toMain", {action:"openProxies"});
+}
+
 function deleteLevel(levelid) {
     window.api.send("toMain", {action:"delete-course-file", levelid:levelid});
 }
@@ -1002,6 +1207,10 @@ function checkIfLevelisAlreadyDownloaded(levelid){
 function changedProfileDropdown(){
     const currentProfile = document.getElementById('profile-Dropdown').value;
     setSetting("selectedProfile", currentProfile);
+}
+
+function resetOfficialCourses() {
+    window.api.send("toMain", {action:"reset-official-courses"});
 }
 
 function enqueueDrawTask(levelid, course, objects) {
@@ -1033,6 +1242,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (data.action == "saveing") {
             //console.log(data.result)
         }
+        //TODO: add a mark if it is a mass download (A Download for every level in whole SMM1)
         if (data.action == "download-info") {
             if (data.resultType == "INIT") {
                 //console.log(data.resultType);
@@ -1054,7 +1264,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
                 //console.log("TEST")
                 if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
-                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
+                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button><button class="openCourseFolder-btn">Open Folder</button>`
+
+                    if (currentHTMLPage === "savedLevels") {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
+                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(data.levelid)})
+                    } else {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+                    }
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
                 //console.log("TEST2")
@@ -1083,6 +1300,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (data.answer == true){
                 const levelHTMLObj = document.getElementById(`object-${data.levelid}`)
                 const levelDisplayObjDownloadActions = document.getElementById(`download-actions-button-1`)
+                const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
                 if (levelHTMLObj && currentHTMLPage == "main") {
                     const barcontainer = document.getElementById(`downloadingBarContainer-${data.levelid}`);
                     if (barcontainer) {
@@ -1091,8 +1309,15 @@ window.addEventListener('DOMContentLoaded', () => {
                         barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
                     }
                 }
-                if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
-                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
+                if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid) && (savedLevelsDrop.value == "downloaded" || savedLevelsDrop.value == "backupped")) {
+                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button><button class="openCourseFolder-btn">Open Folder</button>`
+
+                    if (currentHTMLPage === "savedLevels") {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
+                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(data.levelid)})
+                    } else {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+                    }
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
             }
@@ -1130,12 +1355,15 @@ window.addEventListener('DOMContentLoaded', () => {
             displayLevels(data.levels);
         }
         if (data.action == "displayCourse") {
-            document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})</b><br>`
+            document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${data.levelid}</b><br>`
             var courseInfoHTML = ``;
             if (lastLoadedDownloads[data.levelid]) {
                 courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
                 const objectDiv = document.getElementById(`object-${data.levelid}`)
                 objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
+            } else {
+                const objectDiv = document.getElementById(`object-${data.levelid}`)
+                objectDiv.addEventListener('click', () => objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}));   
             }
 //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
 //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`

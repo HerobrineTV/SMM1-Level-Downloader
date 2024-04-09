@@ -4,18 +4,21 @@
 <body>
     <div id="main-content">
         <h1>Main Settings</h1>
-        <br><br>
+        <br>
         <div class="checkbox-item">
             <input type="checkbox" id="useCEMUfolder" name="cemu-option" onclick="CEMUcheckBoxChanged()">
-            <label class="checkbox-label" for="useCEMUfolder">Use Cemu Folder (Coming Soon)</label>
+            <label class="checkbox-label" for="useCEMUfolder">Use Cemu Folder (Coming Soon)<div id="optionalCEMU"></div></label>
             <br><br>
             <input type="checkbox" id="autoBackupLevels" name="backup-option" onclick="overwriteCheckBoxChanged()">
-            <label class="checkbox-label" for="autoBackupLevels">Backup Overwritten Levels</label>
+            <label class="checkbox-label" for="autoBackupLevels">Backup Cemu Overwritten Levels (Coming Soon)</label>
+            <br><br>
+            <input type="checkbox" id="useProxy" name="proxy-option" onclick="proxyCheckBoxChanged()">
+            <label class="checkbox-label" for="useProxy">Use Proxy for Downloads<div id="optionalProxy"></div></label>
         </div>
-        <div id="optionalCEMU"></div>
         <div id="selectedFolder"></div>
         <div id="profileselection"></div>
-        <h2>Reset Settings:</h2><button onclick="resetSettings()">Reset Settings</button><br><br>
+        <h2>Reset Official Courses:</h2><button onclick="resetOfficialCourses()">Reset</button><br><br>
+        <h2>Reset Settings:</h2><button onclick="resetSettings()">Reset</button><br><br>
         <br><br>
     </div>
 </body>

@@ -19,10 +19,12 @@
             <h2>Select which Levels u want to See:</h2>
             <select id="savedlevelsDropdown" onchange="loadSavedLevels()">
                 <option value="downloaded">Downloaded in Cache</option>
+                <option value="official-testing">Official Testing Courses</option>
                 <option value="backupped">Backupped in Cache</option>
                 <option value="cemu">Loaded to Cemu</option>
             </select>
             <button id="openfolderdownload-btn" onclick="openFolderDownloaded()">Open Folder</button>
+            <button id="openfolderofficial-btn" onclick="openFolderOfficial()" style="display: none;">Open Folder</button>
             <button id="openfolderbackup-btn" onclick="openFolderBackupped()" style="display: none;">Open Folder</button>
             <button id="openfoldercemu-btn" onclick="openFolderCemu()" style="display: none;">Open Folder</button>
             <br>
