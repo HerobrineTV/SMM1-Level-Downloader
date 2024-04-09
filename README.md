@@ -47,6 +47,11 @@ Now u can Press the "Open Folder" Button and u will see all your Saved Levels.
 
 Just copy the inside of the folders in your desired Mario Maker 1 Savefile in one of the course files.
 
+# Where do the Testing Levels Come from?
+The Testing Levels come from 2 Archives which tell theyre Official Testing Levels, but If thats true we will never know.
+https://archive.org/details/smm1-game-dev
+https://archive.org/details/smm1staging
+
 # Important Note
 U have to create the course Files ingame and not by creating a Folder, else they wont show up!
 All Copyright of the Used Images goes to Nintendo
