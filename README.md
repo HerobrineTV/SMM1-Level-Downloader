@@ -49,8 +49,10 @@ Just copy the inside of the folders in your desired Mario Maker 1 Savefile in on
 
 # Where do the Testing Levels Come from?
 The Testing Levels come from 2 Archives which tell theyre Official Testing Levels, but If thats true we will never know.
-https://archive.org/details/smm1-game-dev
-https://archive.org/details/smm1staging
+You will probably notice, that I didnt add all of them cuz theyre alot. So feel free to download New ones and add them to:
+"SMMDownloader\Data\OfficialCourses\CourseFiles"
+- https://archive.org/details/smm1-game-dev
+- https://archive.org/details/smm1staging
 
 # Can I add more Levels if I only got the File without Definition?
 Yes you can, just put it in this Folder: "SMMDownloader\Data\OfficialCourses\CourseFiles"
