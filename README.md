@@ -23,11 +23,6 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 To Decompile the Levels I used ASH Extractor which is already In this Repository
 http://wiibrew.org/wiki/ASH_Extractor
 
-# First time setup
-For the first time setup u need to install axios
-"npm install axios"
-Might be not needed anymore?? have to check that
-
 # Usage
 Just unzip the "SMM1Downloader.zip" from the releases Tab and start the "SMM1Downloader.exe"
 All should work from then.
