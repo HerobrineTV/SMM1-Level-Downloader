@@ -1221,7 +1221,12 @@ function enqueueDrawTask(levelid, course, objects) {
 
 function drawLevel(levelid, course, objects) {
     if (document.getElementById(`courseDisplay-${levelid}`)!= null) {
-        new Draw(`courseDisplay-${levelid}`, course, objects, "8"); //32 64
+        if (objects.length > 0) {
+            new Draw(`courseDisplay-${levelid}`, course, objects, "8"); //32 64
+        } else {
+            document.getElementById(`courseDisplay-${levelid}`).innerHTML = "<h1>Level with Filename: "+levelid+" Cant be displayed! Broken File!</h1>"
+            window.api.send("toMain", {action:"write-to-log", message:"[ERROR] The Level with Filename: "+levelid+" contained "+ objects.length + " Objects"});
+        }
     }
 }
 
@@ -1355,25 +1360,29 @@ window.addEventListener('DOMContentLoaded', () => {
             displayLevels(data.levels);
         }
         if (data.action == "displayCourse") {
-            document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${data.levelid}</b><br>`
-            var courseInfoHTML = ``;
-            if (lastLoadedDownloads[data.levelid]) {
-                courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
-                const objectDiv = document.getElementById(`object-${data.levelid}`)
-                objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
+            if (data.html == "<h1>Level Cant be displayed! Broken File!</h1>" || data.course == null || data.objects == null) {
+                document.getElementById(`courseName-${data.levelid}`).innerHTML = "<h1>Level with ID: "+data.levelid+" Cant be displayed! Broken File!</h1>"
             } else {
-                const objectDiv = document.getElementById(`object-${data.levelid}`)
-                objectDiv.addEventListener('click', () => objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}));   
+                document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${data.levelid}</b><br>`
+                var courseInfoHTML = ``;
+                if (lastLoadedDownloads[data.levelid]) {
+                    courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
+                    const objectDiv = document.getElementById(`object-${data.levelid}`)
+                    objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
+                } else {
+                    const objectDiv = document.getElementById(`object-${data.levelid}`)
+                    objectDiv.addEventListener('click', () => objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}));   
+                }
+    //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
+    //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
+    //            courseInfoHTML += `<b>Theme</b>: overworld (0)<br>`
+    //            courseInfoHTML += `<b>Game Time</b>: 500s<br>`
+    //            courseInfoHTML += `<b>Objects Count</b>: 115<br>`
+    //            courseInfoHTML += `<b>Scroll</b>: none (0) over 39 blocks<br>`
+                courseInfoHTML += `</div>`
+                enqueueDrawTask(data.levelid, data.course, data.objects)
+                document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
             }
-//            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
-//            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
-//            courseInfoHTML += `<b>Theme</b>: overworld (0)<br>`
-//            courseInfoHTML += `<b>Game Time</b>: 500s<br>`
-//            courseInfoHTML += `<b>Objects Count</b>: 115<br>`
-//            courseInfoHTML += `<b>Scroll</b>: none (0) over 39 blocks<br>`
-            courseInfoHTML += `</div>`
-            enqueueDrawTask(data.levelid, data.course, data.objects)
-            document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
         }
     });
 });
