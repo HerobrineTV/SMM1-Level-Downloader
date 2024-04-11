@@ -305,7 +305,7 @@ function containsSpecificFile(directory, fileName) {
         try {
             //console.log(`Decompressing: ${partFilePath}`);
             //console.log(ashextractorExecutable, partFilePath);
-            execSync(`"${ashextractorExecutable}" ${partFilePath}`);
+            execSync(`"${ashextractorExecutable}" "${partFilePath}"`);
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
               //console.log(`${partFilePath} has sucessfully been compressed!`);
               renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
@@ -317,7 +317,6 @@ function containsSpecificFile(directory, fileName) {
               });
             } else {
               writeToLog("[ERROR] "+partNamesFirst[i]+".arc"+" wasnt found!")
-              renameFileIfConditionMet(partsDirectory, partNamesFirst[i], partNames[i]);
             }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
@@ -332,7 +331,6 @@ function containsSpecificFile(directory, fileName) {
                 });
             } else {
               writeToLog("[ERROR] "+partNamesFirst[i]+".arc"+" wasnt found!")
-              renameFileIfConditionMet(partsDirectory, partNamesFirst[i], partNames[i]);
             }
         }
     }
