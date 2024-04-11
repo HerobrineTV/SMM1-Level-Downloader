@@ -17,7 +17,7 @@
     background-color: rgba(0, 0, 0, 0.4);
 
 
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -33,7 +33,7 @@
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -65,7 +65,7 @@
 
 /* Main content styles */
 body {
-    font-family: "Press Start 2P", cursive; /* Super Mario Maker font */
+    font-family: "Pixelify Sans", sans-serif;
     margin: 0;
     padding: 0;
 }
@@ -73,7 +73,7 @@ body {
 h1, h2 {
     color: #bb1919; /* Red color */
     text-shadow: 2px 2px 4px rgb(255 0 0 / 50%); /* Text shadow */
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: "bolder";
     font-style: normal;
 }
@@ -87,7 +87,7 @@ button {
     cursor: pointer;
     border-radius: inherit;
 
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     box-shadow: 0 0 10px rgb(0 0 0);
@@ -108,7 +108,7 @@ p {
 }
 
 #main-content {
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     max-width: 80%;
@@ -179,7 +179,7 @@ p {
     border-radius: 2vh 2vh 0.5vh 0.5vh;
     padding-inline: 4vw;
 
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     font-size: 2.3vh;
@@ -223,7 +223,7 @@ p {
     overflow: auto; /* Keep as is */
     background-color: rgba(0, 0, 0, 0.4); /* Lighter overlay */
 
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -291,7 +291,7 @@ p {
     padding: 9px 20px;
     margin-right: 10px;
     cursor: pointer;
-    font-family: "Press Start 2P", cursive;
+    font-family: "Pixelify Sans", sans-serif;
 }
 
 #savedlevelsDropdown {
@@ -303,7 +303,7 @@ p {
     cursor: pointer;
     border-radius: inherit;
 
-    font-family: "Rubik Doodle Shadow", system-ui;
+    font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
     box-shadow: 0 0 10px rgb(0 0 0);
@@ -317,7 +317,7 @@ p {
     padding: 9px 20px;
     margin-right: 10px;
     cursor: pointer;
-    font-family: "Press Start 2P", cursive;
+    font-family: "Pixelify Sans", sans-serif;
 }
 
 .profile {

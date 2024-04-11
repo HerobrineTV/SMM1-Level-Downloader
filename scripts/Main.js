@@ -578,48 +578,54 @@ function courseViewerExtract(coursepath){
     const sendQueue = []; // Queue to hold the send operations
 
     for (let i = 0; i < folders.length; i++) {
-      smmCourseViewer.read(path.join(coursepath, folders[i], "course_data.cdt"), function(err, course, objects) {
-        const levelObj = {
-          folder: folders[i],
-          course: course,
-          objects: objects,
-          levelid: folders[i],
-          html: smmCourseViewer.course.getHtml(),
-          name: ""
-        };
-        if (!err) {
-          levelObj.name = course['name'];
-        }
-        levels.push(levelObj);
-        counter++;
-
-        if (counter === folders.length) {
-          // When all levels are processed, send summary
-          mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
-
-          // Queue the send operations
-          levels.forEach((level, index) => {
-            sendQueue.push(() => mainWindow.webContents.send("fromMain", {
-              action: "displayCourse",
-              coursehtml: level.html,
-              levelid: level.levelid,
-              course: level.course,
-              objects: level.objects,
-              fileName: folders[index]
-            }));
-          });
-
-          // Process the queue at a rate of 10 messages per second
-          const sendInterval = setInterval(() => {
-            if (sendQueue.length > 0) {
-              const sendOperation = sendQueue.shift();
-              sendOperation();
-            } else {
-              clearInterval(sendInterval); // Stop the interval when all messages are sent
-            }
-          }, 1); // 1ms interval
-        }
-      });
+      try {
+        smmCourseViewer.read(path.join(coursepath, folders[i], "course_data.cdt"), function(err, course, objects) {
+          const levelObj = {
+            folder: folders[i],
+            course: course,
+            objects: objects,
+            levelid: folders[i],
+            html: smmCourseViewer.course.getHtml(),
+            name: ""
+          };
+          if (!err) {
+            levelObj.name = course['name'];
+          }
+          levels.push(levelObj);
+          counter++;
+  
+          if (counter === folders.length) {
+            // When all levels are processed, send summary
+            mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
+  
+            // Queue the send operations
+            levels.forEach((level, index) => {
+              sendQueue.push(() => mainWindow.webContents.send("fromMain", {
+                action: "displayCourse",
+                coursehtml: level.html,
+                levelid: level.levelid,
+                course: level.course,
+                objects: level.objects,
+                fileName: folders[index]
+              }));
+            });
+  
+            // Process the queue at a rate of 10 messages per second
+            const sendInterval = setInterval(() => {
+              if (sendQueue.length > 0) {
+                const sendOperation = sendQueue.shift();
+                sendOperation();
+              } else {
+                clearInterval(sendInterval); // Stop the interval when all messages are sent
+              }
+            }, 1); // 1ms interval
+          }
+        });
+      } catch (err) {
+        writeToLog('[Error] '+`Error reading the file: `+path.join(coursepath, folders[i], "course_data.cdt"));
+        console.error('Error reading the directory:', err);
+        return;
+      }
     }
   });
 }
