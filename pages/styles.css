@@ -125,6 +125,19 @@ label {
     text-shadow: 0 0 black;
 }
 
+#main-content-2 {
+    font-family: "Pixelify Sans", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    max-width: 80%;
+    margin: 0 auto;
+    padding: 1%;
+    background-color: #994220; /* Light gray background */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
+}
+
 input[type="text"] {
     background-color: bisque;
     border: none;

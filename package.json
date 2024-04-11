@@ -16,7 +16,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node_modules\\electron\\Electron.exe scripts/Main.js",
     "start-home": "electron scripts/Main.js",
-    "build-electron": "electron-packager . smm1-level-downloader --platform=win32 --arch=x64 --overwrite --out=../Build --executable-name='SMM1 Level Downloader' --icon=SMMDownloader/Data/Icon.png"
+    "dev-build-electron": "electron-packager . smm1-level-downloader-dev --platform=win32 --arch=x64 --overwrite --out=../Build-Dev --executable-name='SMM1LevelDownloader' --icon=SMMDownloader/Data/Icon.png",
+    "build-electron": "electron-packager . smm1-level-downloader --platform=win32 --arch=x64 --overwrite --out=../Build --executable-name='SMM1LevelDownloader' --icon=SMMDownloader/Data/Icon.png"
   },
   "keywords": [],
   "author": "HerobrineTVv",
