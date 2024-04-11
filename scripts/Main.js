@@ -310,18 +310,29 @@ function containsSpecificFile(directory, fileName) {
               //console.log(`${partFilePath} has sucessfully been compressed!`);
               renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
               fs.unlink(partFilePath, (err) => {
-                if (err) throw err;
-                //console.log('File deleted successfully!');
+                if (err) {
+                  writeToLog(err);
+                  throw err;
+                }
               });
+            } else {
+              writeToLog("[ERROR] "+partNamesFirst[i]+".arc"+" wasnt found!")
+              renameFileIfConditionMet(partsDirectory, partNamesFirst[i], partNames[i]);
             }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
                 //console.log(`${partFilePath} has sucessfully been compressed!`);
                 renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
                 fs.unlink(partFilePath, (err) => {
-                  if (err) throw err;
+                  if (err) {
+                    writeToLog(err);
+                    throw err;
+                  }
                   //console.log('File deleted successfully!');
                 });
+            } else {
+              writeToLog("[ERROR] "+partNamesFirst[i]+".arc"+" wasnt found!")
+              renameFileIfConditionMet(partsDirectory, partNamesFirst[i], partNames[i]);
             }
         }
     }
