@@ -31,7 +31,7 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
-const thisReleaseTag = "V2.0-Pre"
+const thisReleaseTag = "Alpha V1.0.0";
 
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
@@ -461,7 +461,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     });
 
     app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
-    //mainWindow.setMenu(null);
+    mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
@@ -731,7 +731,7 @@ async function resetOfficialCoursefiles(coursefolder) {
       if (err) throw err;
       for (let i = 0; i < files.length; i++) {
         //console.log(path.join(__dirname, "../SMMDownloader/Data/OfficialCourses/OriginalFiles", files[i]))
-        splitFile(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles", files[i]), i, {info : "IGNORE", levelid : i, coursefolder: coursefolder});
+        splitFile(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/OriginalFiles", files[i]), files[i], {info : "IGNORE", levelid : files[i], coursefolder: coursefolder});
       }
     });
   } else {

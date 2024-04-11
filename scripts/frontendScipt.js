@@ -228,6 +228,7 @@ function loadFileInWindow(levelObj) {
             </div>
             <div id="download-actions-button-1">
                 <button class="searchdownload-btn">Download</button>
+                <button class="openCourseFolder-btn">Open Folder</button>
             </div>
         </div>
     </div>
@@ -239,6 +240,13 @@ function loadFileInWindow(levelObj) {
     document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
     downloadingBar.updateWindow(levelObj.levelid);
 
+    if (currentHTMLPage === "savedLevels") {
+        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
+        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(levelObj.levelid)})
+    } else {
+        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+    }
+
     if (SettingsData.useCemuDir == false || SettingsData.CemuDirPath == "") {
         if (document.getElementsByClassName("selected-option")[0]) {
             document.getElementsByClassName("selected-option")[0].style.display = "none";
@@ -247,6 +255,49 @@ function loadFileInWindow(levelObj) {
         if (document.getElementsByClassName("selected-option")[0]) {
             document.getElementsByClassName("selected-option")[0].style.display = "block";   
         }
+    }
+
+    modal.style.display = "block";
+
+    const closeModal = () => {
+        modal.style.display = "none";
+    };
+
+    const span = document.getElementsByClassName("close")[0];
+
+    span.onclick = closeModal;
+
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    };
+}
+
+function loadFileInWindowLight(levelObj) {
+    const modal = document.getElementById("myModal");
+    const modalContent = document.querySelector(".modal-content");
+    const levelInfo = document.getElementById("levelInfo");
+
+    // Modified part to include the custom dropdown instead of <select>
+    levelInfo.innerHTML = `
+    <div class="level-info">
+        <h2 id="levelName">${levelObj.name}</h2>
+    </div>
+    <div class="level-details">
+        <p><strong>Level ID:</strong> <span id="levelID">${levelObj.levelid}</span></p>
+    </div>
+    <div class="actions">
+        <div id="download-actions" class="custom-select">
+            <div id="download-actions-button-1">
+                <button class="openCourseFolder-btn">Open Folder</button>
+            </div>
+        </div>
+    </div>
+    `;
+
+    if (currentHTMLPage === "savedLevels") {
+        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(levelObj.levelid)})
     }
 
     modal.style.display = "block";
@@ -396,11 +447,15 @@ function markLevelAsDeleting(levelObj){
 
 function objectClicked(levelid, levelObj) {
     //console.log("Clicked")
-    if (isDeleteMode == false) {
-        loadFileInWindow(levelObj);
+    if (levelObj.mode === "light") {
+        loadFileInWindowLight(levelObj);
     } else {
-        isAllSelectedForDel = false;
-        markLevelAsDeleting(levelObj);
+        if (isDeleteMode == false) {
+            loadFileInWindow(levelObj);
+        } else {
+            isAllSelectedForDel = false;
+            markLevelAsDeleting(levelObj);
+        }
     }
 }
 
@@ -655,7 +710,7 @@ function generateCode(levelid) {
     let idstring = idno.toString(16).toUpperCase();
     idstring = idstring.padStart(16, '0');
     const code = checksum.substring(0, 4) + '-0000-' + idstring.substring(8, 12) + '-' + idstring.substring(12);
-    console.log(code);
+    //console.log(code);
     return code;
 }
 
@@ -905,6 +960,7 @@ function loadSavedLevels(){
     const _downloadedFolderbtn = document.getElementById('openfolderdownload-btn')
     const _backuppedFolderbtn = document.getElementById('openfolderbackup-btn')
     const _cemuFolderbtn = document.getElementById('openfoldercemu-btn')
+    const _officialFolderbtn = document.getElementById('openfolderofficial-btn')
 
     if (multideletebtn) {
         multideletebtn.style.display = "";
@@ -926,6 +982,7 @@ function loadSavedLevels(){
         _downloadedFolderbtn.style.display = ""
         _backuppedFolderbtn.style.display = "none"
         _cemuFolderbtn.style.display = "none"
+        _officialFolderbtn.style.display = "none"
         loadDownloadedLevels()
     } else if (savedLevelsDrop.value == "official-testing") {
         deleteArray = [];
@@ -935,6 +992,7 @@ function loadSavedLevels(){
         _backuppedFolderbtn.style.display = "none"
         _cemuFolderbtn.style.display = "none"
         multideletebtn.style.display = "none"
+        _officialFolderbtn.style.display = ""
         loadOfficialLevels("testing")
     } else if (savedLevelsDrop.value == "cemu") {
         deleteArray = [];
@@ -943,6 +1001,7 @@ function loadSavedLevels(){
         _downloadedFolderbtn.style.display = "none"
         _backuppedFolderbtn.style.display = "none"
         multideletebtn.style.display = "none"
+        _officialFolderbtn.style.display = "none"
         if (SettingsData.CemuDirPath != "") {
             _cemuFolderbtn.style.display = ""
         }
@@ -954,8 +1013,15 @@ function loadSavedLevels(){
         _downloadedFolderbtn.style.display = "none"
         _backuppedFolderbtn.style.display = ""
         _cemuFolderbtn.style.display = "none"
+        _officialFolderbtn.style.display = "none"
         loadBackuppedLevels()
     }
+}
+
+function openFolderOfficial() {
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/OfficialCourses/CourseFiles"})
 }
 
 function openFolderDownloaded() {
@@ -972,6 +1038,24 @@ function openFolderBackupped() {
 
 function openFolderCemu() {
     window.api.send("toMain", {action:"open-folder", path:SettingsData.CemuDirPath})
+}
+
+function openCourseFolder(levelid) {
+    const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    if (savedLevelsDrop.value == "official-testing") {
+        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/OfficialCourses/CourseFiles/"+levelid})
+    }
+    if (savedLevelsDrop.value == "downloaded") {
+        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/DownloadCache/"+levelid})
+    }
+    if (savedLevelsDrop.value == "backupped") {
+        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/BackupCache/"+levelid})
+    }
+    if (savedLevelsDrop.value == "cemu") {
+        window.api.send("toMain", {action:"open-folder", path: SettingsData.CemuDirPath+"/"+levelid})
+    }
 }
 
 function increaseSettingvalue(val, amount) {
@@ -1180,7 +1264,14 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
                 //console.log("TEST")
                 if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid)) {
-                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
+                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button><button class="openCourseFolder-btn">Open Folder</button>`
+
+                    if (currentHTMLPage === "savedLevels") {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
+                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(data.levelid)})
+                    } else {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+                    }
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
                 //console.log("TEST2")
@@ -1219,7 +1310,14 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
                 }
                 if (levelDisplayObjDownloadActions && document.getElementById('levelID') && document.getElementById('levelID').innerHTML.includes(data.levelid) && (savedLevelsDrop.value == "downloaded" || savedLevelsDrop.value == "backupped")) {
-                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button>`
+                    levelDisplayObjDownloadActions.innerHTML = `<button class="deletedownload-btn">Delete</button><button class="openCourseFolder-btn">Open Folder</button>`
+
+                    if (currentHTMLPage === "savedLevels") {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
+                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(data.levelid)})
+                    } else {
+                        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+                    }
                     document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
                 }
             }
@@ -1257,12 +1355,15 @@ window.addEventListener('DOMContentLoaded', () => {
             displayLevels(data.levels);
         }
         if (data.action == "displayCourse") {
-            document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})</b><br>`
+            document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${data.levelid}</b><br>`
             var courseInfoHTML = ``;
             if (lastLoadedDownloads[data.levelid]) {
                 courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
                 const objectDiv = document.getElementById(`object-${data.levelid}`)
                 objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
+            } else {
+                const objectDiv = document.getElementById(`object-${data.levelid}`)
+                objectDiv.addEventListener('click', () => objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}));   
             }
 //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
 //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
