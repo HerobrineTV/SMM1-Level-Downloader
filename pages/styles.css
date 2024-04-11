@@ -68,10 +68,11 @@ body {
     font-family: "Pixelify Sans", sans-serif;
     margin: 0;
     padding: 0;
+    background-color: #af9f57;
 }
 
 h1, h2 {
-    color: #bb1919; /* Red color */
+    color: #e3e1d7; 
     text-shadow: 2px 2px 4px rgb(255 0 0 / 50%); /* Text shadow */
     font-family: "Pixelify Sans", sans-serif;
     font-weight: "bolder";
@@ -107,6 +108,10 @@ p {
     text-shadow: 0 0 black;
 }
 
+label {
+    color: #e3e1d7;
+}
+
 #main-content {
     font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
@@ -114,10 +119,16 @@ p {
     max-width: 80%;
     margin: 0 auto;
     padding: 1%;
-    background-color: #f0f0f0; /* Light gray background */
+    background-color: #994220; /* Light gray background */
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-shadow: 0 0 black;
+}
+
+input[type="text"] {
+    background-color: bisque;
+    border: none;
+    border-radius: 10px;
 }
 
 /* Checkbox styles */
@@ -205,11 +216,11 @@ p {
     margin-bottom: 10px;
     padding: 5px;
     border-radius: 5px;
-    background-color: #dddddd;
+    background-color: #4b1e0d5e;
 }
 
 .object:hover {
-    background-color: #e0e0e0;
+    background-color: #4b1e0d;
 }
 /* Base Modal Styles */
 .modal {
@@ -347,8 +358,6 @@ p {
     border-radius: 5px;
   }
 
-  body{margin: 0;padding: 0;}
-
 .courseInfoDisplay {
     text-transform: capitalize;
 }
@@ -477,3 +486,7 @@ p {
   .bounce3 {
     animation-delay: 0.4s;
   }
+
+  .object div {
+    color: antiquewhite;
+}
