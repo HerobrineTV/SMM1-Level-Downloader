@@ -1,1 +1,17 @@
-{}
+{
+  "69558347": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00069558347-00001?Expires=1625231052&Signature=tPVzHOY5GtpA48~Qdr9I8adXRzprGSedEofCPA4smPhSkAce966rwNe~~y9WRg5CaCQdqBRXhcTl6AXykRm3nopyKFwtyM9lrZWDHIvIp7D1grcNHP7aI5Nnh53OpaDn-pvOJ8lvDXkSJ4I6ivmOiDYINHJBOC2YYDI723FbNV4l8cfghojKFCS3AfLI0xtKkJvvI5W4iS55qHyt0UhzUn7GP4ZXCiGyeJB~UyBeOjXQmooxkgfgtlvNpGVjw1J~p7JO0t7vTrvPfo3jQ5wjQuu3~3if0UKbis4pcU0FFjSANRP5FYLoCXKZMHapbczLCCznY8TRJgUd22j~LXidMQ__&Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Test of the Shiekah Tribe",
+    "creator": "beatunia",
+    "levelid": 69558347,
+    "creatorid": 1798589750,
+    "clears": 0,
+    "failures": 22,
+    "total_attempts": 22,
+    "clearrate": 0,
+    "uploadTime": "2021-03-30T21:34:12.000Z",
+    "world_record_ms": null,
+    "world_record_holder_nnid": null,
+    "stars": 2
+  }
+}

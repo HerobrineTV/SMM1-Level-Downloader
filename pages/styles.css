@@ -503,3 +503,44 @@ input[type="text"] {
   .object div {
     color: antiquewhite;
 }
+
+
+
+
+
+.hidden {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateX(-100%);
+    transition: all 1.5s;
+}
+
+@media(prefers-reduced-motion) {
+    .hidden {
+        transition: none;
+    }
+}
+
+.show {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateX(0);
+}
+
+.notification {
+    position: fixed;
+    bottom: 0vh;
+    left: 10vw;
+    max-width: 60vw;
+    transform: translateX(-0%);
+    background-color: #f0f0f0;
+    padding: 1vh 11vw;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: none;
+  }
+  
+  .notification.show {
+    display: block;
+  }

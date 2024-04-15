@@ -5,8 +5,8 @@ const {
 
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
-contextBridge.exposeInMainWorld(
-    "api", {
+document.addEventListener('DOMContentLoaded', () => {
+    contextBridge.exposeInMainWorld("api", {
         send: (channel, data) => {
             // whitelist channels
             let validChannels = ["toMain"];
@@ -21,5 +21,5 @@ contextBridge.exposeInMainWorld(
                 ipcRenderer.on(channel, (event, ...args) => func(...args));
             }
         }
-    }
-);
+    });
+});

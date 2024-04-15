@@ -160,6 +160,26 @@ function proxyCheckBoxChanged() {
     }
 }
 
+function searchFadeInChanged() {
+    if (SettingsData.fadeInAnim.levelSearch == false) {
+        setSubSetting("fadeInAnim", "levelSearch", true)
+    } else if (SettingsData.fadeInAnim.levelSearch == true) {
+        setSubSetting("fadeInAnim", "levelSearch", false)
+    } else {
+        setSubSetting("fadeInAnim", "levelSearch", false)
+    }
+}
+
+function searchDownloadedInChanged() {
+    if (SettingsData.fadeInAnim.downloadedLevels == false) {
+        setSubSetting("fadeInAnim", "downloadedLevels", true)
+    } else if (SettingsData.fadeInAnim.downloadedLevels == true) {
+        setSubSetting("fadeInAnim", "downloadedLevels", false)
+    } else {
+        setSubSetting("fadeInAnim", "downloadedLevels", false)
+    }
+}
+
 function overwriteCheckBoxChanged() {
     if (SettingsData.BackupLevels == false) {
         setSetting("BackupLevels", true)
@@ -471,6 +491,7 @@ function addObjects(levels) {
         objectDiv.id = `object-${obj.levelid}`;
         objectDiv.classList.add('object');
         objectDiv.classList.add('searchable');
+        objectDiv.classList.add('hidden')
         objectDiv.setAttribute('data-name', obj.name);
         if (obj.folder) {
             objectDiv.innerHTML = ``
@@ -894,6 +915,12 @@ function loadPageScripts(page) {
         if (SettingsData.BackupLevels == true) {
             document.getElementById("autoBackupLevels").checked = true;
         }
+        if (SettingsData.fadeInAnim.levelSearch == true) {
+            document.getElementById("useSearchFadeIn").checked = true;
+        }
+        if (SettingsData.fadeInAnim.downloadedLevels == true) {
+            document.getElementById("useDownloadedFadeIn").checked = true;
+        }
     } else if (page == "../pages/main.html") {
         deleteArray = [];
         isDeleteMode = false;
@@ -1230,6 +1257,42 @@ function drawLevel(levelid, course, objects) {
     }
 }
 
+
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+        //console.log(entry)
+        if (entry.isIntersecting) {
+            entry.target.classList.add('show');
+        } else {
+            entry.target.classList.remove('show');
+        }
+    });
+});
+
+function observeNewElements() {
+    const elements = document.querySelectorAll('.hidden');
+    elements.forEach((element) => {
+        if ((currentHTMLPage == "savedLevels" && SettingsData.fadeInAnim.downloadedLevels == true) || (currentHTMLPage == "main" && SettingsData.fadeInAnim.levelSearch == true)) {
+            observer.observe(element);
+        } else {
+            element.classList.remove('hidden')
+        }
+    });
+}
+
+const mutationObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            observeNewElements();
+        }
+    });
+});
+
+mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+
 setInterval(() => {
     if (drawQueue.length > 0) {
         const tasksToDraw = drawQueue.splice(0, 10); // Get up to 10 tasks to draw
@@ -1246,6 +1309,15 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (data.action == "saveing") {
             //console.log(data.result)
+        }
+        if (data.action == "update-info") {
+            console.log("displaying")
+            const notification = document.getElementById('notification');
+            notification.innerHTML = `A new Update is available! New Version: ${data.foundVersion}<button style="margin-left: 1vw" onclick="openURL('${data.url}')">Update Now!</button>`
+            notification.classList.add('show');
+            setTimeout(() => {
+              notification.classList.remove('show');
+            }, 10000);
         }
         //TODO: add a mark if it is a mass download (A Download for every level in whole SMM1)
         if (data.action == "download-info") {
@@ -1386,6 +1458,3 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
-
-
-// NPM SCRIPTS

@@ -31,7 +31,7 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
-const thisReleaseTag = "Alpha V1.0.0";
+const thisReleaseTag = "Alpha-V1.0.1";
 
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
@@ -154,12 +154,22 @@ async function checkNewRelease() {
   const repo = 'HerobrineTV/SMM1-Level-Downloader'; // Replace with your GitHub repo
   const url = `https://api.github.com/repos/${repo}/releases/latest`;
 
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
+  await new Promise(resolve => setTimeout(resolve, 5000));
 
-    if (!response.ok) {
+  try {
+    const response = await axios.get(url);
+    //const data = await response.json();
+    console.log(response.data)
+    const data = response.data
+
+    if (response.statusText != "OK") {
       throw new Error(`GitHub API error: ${data.message}`);
+    } else {
+      if (data.tag_name != thisReleaseTag) {
+        //console.log(response)
+        //console.log("Version missmatch: "+response.tag_name)
+        mainWindow.webContents.send("fromMain", {action:"update-info",resultType:"version-missmatch",currentVersion:thisReleaseTag,foundVersion:data.tag_name,url:data.html_url});
+      }
     }
 
     //console.log('Latest release tag:', data.tag_name);
@@ -167,6 +177,7 @@ async function checkNewRelease() {
     // You can further process the data as needed, for example, compare it with your local version
     return data;
   } catch (error) {
+    writeToLog(error)
     writeToLog('[ERROR] '+'Failed to fetch the latest release!');
     console.error('Failed to fetch the latest release!');
   }
@@ -461,7 +472,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     });
 
     app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
-    mainWindow.setMenu(null);
+    //mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
@@ -513,6 +524,11 @@ async function processUrl(originalUrl, levelid, levelObj) {
             "CreatorID":false,
             "SearchExact":false
           },
+          "fadeInAnim":
+          {
+            "levelSearch":false,
+            "downloadedLevels":false
+          }
         }
       );
     } else {
