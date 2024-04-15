@@ -14,6 +14,7 @@ var isAllSelectedForDel = false;
 let deleteArray = [];
 var isloadingLevels = false;
 var connerrorCooldown = false;
+var subAreaClicked = false;
 var imageUrls = [
     "../pictures/smmdownloader/WU-groundblock.png", 
     "../pictures/smmdownloader/WU-questionmarkblock.png", 
@@ -436,7 +437,7 @@ function changeDeleteMode() {
             selectallbtn.style.display = "none";
         }
         if (scrollFrame) {
-            scrollFrame.style.borderColor = "rgb(204, 204, 204)";
+            scrollFrame.style.borderColor = "";
         }
     }
 }
@@ -467,16 +468,55 @@ function markLevelAsDeleting(levelObj){
 
 function objectClicked(levelid, levelObj) {
     //console.log("Clicked")
-    if (levelObj.mode === "light") {
-        loadFileInWindowLight(levelObj);
-    } else {
-        if (isDeleteMode == false) {
-            loadFileInWindow(levelObj);
+    if (!subAreaClicked) {
+        if (levelObj.mode === "light") {
+            loadFileInWindowLight(levelObj);
         } else {
-            isAllSelectedForDel = false;
-            markLevelAsDeleting(levelObj);
+            if (isDeleteMode == false) {
+                loadFileInWindow(levelObj);
+            } else {
+                isAllSelectedForDel = false;
+                markLevelAsDeleting(levelObj);
+            }
         }
     }
+}
+
+function subAreaBtnClicked(levelid) {
+    const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
+    const objectDiv = document.getElementById(`object-${levelid}`);
+    const btn = document.getElementById(`button-${levelid}`);
+    var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    subAreaClicked = true;
+    var path = "";
+    var filename = "";
+    console.log("Clicked")
+
+    if (savedLevelsDrop.value == "downloaded") {
+        path = "../SMMDownloader/Data/DownloadCache"
+    } else if (savedLevelsDrop.value == "official-testing") {
+        path = "../SMMDownloader/Data/OfficialCourses/CourseFiles"
+    } else if (savedLevelsDrop.value == "cemu") {
+        //path = SettingsData.CemuDirPath;
+    } else if (savedLevelsDrop.value == "backupped") {
+        path = "../SMMDownloader/Data/BackupCache";
+    }
+    if (objectDiv.getAttribute('current-layer') == "overworld") {
+        filename = "course_data_sub.cdt"
+        btn.innerText = "Switch to Overworld";
+        objectDiv.setAttribute('current-layer', "underworld");
+    } else {
+        filename = "course_data.cdt"
+        btn.innerText = "Switch to Sub Area";
+        objectDiv.setAttribute('current-layer', "overworld");
+    }
+    //console.log(path)
+    window.api.send("toMain", {action:"loadSubArea", folderpath:path, levelid:levelid, filename:filename});
+
+    setTimeout(() => {
+        subAreaClicked = false;
+      }, 100);
 }
 
 function addObjects(levels) {
@@ -493,8 +533,10 @@ function addObjects(levels) {
         objectDiv.classList.add('searchable');
         objectDiv.classList.add('hidden')
         objectDiv.setAttribute('data-name', obj.name);
+        objectDiv.setAttribute('current-layer', "overworld");
+        
         if (obj.folder) {
-            objectDiv.innerHTML = ``
+            objectDiv.innerHTML = `<button id="button-${obj.levelid}" onclick="subAreaBtnClicked('${obj.levelid}')">Switch to Sub Area</button>`
             +`<div id="courseName-${obj.levelid}">${obj.name} <br>${generateCode(obj.levelid)}</div>`
             +`<div></div>`
             +`<div id="courseDisplay-${obj.levelid}"></div>`
@@ -512,6 +554,12 @@ function addObjects(levels) {
             <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
             `;
             objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
+            objectDiv.addEventListener("wheel", function(event) {
+                if (event.deltaY !== 0) {
+                    event.preventDefault();
+                    scrollableElement.scrollLeft += event.deltaY;
+                }
+            });
         }
         objectsContainer.appendChild(objectDiv);
     });
@@ -1206,6 +1254,10 @@ function loadBackuppedLevels() {
     }
 }
 
+function viewChangelog() {
+    // SOON
+}
+
 function displayLevels(levels) {
     addObjects(levels);
 }
@@ -1237,6 +1289,7 @@ function changedProfileDropdown(){
 }
 
 function resetOfficialCourses() {
+    displayNotification(`Resetting official Courses!`, 3000)
     window.api.send("toMain", {action:"reset-official-courses"});
 }
 
@@ -1255,6 +1308,15 @@ function drawLevel(levelid, course, objects) {
             window.api.send("toMain", {action:"write-to-log", message:"[ERROR] The Level with Filename: "+levelid+" contained "+ objects.length + " Objects"});
         }
     }
+}
+
+function displayNotification(html, displaytime) {
+    const notification = document.getElementById('notification');
+    notification.innerHTML = html
+    notification.classList.add('show');
+    setTimeout(() => {
+      notification.classList.remove('show');
+    }, displaytime);
 }
 
 
@@ -1311,13 +1373,7 @@ window.addEventListener('DOMContentLoaded', () => {
             //console.log(data.result)
         }
         if (data.action == "update-info") {
-            console.log("displaying")
-            const notification = document.getElementById('notification');
-            notification.innerHTML = `A new Update is available! New Version: ${data.foundVersion}<button style="margin-left: 1vw" onclick="openURL('${data.url}')">Update Now!</button>`
-            notification.classList.add('show');
-            setTimeout(() => {
-              notification.classList.remove('show');
-            }, 10000);
+            displayNotification(`A new Update is available! New Version: ${data.foundVersion}<button style="margin-left: 1vw" onclick="openURL('${data.url}')">Update Now!</button>`, 10000)
         }
         //TODO: add a mark if it is a mass download (A Download for every level in whole SMM1)
         if (data.action == "download-info") {
@@ -1432,6 +1488,7 @@ window.addEventListener('DOMContentLoaded', () => {
             displayLevels(data.levels);
         }
         if (data.action == "displayCourse") {
+            subAreaClicked = false;
             if (data.html == "<h1>Level Cant be displayed! Broken File!</h1>" || data.course == null || data.objects == null) {
                 document.getElementById(`courseName-${data.levelid}`).innerHTML = "<h1>Level with ID: "+data.levelid+" Cant be displayed! Broken File!</h1>"
             } else {

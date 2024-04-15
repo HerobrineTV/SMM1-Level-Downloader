@@ -1,0 +1,18 @@
+{
+    "Alpha-V1.0.0" : [
+        "UI Release",
+        "Level Search Implemented",
+        "Level Downloading Implemented",
+        "Open Levels Folder Implemented",
+        "Download Multiple Levels at once"
+    ],
+    "Alpha-V1.0.1" : [
+        "Fixxed Issue with Spaces in Folder Names",
+        "Added possibility to download Dev Courses",
+        "Changed the UI Style",
+        "Added Update Checker",
+        "Added Fade In Animations for Level display",
+        "Changed Settings appearance",
+        "Added Proxy Support"
+    ]
+}

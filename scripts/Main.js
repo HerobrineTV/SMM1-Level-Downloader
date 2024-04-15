@@ -159,7 +159,7 @@ async function checkNewRelease() {
   try {
     const response = await axios.get(url);
     //const data = await response.json();
-    console.log(response.data)
+    //console.log(response.data)
     const data = response.data
 
     if (response.statusText != "OK") {
@@ -571,6 +571,52 @@ function loadExistingUserIDs(cemupath) {
   });
 }
 
+function courseViewerReadSolo(coursepath, levelid, coursefile) {
+  //console.log(coursepath)
+  smmCourseViewer.read(path.join(__dirname, coursepath, levelid, coursefile), function(err, course, objects) {
+    if (course) {
+      const levelObj = {
+        course: course,
+        objects: objects,
+        levelid: levelid,
+        name: "",
+        folder: levelid
+      };
+
+      if (!err) {
+        levelObj.name = course['name'];
+      }
+
+      if ((levelObj.name && levelObj.name == "[ERR]: LEVEL NAME BROKEN") || course['mode'] == "[ERR]: LEVEL NAME BROKEN") {
+        writeToLog('[ERROR] '+`Error reading the Level Name of: `+path.join(coursepath, levelid, coursefile));
+      }
+
+      if (course['mode'] && course['mode'] == "[ERR]: LEVEL NAME BROKEN") {
+        writeToLog('[ERROR] '+`Error reading the Level Style of: `+path.join(coursepath, levelid, coursefile));
+      }
+
+      if (smmCourseViewer.course) {
+        levelObj.html = smmCourseViewer.course.getHtml()
+      } else {
+        levelObj.html = "<h1>Level Cant be displayed! Broken File!</h1>"
+        writeToLog('[ERROR] '+`Error reading the Level: `+path.join(coursepath, levelid, coursefile));
+      }
+
+      mainWindow.webContents.send("fromMain", {
+        action: "displayCourse",
+        coursehtml: levelObj.html,
+        levelid: levelObj.levelid,
+        course: levelObj.course,
+        objects: levelObj.objects,
+        folder: levelid
+      })
+
+    } else {
+      writeToLog('[ERROR] '+`Error reading the directory: `+path.join(coursepath, levelid, coursefile));
+    }
+  });
+}
+
 function courseViewerExtract(coursepath){
 
   fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
@@ -822,6 +868,8 @@ async function resetOfficialCoursefiles(coursefolder) {
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
+    } else if (args.action === "loadSubArea") {
+      courseViewerReadSolo(args.folderpath, args.levelid, args.filename);
     } else if (args.action === "get-smm1-cached-officials-testing") {
       loadOfficialCourses("OfficialCourses");
     } else if (args.action === "reset-official-courses") {

@@ -123,13 +123,15 @@ label {
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-shadow: 0 0 black;
+    padding-top: 10vh;
 }
 
 #main-content-2 {
     font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
-    max-width: 80%;
+    max-width: 95%;
+    min-width: 95%;
     margin: 0 auto;
     padding: 1%;
     background-color: #994220; /* Light gray background */
@@ -184,11 +186,16 @@ input[type="text"] {
 
 /* Toolbar styles */
 .toolbar {
-    background-color: #d8b51b; /* Yellow color */
+    position: fixed;
+    background-color: #d8b51b;
     padding-top: 2vh;
-    padding-left: 1vw;
-    padding-right: 1vw;
+    padding-left: 5%;
+    padding-right: 5%;
+    margin-left: 0%;
+    align-content: center;
+    margin-right: 0%;
     text-align: center;
+    min-width: 90%;
 }
 
 .toolbar button {
@@ -216,21 +223,35 @@ input[type="text"] {
 
 /* Scrollable objects */
 #scrollable-objects {
-    max-height: 80vh; /* Adjust height as needed, using vh for viewport height */
-    overflow-y: auto; /* Enable vertical scroll */
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-top: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1vw solid #994220;
+    padding-inline: 5vw;
+    margin-top: 2vh;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-shadow: 0 0 black;
 }
 
 /* Object styles */
 .object {
+    position: relative;
     cursor: pointer;
     margin-bottom: 10px;
     padding: 5px;
     border-radius: 5px;
     background-color: #4b1e0d5e;
 }
+
+.object button {
+    margin-right: 10px;
+    padding: 5px;
+    background-color: #4b1e0d5e;
+    position: absolute;
+    top: 1vh;
+    right: 0;
+    z-index: 1;
+}
+
 
 .object:hover {
     background-color: #4b1e0d;
@@ -239,7 +260,7 @@ input[type="text"] {
 .modal {
     display: none; /* Keep as is */
     position: fixed; /* Keep as is */
-    z-index: 1; /* Keep as is */
+    z-index: 2; /* Keep as is */
     left: 0; /* Keep as is */
     top: 0; /* Keep as is */
     width: 100%; /* Keep as is */
@@ -378,9 +399,11 @@ input[type="text"] {
 .courseDrawMain {
     width: 99%;
     height: 235px;
-    overflow: auto;
+    overflow-x: auto;
     background: none;
     border: 3px solid #bd851f;
+    overflow-y: hidden;
+    white-space: nowrap;
 }
 
 .courseDraw {
@@ -529,16 +552,18 @@ input[type="text"] {
 
 .notification {
     position: fixed;
-    bottom: 0vh;
-    left: 10vw;
-    max-width: 60vw;
+    bottom: 1%;
+    left: 9%;
+    max-width: 80%;
+    min-width: 80%;
     transform: translateX(-0%);
     background-color: #f0f0f0;
-    padding: 1vh 11vw;
+    padding: 1vh;
     border: 1px solid #ccc;
     border-radius: 5px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     display: none;
+    text-align: center;
   }
   
   .notification.show {
