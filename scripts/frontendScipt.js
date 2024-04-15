@@ -554,12 +554,6 @@ function addObjects(levels) {
             <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
             `;
             objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
-            objectDiv.addEventListener("wheel", function(event) {
-                if (event.deltaY !== 0) {
-                    event.preventDefault();
-                    scrollableElement.scrollLeft += event.deltaY;
-                }
-            });
         }
         objectsContainer.appendChild(objectDiv);
     });
@@ -1303,6 +1297,15 @@ function drawLevel(levelid, course, objects) {
     if (document.getElementById(`courseDisplay-${levelid}`)!= null) {
         if (objects.length > 0) {
             new Draw(`courseDisplay-${levelid}`, course, objects, "8"); //32 64
+            setTimeout(() => {
+
+            }, 1000);
+            document.querySelector(`#courseDisplay-${levelid} > div`).addEventListener("wheel", function(event) {
+                if (event.deltaY !== 0) {
+                    event.preventDefault();
+                    document.querySelector(`#courseDisplay-${levelid} > div`).scrollLeft += event.deltaY;
+                }
+            });
         } else {
             document.getElementById(`courseDisplay-${levelid}`).innerHTML = "<h1>Level with Filename: "+levelid+" Cant be displayed! Broken File!</h1>"
             window.api.send("toMain", {action:"write-to-log", message:"[ERROR] The Level with Filename: "+levelid+" contained "+ objects.length + " Objects"});
