@@ -161,6 +161,16 @@ function proxyCheckBoxChanged() {
     }
 }
 
+function invisBGCheckBoxChanged() {
+    if (SettingsData.invisibleCourseBG == false) {
+        setSetting("invisibleCourseBG", true)
+    } else if (SettingsData.invisibleCourseBG == true) {
+        setSetting("invisibleCourseBG", false)
+    } else {
+        setSetting("invisibleCourseBG", false)
+    }
+}
+
 function searchFadeInChanged() {
     if (SettingsData.fadeInAnim.levelSearch == false) {
         setSubSetting("fadeInAnim", "levelSearch", true)
@@ -491,7 +501,7 @@ function subAreaBtnClicked(levelid) {
     subAreaClicked = true;
     var path = "";
     var filename = "";
-    console.log("Clicked")
+    //console.log("Clicked")
 
     if (savedLevelsDrop.value == "downloaded") {
         path = "../SMMDownloader/Data/DownloadCache"
@@ -960,6 +970,9 @@ function loadPageScripts(page) {
         if (SettingsData.fadeInAnim.levelSearch == true) {
             document.getElementById("useSearchFadeIn").checked = true;
         }
+        if (SettingsData.invisibleCourseBG == true) {
+            document.getElementById("useInvisBackground").checked = true;
+        }
         if (SettingsData.fadeInAnim.downloadedLevels == true) {
             document.getElementById("useDownloadedFadeIn").checked = true;
         }
@@ -1296,7 +1309,7 @@ function enqueueDrawTask(levelid, course, objects) {
 function drawLevel(levelid, course, objects) {
     if (document.getElementById(`courseDisplay-${levelid}`)!= null) {
         if (objects.length > 0) {
-            new Draw(`courseDisplay-${levelid}`, course, objects, "8"); //32 64
+            new Draw(`courseDisplay-${levelid}`, course, objects, "8", SettingsData.invisibleCourseBG); //32 64
             setTimeout(() => {
 
             }, 1000);

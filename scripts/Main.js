@@ -516,6 +516,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
           "recentFoundLevels":[],
           "amounttrue":0,
           "useProxy":false,
+          "invisibleCourseBG":true,
           "searchParams":
           {
             "LevelName":false,

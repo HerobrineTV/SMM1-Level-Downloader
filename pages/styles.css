@@ -381,6 +381,8 @@ input[type="text"] {
 ::-webkit-scrollbar {
     width: 10px;
     height: 14px;
+    background-color: #ffffff36;
+    border-radius: 5px;
   }
   
   ::-webkit-scrollbar-track {
@@ -404,6 +406,7 @@ input[type="text"] {
     border: 3px solid #bd851f;
     overflow-y: hidden;
     white-space: nowrap;
+    background-color: #ffffff2e;
 }
 
 .courseDraw {
