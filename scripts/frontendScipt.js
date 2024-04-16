@@ -2,6 +2,7 @@ const { ipcRenderer } = window; // Use provided ipcRenderer in Electron apps
 const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 const backupCache = ('../SMMDownloader/Data/backupped.json');
+const changelog = ('../pages/changelog.json');
 let SettingsData;
 let lastLoadedDownloads = {};
 const totalSteps = 12;
@@ -1262,7 +1263,26 @@ function loadBackuppedLevels() {
 }
 
 function viewChangelog() {
-    // SOON
+    fetch(changelog)
+        .then(response => response.json())
+        .then(data => {
+
+            if (data) {
+                //console.log(data);
+                var changelogHTML = "";
+                Object.keys(data).reverse().forEach(key => {
+                    changelogHTML += `<h2>${key}</h2>`; // Use the key as the title
+                    // Iterate over the values (assuming each value is an array)
+                    data[key].forEach(item => {
+                        changelogHTML += `<li>${item}</li>`; // Generate HTML for each item
+                    });
+                });
+                document.getElementById('main-content-2').innerHTML = changelogHTML;
+            } else {
+                displayNotification("Changelog is Empty! <br> U need to Update SMMDownloader!", 5000)
+            }
+        })
+        .catch(error => console.log(error));
 }
 
 function displayLevels(levels) {

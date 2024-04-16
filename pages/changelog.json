@@ -1,12 +1,12 @@
 {
-    "Alpha-V1.0.0" : [
+    "Alpha-V1.0.0 -----x----- [Alpha Release]" : [
         "UI Release",
         "Level Search Implemented",
         "Level Downloading Implemented",
         "Open Levels Folder Implemented",
         "Download Multiple Levels at once"
     ],
-    "Alpha-V1.0.1" : [
+    "Alpha-V1.0.1 -----x----- [Mo Features Update]" : [
         "Fixxed Issue with Spaces in Folder Names",
         "Added possibility to download Dev Courses",
         "Changed the UI Style",
