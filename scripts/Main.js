@@ -446,7 +446,7 @@ async function loadProxiesFromFile(filePath) {
 function copyDefaultSoundFile(outputPath) {
   fs.copyFile(path.join(__dirname, '../SMMDownloader/Data/sound.bwv'), path.join(outputPath, '/sound.bwv'), (err) => {
     if (err) throw err;
-    console.log('File was copied to destination');
+    //console.log('File was copied to destination');
   });
 }
 
