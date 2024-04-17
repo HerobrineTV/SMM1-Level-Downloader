@@ -267,6 +267,8 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
         fs.mkdirSync(partsDirectory, { recursive: true });
     }
 
+    copyDefaultSoundFile(partsDirectory)
+
     // Save each part with the predetermined names
     parts.forEach((part, i) => {
         if (i < partNamesFirst.length) { // Ensure we don't exceed the names array
@@ -438,6 +440,13 @@ async function loadProxiesFromFile(filePath) {
           currentProxyIndex = 0;
           resolve(proxies);
       });
+  });
+}
+
+function copyDefaultSoundFile(outputPath) {
+  fs.copyFile(path.join(__dirname, '../SMMDownloader/Data/sound.bwv'), path.join(outputPath, '/sound.bwv'), (err) => {
+    if (err) throw err;
+    console.log('File was copied to destination');
   });
 }
 
