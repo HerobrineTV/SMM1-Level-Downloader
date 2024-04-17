@@ -227,11 +227,13 @@ function loadFileInWindow(levelObj) {
     const modal = document.getElementById("myModal");
     const modalContent = document.querySelector(".modal-content");
     const levelInfo = document.getElementById("levelInfo");
+    const barcontainer = document.getElementById(`downloadingBarContainer-${levelObj.levelid}`);
+    var buildhtml = ``;
     //console.log(levelObj);
     checkIfLevelisAlreadyDownloaded(levelObj.levelid);
 
     // Modified part to include the custom dropdown instead of <select>
-    levelInfo.innerHTML = `
+    buildhtml = `
     <div class="level-info">
         <h2 id="levelName">${levelObj.name} <br>${generateCode(levelObj.levelid)}</h2>
     </div>
@@ -258,18 +260,28 @@ function loadFileInWindow(levelObj) {
                 <div class="option">course004</div>
                 <div class="option">course005</div>
             </div>
-            <div id="download-actions-button-1">
-                <button class="searchdownload-btn">Download</button>
-                <button class="openCourseFolder-btn">Open Folder</button>
+            <div id="download-actions-button-1">`
+
+                if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {
+                } else {
+                    buildhtml+= `<button class="searchdownload-btn">Download</button>`
+                }
+
+                buildhtml+=`<button class="openCourseFolder-btn">Open Folder</button>
             </div>
         </div>
     </div>
     `;
 
+    levelInfo.innerHTML = buildhtml;
+
     // Add event listeners for the custom dropdown
     setupCustomDropdown();
 
-    document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
+    if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {} else {
+        document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
+    }
+
     downloadingBar.updateWindow(levelObj.levelid);
 
     if (currentHTMLPage === "savedLevels") {
