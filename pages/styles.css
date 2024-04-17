@@ -186,6 +186,7 @@ input[type="text"] {
 
 /* Toolbar styles */
 .toolbar {
+    z-index: 2;
     position: fixed;
     background-color: #d8b51b;
     padding-top: 2vh;
