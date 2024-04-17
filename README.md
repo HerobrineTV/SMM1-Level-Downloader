@@ -1,7 +1,3 @@
-# Announcement
-I am currently createing a whole UI System with Settings and Level Search using ElectronJS
-If u got any feature requests Dm me on Discord: nintendo_switch
-
 # SMM1-Level-Downloader
 A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection
 
@@ -13,27 +9,28 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 - Have a course Preview for saved Courses
 - Have a WildCard Search for Levels (Takes sometimes a bit, but working)
 - Use Proxies to download Levels even faster (needs to be enabled in Settings)
-- Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
-- Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
 - Delete Levels (Currently Downloads only please, else it could break stuff!!!)
+- Import Levels from other Archives as long as they are saved the same Way!
 - Search by the Official Level IDs through the Database, but make sure u disabled all other searches (except fast search) else it wont work
 ![Screenshot 2024-04-09 114944](https://github.com/HerobrineTV/SMM1-Level-Downloader/assets/70803896/181c109d-5397-47c3-8390-dd3732f6f348)
 
+# Planned Features
+- Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
+- Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
+- REWORK OF UI
+  
 # Decompilation
 To Decompile the Levels I used ASH Extractor which is already In this Repository
 http://wiibrew.org/wiki/ASH_Extractor
 
-# First time setup
-For the first time setup u need to install axios
-"npm install axios"
-Might be not needed anymore?? have to check that
-
-# Usage
+# Usage / Download
 Just unzip the "SMM1Downloader.zip" from the releases Tab and start the "SMM1Downloader.exe"
 All should work from then.
 
 # How does this work?
 I packed my ElectronJS Application into a .exe format by using electron-packager, just run unzip the .zip File from the Releases
+https://github.com/HerobrineTV/SMM1-Level-Downloader/releases/tag/Alpha-V1.0.0
+The Zip u need is called: "smm1-level-downloader-win32-x64.zip" and is being found there.
 
 It gathers the Archive.org download link for the Searched Level from my Database.
 
