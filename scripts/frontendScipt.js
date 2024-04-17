@@ -1428,7 +1428,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (barcontainer) {
                         barcontainer.style.display = 'contents';
                         barcontainer.style.backgroundColor = '';
-                        barcontainer.innerHTML = `<p2>Already Downloaded</p2>`
+                        barcontainer.innerHTML = `<p2>Download Complete</p2>`
                     }
                 }
                 //console.log("TEST")
