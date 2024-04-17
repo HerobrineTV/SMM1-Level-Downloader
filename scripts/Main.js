@@ -31,7 +31,7 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
-const thisReleaseTag = "Alpha-V1.0.1";
+const thisReleaseTag = "Pre-Alpha-V1.0.1";
 
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
