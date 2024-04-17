@@ -694,7 +694,7 @@ function onScrollToBottom() {
 
 // Following needs to be reworked, since it has to use the EntryID instead of the LevelID
 function findRandomLevel() {
-    const ranID = getRandomInt(12000000)
+    const ranID = getRandomInt(18118278)
 
     SettingsData.currentPage = 1;
     const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(ranID)}/1`
@@ -702,7 +702,7 @@ function findRandomLevel() {
     +`&courseid=1`
     +`&creatorname=0`
     +`&creatorid=0`
-    +`&searchexact=0`;
+    +`&searchexact=1`;
         
         // Make a GET request to the API
         fetch(apiUrl)
