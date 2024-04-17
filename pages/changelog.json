@@ -20,5 +20,8 @@
         "~ Searches encounter less often Connection errors now",
         " -----------------------------------",
         "NOTE: This is a kinda pre release of the next Alpha, just wanted to push the update checker fast"
+    ],
+    "Alpha-V1.0.1 -----x----- [Mo Features Update]" : [
+        "* Finally fixxed Random Level Search"
     ]
 }
