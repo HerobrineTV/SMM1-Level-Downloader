@@ -697,12 +697,7 @@ function findRandomLevel() {
     const ranID = getRandomInt(18118278)
 
     SettingsData.currentPage = 1;
-    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(ranID)}/1`
-    +`?coursename=0`
-    +`&courseid=1`
-    +`&creatorname=0`
-    +`&creatorid=0`
-    +`&searchexact=1`;
+    const apiUrl = `${SettingsData.APILink}/searchRandomLevels/${encodeURIComponent(ranID)}`;
         
         // Make a GET request to the API
         fetch(apiUrl)
@@ -715,6 +710,14 @@ function findRandomLevel() {
                 return response.json();
             })
             .then(data => {
+                if (data.error) {
+                    if (data.error == "No Random Level Found!") {
+                        findRandomLevel(); 
+                    } else {
+                        console.error('There was a problem with the fetch operation:', data.error);
+                    }
+                    return;
+                }
                 // Handle the JSON data from the API
                 //console.log(data); // You can process the data here
                 if (SettingsData.currentPage == 1) {
@@ -729,7 +732,9 @@ function findRandomLevel() {
                     document.getElementById("downloadAllLevel-button").style.display = ""
                     document.getElementById("selectRandomLevel-button").style.display = ""
                 }
-                displayLevels(data);
+                if (!data.error && data.length > 0) {
+                    displayLevels(data);
+                }
             })
             .catch(error => {
                 // Handle errors that occur during the fetch
