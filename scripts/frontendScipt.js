@@ -30,6 +30,8 @@ const formatCodes = {
     'Q': 8
   };
 
+  const existingPacks = ['Level Pack 1', 'Level Pack 2', 'Level Pack 3', 'Level Pack 1', 'Level Pack 2', 'Level Pack 3', 'Level Pack 1', 'Level Pack 2', 'Level Pack 3'];
+
 // Function to change image source after each bounce
 function changeImageSrc() {
     var images = document.querySelectorAll('.loading-container img');
@@ -1034,6 +1036,68 @@ function loadPageScripts(page) {
         });
 
         setSetting("amounttrue", amounttrue);
+
+        const levelPackInput1 = document.getElementById('levelPackInput-1');
+        const levelPackInput2 = document.getElementById('levelPackInput-2');
+        const dropdown1 = document.getElementById('pack-dropdown-1');
+        const dropdown2 = document.getElementById('pack-dropdown-2');
+        
+        levelPackInput1.addEventListener('input', function() {
+          const input = this.value.toLowerCase();
+          dropdown1.innerHTML = '';
+
+          existingPacks.forEach(pack => {
+            if (pack.toLowerCase().includes(input)) {
+              const option = document.createElement('a');
+              option.textContent = pack;
+              option.addEventListener('click', function() {
+                levelPackInput1.value = pack;
+                levelPackInput2.value = pack;
+                dropdown1.style.display = 'none';
+              });
+              dropdown1.appendChild(option);
+            }
+          });
+        
+          if (input === '') {
+            dropdown1.style.display = 'none';
+          } else {
+            dropdown1.style.display = 'block';
+          }
+        });
+        
+        levelPackInput2.addEventListener('input', function() {
+            const input = this.value.toLowerCase();
+            dropdown2.innerHTML = '';
+
+            existingPacks.forEach(pack => {
+              if (pack.toLowerCase().includes(input)) {
+                const option = document.createElement('a');
+                option.textContent = pack;
+                option.addEventListener('click', function() {
+                  levelPackInput2.value = pack;
+                  levelPackInput1.value = pack;
+                  dropdown2.style.display = 'none';
+                });
+                dropdown2.appendChild(option);
+              }
+            });
+          
+            if (input === '') {
+              dropdown2.style.display = 'none';
+            } else {
+              dropdown2.style.display = 'block';
+            }
+          });
+
+        // Close the dropdown if the user clicks outside of it
+        document.addEventListener('click', function(event) {
+          if (!event.target.matches('#levelPackInput-1') && !event.target.matches('#levelPackInput-2')) {
+            dropdown1.style.display = 'none';
+            dropdown2.style.display = 'none';
+          }
+        });
+
     } else if (page == "../pages/savedLevels.html") {
         deleteArray = [];
         isDeleteMode = false;
@@ -1356,6 +1420,15 @@ function drawLevel(levelid, course, objects) {
             window.api.send("toMain", {action:"write-to-log", message:"[ERROR] The Level with Filename: "+levelid+" contained "+ objects.length + " Objects"});
         }
     }
+}
+
+function switchDownloadTab(tabdiv) {
+    const newtab = document.getElementById(tabdiv);
+    const tabs = document.getElementsByClassName("downloadTabs")
+    for (var i = 0; i < tabs.length; i++) {
+        tabs[i].style.display = "none";
+    }
+    newtab.style.display = "";
 }
 
 function displayNotification(html, displaytime) {

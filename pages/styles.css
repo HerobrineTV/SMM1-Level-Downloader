@@ -151,6 +151,11 @@ input[type="text"] {
     margin-bottom: 10px;
 }
 
+.checkbox-item input[type="text"] {
+    max-width: 10vw;
+    min-width: 10vw;
+}
+
 .checkbox-item input[type="checkbox"] {
     display: none;
 }
@@ -190,13 +195,11 @@ input[type="text"] {
     position: fixed;
     background-color: #d8b51b;
     padding-top: 2vh;
-    padding-left: 5%;
-    padding-right: 5%;
     margin-left: 0%;
     align-content: center;
     margin-right: 0%;
     text-align: center;
-    min-width: 90%;
+    min-width: 100%;
 }
 
 .toolbar button {
@@ -572,4 +575,47 @@ input[type="text"] {
   
   .notification.show {
     display: block;
+  }
+
+
+textarea {
+    resize: none;
+    overflow-y: auto;
+    height: 200px;
+}
+
+/* Placeholder text styling */
+textarea::placeholder {
+    color: #999; /* Placeholder text color */
+    font-style: italic; /* Italicize placeholder text */
+}
+
+.dropdown-container {
+    position: relative;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: relative;
+    background-color: #f9f9f9;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+    z-index: 10000;
+    top: 100%;
+    left: 0;
+    max-width: 30vw;
+    min-width: 30vw;
+    overflow-x: hidden;
+    max-height: 10vh;
+    font-size: 2vh;
+  }
+  
+  .dropdown-content a {
+    color: black;
+    padding: 1px;
+    text-decoration: none;
+    display: block;
+  }
+  
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
   }
