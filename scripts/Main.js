@@ -31,7 +31,7 @@ const partNames = [
     "thumbnail1.tnl"
 ];
 
-const thisReleaseTag = "Alpha V1.0.0";
+const thisReleaseTag = "Pre-Alpha-V1.0.1";
 
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
@@ -72,7 +72,7 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
       const archiveTimestamp = response.data.first_ts;
       if (!archiveTimestamp) {
           console.error('No archived version found.');
-          writeToLog('[Error] '+'No archived Version on The Archive found!');
+          writeToLog('[ERROR] '+'No archived Version on The Archive found!');
           return null;
       }
     
@@ -81,7 +81,7 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
     } catch (error) {
       console.error(error.message);
       console.error(`http://${proxy.host}:${proxy.port}`)
-      writeToLog('[Error] '+'Error fetching The Archive API! '+error.message);
+      writeToLog('[ERROR] '+'Error fetching The Archive API! '+error.message);
       //console.error(error);
       //mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Wasn't able to fetch archive URL from Wayback Machine"});
     }
@@ -154,12 +154,22 @@ async function checkNewRelease() {
   const repo = 'HerobrineTV/SMM1-Level-Downloader'; // Replace with your GitHub repo
   const url = `https://api.github.com/repos/${repo}/releases/latest`;
 
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
+  await new Promise(resolve => setTimeout(resolve, 5000));
 
-    if (!response.ok) {
+  try {
+    const response = await axios.get(url);
+    //const data = await response.json();
+    //console.log(response.data)
+    const data = response.data
+
+    if (response.statusText != "OK") {
       throw new Error(`GitHub API error: ${data.message}`);
+    } else {
+      if (data.tag_name != thisReleaseTag) {
+        //console.log(response)
+        //console.log("Version missmatch: "+response.tag_name)
+        mainWindow.webContents.send("fromMain", {action:"update-info",resultType:"version-missmatch",currentVersion:thisReleaseTag,foundVersion:data.tag_name,url:data.html_url});
+      }
     }
 
     //console.log('Latest release tag:', data.tag_name);
@@ -167,7 +177,8 @@ async function checkNewRelease() {
     // You can further process the data as needed, for example, compare it with your local version
     return data;
   } catch (error) {
-    writeToLog('[Error] '+'Failed to fetch the latest release!');
+    writeToLog(error)
+    writeToLog('[ERROR] '+'Failed to fetch the latest release!');
     console.error('Failed to fetch the latest release!');
   }
 }
@@ -203,7 +214,7 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"downloadFile",levelid:levelObj.levelid,info:"Successfully downloaded file from Wayback Machine"});
     } catch (error) {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'ERROR',step:"downloadFile",levelid:levelObj.levelid,info:"Wasn't able to download file from Wayback Machine"});
-      writeToLog('[Error] '+'Error downloading file: '+error.message);
+      writeToLog('[ERROR] '+'Error downloading file: '+error.message);
       console.error('Error downloading file:', error.message);
     }
   }
@@ -256,6 +267,8 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
         fs.mkdirSync(partsDirectory, { recursive: true });
     }
 
+    copyDefaultSoundFile(partsDirectory)
+
     // Save each part with the predetermined names
     parts.forEach((part, i) => {
         if (i < partNamesFirst.length) { // Ensure we don't exceed the names array
@@ -277,7 +290,7 @@ function containsSpecificFile(directory, fileName) {
       return files.includes(fileName);
     } catch (error) {
       console.error(`Error reading directory ${directory}:`, error);
-      writeToLog('[Error] '+`Error reading directory ${directory}: `+error.message);
+      writeToLog('[ERROR] '+`Error reading the directory ${directory}: `+error.message);
       return false;
     }
   }
@@ -305,23 +318,32 @@ function containsSpecificFile(directory, fileName) {
         try {
             //console.log(`Decompressing: ${partFilePath}`);
             //console.log(ashextractorExecutable, partFilePath);
-            execSync(`"${ashextractorExecutable}" ${partFilePath}`);
+            execSync(`"${ashextractorExecutable}" "${partFilePath}"`);
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
               //console.log(`${partFilePath} has sucessfully been compressed!`);
               renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
               fs.unlink(partFilePath, (err) => {
-                if (err) throw err;
-                //console.log('File deleted successfully!');
+                if (err) {
+                  writeToLog(err);
+                  throw err;
+                }
               });
+            } else {
+              writeToLog("[ERROR] "+partNamesFirst[i]+".arc"+" wasnt found!")
             }
         } catch (error) {
             if (containsSpecificFile(partsDirectory, partNamesFirst[i]+".arc")) {
                 //console.log(`${partFilePath} has sucessfully been compressed!`);
                 renameFileIfConditionMet(partsDirectory, partNamesFirst[i]+".arc", partNames[i]);
                 fs.unlink(partFilePath, (err) => {
-                  if (err) throw err;
+                  if (err) {
+                    writeToLog(err);
+                    throw err;
+                  }
                   //console.log('File deleted successfully!');
                 });
+            } else {
+              writeToLog("[ERROR] "+partNamesFirst[i]+".arc"+" wasnt found!")
             }
         }
     }
@@ -352,7 +374,7 @@ async function addLevelToJson(levelObj){
           const data = fs.readFileSync(jsonDirectory+"/downloaded.json", 'utf8');
           jsonData = JSON.parse(data);
       } catch (error) {
-          writeToLog('[Error] '+`Error reading JSON file: `+error.message);
+          writeToLog('[ERROR] '+`Error reading the downloaded.json JSON file: `+error.message);
           console.error('Error reading JSON file:', error);
           return;
       }
@@ -367,7 +389,7 @@ async function addLevelToJson(levelObj){
           mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"addLevelToJson",levelid:levelobjlvlid,info:"Finished adding object to JSON file."});
       } catch (error) {
           console.error('Error writing JSON file:', error);
-          writeToLog('[Error] '+`Error writing JSON file: `+error.message);
+          writeToLog('[ERROR] '+`Error writing JSON file: `+error.message);
           mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"addLevelToJson",levelid:levelobjlvlid,info:"Error adding object to JSON file."});
       }
 }
@@ -395,7 +417,7 @@ async function fetchArchiveUrlWithRetries(originalUrl, levelObj) {
       await delay(1000); // Wait for 1 second before retrying
     }
   }
-  writeToLog('[Error] '+`Failed 5 Times to fetch the Archive URL!`);
+  writeToLog('[ERROR] '+`Failed 5 Times to fetch the Archive URL!`);
   // After 5 failed attempts, return null to indicate failure
   return null;
 }
@@ -418,6 +440,13 @@ async function loadProxiesFromFile(filePath) {
           currentProxyIndex = 0;
           resolve(proxies);
       });
+  });
+}
+
+function copyDefaultSoundFile(outputPath) {
+  fs.copyFile(path.join(__dirname, '../SMMDownloader/Data/sound.bwv'), path.join(outputPath, '/sound.bwv'), (err) => {
+    if (err) throw err;
+    console.log('File was copied to destination');
   });
 }
 
@@ -452,7 +481,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     });
 
     app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
-    mainWindow.setMenu(null);
+    //mainWindow.setMenu(null);
     const appIcon = nativeImage.createFromPath(iconPath+"/Icon.png");
     mainWindow.setIcon(appIcon);
     //mainWindow.loadFile(iconPath+"/Icon.png")
@@ -496,6 +525,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
           "recentFoundLevels":[],
           "amounttrue":0,
           "useProxy":false,
+          "invisibleCourseBG":true,
           "searchParams":
           {
             "LevelName":false,
@@ -504,6 +534,11 @@ async function processUrl(originalUrl, levelid, levelObj) {
             "CreatorID":false,
             "SearchExact":false
           },
+          "fadeInAnim":
+          {
+            "levelSearch":false,
+            "downloadedLevels":false
+          }
         }
       );
     } else {
@@ -536,7 +571,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
 function loadExistingUserIDs(cemupath) {
   fs.readdir(path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user"), { withFileTypes: true }, (err, files) => {
     if (err) {
-      writeToLog('[Error] '+`Error reading the directory: `+error.message);
+      writeToLog('[ERROR] '+`Error reading the directory: `+error.message);
       console.error('Error reading the directory:', err);
       return;
     }
@@ -546,11 +581,57 @@ function loadExistingUserIDs(cemupath) {
   });
 }
 
+function courseViewerReadSolo(coursepath, levelid, coursefile) {
+  //console.log(coursepath)
+  smmCourseViewer.read(path.join(__dirname, coursepath, levelid, coursefile), function(err, course, objects) {
+    if (course) {
+      const levelObj = {
+        course: course,
+        objects: objects,
+        levelid: levelid,
+        name: "",
+        folder: levelid
+      };
+
+      if (!err) {
+        levelObj.name = course['name'];
+      }
+
+      if ((levelObj.name && levelObj.name == "[ERR]: LEVEL NAME BROKEN") || course['mode'] == "[ERR]: LEVEL NAME BROKEN") {
+        writeToLog('[ERROR] '+`Error reading the Level Name of: `+path.join(coursepath, levelid, coursefile));
+      }
+
+      if (course['mode'] && course['mode'] == "[ERR]: LEVEL NAME BROKEN") {
+        writeToLog('[ERROR] '+`Error reading the Level Style of: `+path.join(coursepath, levelid, coursefile));
+      }
+
+      if (smmCourseViewer.course) {
+        levelObj.html = smmCourseViewer.course.getHtml()
+      } else {
+        levelObj.html = "<h1>Level Cant be displayed! Broken File!</h1>"
+        writeToLog('[ERROR] '+`Error reading the Level: `+path.join(coursepath, levelid, coursefile));
+      }
+
+      mainWindow.webContents.send("fromMain", {
+        action: "displayCourse",
+        coursehtml: levelObj.html,
+        levelid: levelObj.levelid,
+        course: levelObj.course,
+        objects: levelObj.objects,
+        folder: levelid
+      })
+
+    } else {
+      writeToLog('[ERROR] '+`Error reading the directory: `+path.join(coursepath, levelid, coursefile));
+    }
+  });
+}
+
 function courseViewerExtract(coursepath){
 
   fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
     if (err) {
-      writeToLog('[Error] '+`Error reading the directory: `+error.message);
+      writeToLog('[ERROR] '+`Error reading the directory: `+error.message);
       console.error('Error reading the directory:', err);
       return;
     }
@@ -570,45 +651,65 @@ function courseViewerExtract(coursepath){
 
     for (let i = 0; i < folders.length; i++) {
       smmCourseViewer.read(path.join(coursepath, folders[i], "course_data.cdt"), function(err, course, objects) {
-        const levelObj = {
-          folder: folders[i],
-          course: course,
-          objects: objects,
-          levelid: folders[i],
-          html: smmCourseViewer.course.getHtml(),
-          name: ""
-        };
-        if (!err) {
-          levelObj.name = course['name'];
-        }
-        levels.push(levelObj);
-        counter++;
+        if (course) {
+          const levelObj = {
+            folder: folders[i],
+            course: course,
+            objects: objects,
+            levelid: folders[i],
+            name: ""
+          };
+  
+          if (!err) {
+            levelObj.name = course['name'];
+          }
+  
+          if ((levelObj.name && levelObj.name == "[ERR]: LEVEL NAME BROKEN") || course['mode'] == "[ERR]: LEVEL NAME BROKEN") {
+            writeToLog('[ERROR] '+`Error reading the Level Name of: `+path.join(coursepath, folders[i], "course_data.cdt"));
+          }
 
-        if (counter === folders.length) {
-          // When all levels are processed, send summary
-          mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
-
-          // Queue the send operations
-          levels.forEach((level, index) => {
-            sendQueue.push(() => mainWindow.webContents.send("fromMain", {
-              action: "displayCourse",
-              coursehtml: level.html,
-              levelid: level.levelid,
-              course: level.course,
-              objects: level.objects,
-              fileName: folders[index]
-            }));
-          });
-
-          // Process the queue at a rate of 10 messages per second
-          const sendInterval = setInterval(() => {
-            if (sendQueue.length > 0) {
-              const sendOperation = sendQueue.shift();
-              sendOperation();
-            } else {
-              clearInterval(sendInterval); // Stop the interval when all messages are sent
-            }
-          }, 1); // 1ms interval
+          if (course['mode'] && course['mode'] == "[ERR]: LEVEL NAME BROKEN") {
+            writeToLog('[ERROR] '+`Error reading the Level Style of: `+path.join(coursepath, folders[i], "course_data.cdt"));
+          }
+  
+          if (smmCourseViewer.course) {
+            levelObj.html = smmCourseViewer.course.getHtml()
+          } else {
+            levelObj.html = "<h1>Level Cant be displayed! Broken File!</h1>"
+            writeToLog('[ERROR] '+`Error reading the Level: `+path.join(coursepath, folders[i], "course_data.cdt"));
+          }
+  
+          levels.push(levelObj);
+          counter++;
+  
+          if (counter === folders.length) {
+            // When all levels are processed, send summary
+            mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:levels});
+  
+            // Queue the send operations
+            levels.forEach((level, index) => {
+              sendQueue.push(() => mainWindow.webContents.send("fromMain", {
+                action: "displayCourse",
+                coursehtml: level.html,
+                levelid: level.levelid,
+                course: level.course,
+                objects: level.objects,
+                fileName: folders[index]
+              }));
+            });
+  
+            // Process the queue at a rate of 10 messages per second
+            const sendInterval = setInterval(() => {
+              if (sendQueue.length > 0) {
+                const sendOperation = sendQueue.shift();
+                sendOperation();
+              } else {
+                clearInterval(sendInterval); // Stop the interval when all messages are sent
+              }
+            }, 1); // 1ms interval
+          }
+        } else {
+          writeToLog('[ERROR] '+`Error reading the directory: `+path.join(coursepath, folders[i], "course_data.cdt"));
         }
       });
     }
@@ -777,6 +878,8 @@ async function resetOfficialCoursefiles(coursefolder) {
       saveSettings(args.settings);
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
+    } else if (args.action === "loadSubArea") {
+      courseViewerReadSolo(args.folderpath, args.levelid, args.filename);
     } else if (args.action === "get-smm1-cached-officials-testing") {
       loadOfficialCourses("OfficialCourses");
     } else if (args.action === "reset-official-courses") {
@@ -808,6 +911,12 @@ async function resetOfficialCoursefiles(coursefolder) {
       deleteCourseFile(args.levelid);
     }
   });
+
+  process.on('uncaughtException', (error) => {
+    console.error('Unhandled Exception:', error);
+    writeToLog(error);
+  });
+  
 
   //startProcess();
 

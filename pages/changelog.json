@@ -1,0 +1,24 @@
+{
+    "Alpha-V1.0.0 -----x----- [Alpha Release]" : [
+        "+ UI Release",
+        "+ Level Search Implemented",
+        "+ Level Downloading Implemented",
+        "+ Open Levels Folder Implemented",
+        "+ Download Multiple Levels at once"
+    ],
+    "Pre-Alpha-V1.0.1 -----x----- [Mo Features Update]" : [
+        "+ Added possibility to unpack Dev Courses",
+        "+ Added Update Checker",
+        "+ Added Fade In Animations for Level display",
+        "+ Added Proxy Support",
+        "+ Added Sideways Scrolling on Level View",
+        "+ Added Default sound.bwv file",
+        "* Changed Settings appearance",
+        "* Changed the UI Style",
+        "~ Fixxed Issue with Spaces in Folder Names",
+        "~ Fixxed several unintended UI Bugs",
+        "~ Searches encounter less often Connection errors now",
+        " -----------------------------------",
+        "NOTE: This is a kinda pre release of the next Alpha, just wanted to push the update checker fast"
+    ]
+}

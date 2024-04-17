@@ -7,32 +7,62 @@
           <p id="levelInfo"></p>
         </div>
     </div>
-    <div id="main-content">
-        <h1>Search Level</h1>
-        <div id="randomlevlefromdb-button">
-            <button onclick="findRandomLevel()">Random Level</button>
+    <div id="main-content-2">
+        <div id="tab-select-download">
+            <button onclick="switchDownloadTab('searchtab')">Search</button>
+            <button onclick="switchDownloadTab('directdownloadtab')" style="display: none;">Direct Download</button>
         </div>
-        <h2>Select Search Options:</h2>
-        <div class="checkbox-item">
-            <input type="checkbox" id="usesearchLevelbyLevelName" name="search-option" onclick="searchCheckBoxesChanged('LevelName')">
-            <label class="checkbox-label" for="usesearchLevelbyLevelName">Level Name</label>
-            <input type="checkbox" id="usesearchLevelbyLevelID" name="search-option" onclick="searchCheckBoxesChanged('LevelID')">
-            <label class="checkbox-label" for="usesearchLevelbyLevelID">Level ID</label>
-            <input type="checkbox" id="usesearchLevelbyCreatorName" name="search-option" onclick="searchCheckBoxesChanged('CreatorName')">
-            <label class="checkbox-label" for="usesearchLevelbyCreatorName">Creator Name</label>
-            <input type="checkbox" id="usesearchLevelbyCreatorID" name="search-option" onclick="searchCheckBoxesChanged('CreatorID')">
-            <label class="checkbox-label" for="usesearchLevelbyCreatorID">Creator ID</label>
+        <div id="searchtab" class="downloadTabs">
+            <h1>Search Level</h1>
+            <div id="randomlevlefromdb-button">
+                <button onclick="findRandomLevel()">Random Level</button>
+            </div>
+            <h2>Select Search Options:</h2>
+            <div class="checkbox-item">
+                <input type="checkbox" id="usesearchLevelbyLevelName" name="search-option" onclick="searchCheckBoxesChanged('LevelName')">
+                <label class="checkbox-label" for="usesearchLevelbyLevelName">Level Name</label>
+                <input type="checkbox" id="usesearchLevelbyLevelID" name="search-option" onclick="searchCheckBoxesChanged('LevelID')">
+                <label class="checkbox-label" for="usesearchLevelbyLevelID">Level ID</label>
+                <input type="checkbox" id="usesearchLevelbyCreatorName" name="search-option" onclick="searchCheckBoxesChanged('CreatorName')">
+                <label class="checkbox-label" for="usesearchLevelbyCreatorName">Creator Name</label>
+                <input type="checkbox" id="usesearchLevelbyCreatorID" name="search-option" onclick="searchCheckBoxesChanged('CreatorID')">
+                <label class="checkbox-label" for="usesearchLevelbyCreatorID">Creator ID</label>
+                <br><br>
+                <input type="checkbox" id="useseExactSearch" name="search-option" onclick="searchCheckBoxesChanged('SearchExact')">
+                <label class="checkbox-label" for="useseExactSearch">Exact Search (Faster Level Search)</label>
+                <br><br>
+                <input type="checkbox" id="downloadAsLevelPack" name="search-option" onclick="">
+                <label class="checkbox-label" for="downloadAsLevelPack">Save in Levelpack</label>
+                <div class="dropdown-container">
+                    Select Pack (VERY SOON):
+                    <input type="text" id="levelPackInput-1" placeholder="LevelPack Name">
+                    <div id="pack-dropdown-1" class="dropdown-content"></div>
+                </div>
+            </div>
+            <div id="searchLevel-item"></div>
+            <br>
+            <button onclick="searchLevel()" id="searchLevel-button" style='display: none;'>Search Level</button>
+            <button onclick="downloadAll()" id="downloadAllLevel-button" style='display: none;'>Download All found</button>
+            <button onclick="showRandomLevel()" id="selectRandomLevel-button" style='display: none;'>Random found Level</button><br>
+            <div id="scrollable-objects"></div>
             <br><br>
-            <input type="checkbox" id="useseExactSearch" name="search-option" onclick="searchCheckBoxesChanged('SearchExact')">
-            <label class="checkbox-label" for="useseExactSearch">Exact Search (Faster Level Search)</label>
         </div>
-        <div id="searchLevel-item"></div>
-        <br>
-        <button onclick="searchLevel()" id="searchLevel-button" style='display: none;'>Search Level</button>
-        <button onclick="downloadAll()" id="downloadAllLevel-button" style='display: none;'>Download All found</button>
-        <button onclick="showRandomLevel()" id="selectRandomLevel-button" style='display: none;'>Random found Level</button><br>
-        <div id="scrollable-objects"></div>
-        <br><br>
+        <div id="directdownloadtab" class="downloadTabs" style="display: none;">
+            <h1>Direct Download Levels</h1>
+            <h2>Available Options:</h2>
+            <br>
+            <div class="checkbox-item">
+                <input type="checkbox" id="downloadAsLevelPack" name="search-option" onclick="">
+                <label class="checkbox-label" for="downloadAsLevelPack">Save in Levelpack</label>
+                <div class="dropdown-container">
+                    Select Pack:
+                    <input type="text" id="levelPackInput-2" placeholder="LevelPack Name">
+                    <div id="pack-dropdown-2" class="dropdown-content"></div>
+                </div>
+            </div>
+            <textarea placeholder="Insert Level IDs here"></textarea>
+            <br><br>
+        </div>
     </div>
     <div class="loading-container" id="loadingholder" style="display: none;">
         <img src="../pictures/smmdownloader/M1-groundblock.png" alt="Image 1" class="bounce1">

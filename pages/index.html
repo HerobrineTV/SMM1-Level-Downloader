@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Super Mario Maker 1 Level Downloader</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
         <link href="https://fonts.googleapis.com/css2?family=Rubik+Doodle+Shadow&display=swap" rel="stylesheet">
         <link rel="stylesheet" type="text/css" href="styles.css">
     </head>
 
-    <body>
+    <body>         
         <div class="toolbar">
-            <button onclick="loadPage('../pages/main.html')">Search Courses</button>
+            <button onclick="loadPage('../pages/main.html')">Download Courses</button>
             <button onclick="loadPage(`../pages/savedLevels.html`)">Saved Courses</button>
             <button onclick="loadPage('../pages/settings.html')">Settings</button>
             <button onclick="loadPage(`../pages/info.html`)">About</button>
@@ -33,6 +35,16 @@
         </div>
         <div id="main-content">
             <h2>Welcome to the SMM1 Level Downloader</h2>
+            <li>This Software can Download Archived SMM Levels and convert them in a Playable Format for SMM</li>
+            <h2>Current Supported Features</h2>
+            <li>Download every existing SMM1 Level from the Archive</li>
+            <li>Download Multiple Levels at once</li>
+            <li>Have a course Preview for saved Courses</li>
+            <li>Have a WildCard Search for Levels (Takes sometimes a bit, but working)</li>
+            <li>Use Proxies to download Levels even faster (needs to be enabled in Settings)</li>
+            <li>Delete Levels (Currently Downloads only please, else it could break stuff!!!)</li>
+            <li>Import Levels from other Archives as long as they are saved the same Way!</li>
+            <li>Search by the Official Level IDs through the Database, but make sure u disabled all other searches (except fast search) else it wont work</li>
         </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
         <script src="../node_modules/smm-course-viewer/lib/CourseObject.js"></script>
@@ -46,6 +58,10 @@
         <script>
             loadSettings();
         </script>
+        <footer>
+            <div class="notification" id="notification">
+                This is a notification.
+            </div> 
+        </footer>
     </body>
-
 </html>

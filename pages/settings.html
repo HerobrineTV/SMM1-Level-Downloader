@@ -2,9 +2,9 @@
 <html lang="en">
 
 <body>
-    <div id="main-content">
-        <h1>Main Settings</h1>
-        <br>
+    <div id="main-content-2">
+        <h1>Settings</h1>
+        <h2>General:</h2>
         <div class="checkbox-item">
             <input type="checkbox" id="useCEMUfolder" name="cemu-option" onclick="CEMUcheckBoxChanged()">
             <label class="checkbox-label" for="useCEMUfolder">Use Cemu Folder (Coming Soon)<div id="optionalCEMU"></div></label>
@@ -14,11 +14,25 @@
             <br><br>
             <input type="checkbox" id="useProxy" name="proxy-option" onclick="proxyCheckBoxChanged()">
             <label class="checkbox-label" for="useProxy">Use Proxy for Downloads<div id="optionalProxy"></div></label>
+            <br><br>
+            <input type="checkbox" id="useInvisBackground" name="invisbg-option" onclick="invisBGCheckBoxChanged()">
+            <label class="checkbox-label" for="useInvisBackground">Invisible Background on Course Display</label>
         </div>
         <div id="selectedFolder"></div>
         <div id="profileselection"></div>
-        <h2>Reset Official Courses:</h2><button onclick="resetOfficialCourses()">Reset</button><br><br>
-        <h2>Reset Settings:</h2><button onclick="resetSettings()">Reset</button><br><br>
+        <h2>Animations:</h2>
+        <div class="checkbox-item">
+            <input type="checkbox" id="useSearchFadeIn" name="search-fadein" onclick="searchFadeInChanged()">
+            <label class="checkbox-label" for="useSearchFadeIn">Search Fade In Animation</label>
+            <br><br>
+            <input type="checkbox" id="useDownloadedFadeIn" name="downloaded-fadein" onclick="searchDownloadedInChanged()">
+            <label class="checkbox-label" for="useDownloadedFadeIn">Saved Levels Fade In Animation</label>
+        </div>
+        <h2>Changelog:</h2>
+        <button onclick="viewChangelog()">View Changelog</button><br><br>
+        <h2>Reset Stuff:</h2>
+        <button onclick="resetOfficialCourses()">Reset Official Courses</button><br><br>
+        <button onclick="resetSettings()">Reset Settings</button>
         <br><br>
     </div>
 </body>
