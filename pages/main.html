@@ -31,8 +31,8 @@
                 <input type="checkbox" id="useseExactSearch" name="search-option" onclick="searchCheckBoxesChanged('SearchExact')">
                 <label class="checkbox-label" for="useseExactSearch">Exact Search (Faster Level Search)</label>
                 <br><br>
-                <input type="checkbox" id="downloadAsLevelPack" name="search-option" onclick="">
-                <label class="checkbox-label" for="downloadAsLevelPack">Save in Levelpack</label>
+                <input type="checkbox" id="downloadAsLevelPack-1" name="search-option" onclick="changeDownloadAsLevelPack()">
+                <label class="checkbox-label" for="downloadAsLevelPack-1">Save in Levelpack</label>
                 <div class="dropdown-container">
                     Select Pack:
                     <input type="text" id="levelPackInput-1" placeholder="LevelPack Name">
@@ -43,7 +43,6 @@
             <br>
             <button onclick="searchLevel()" id="searchLevel-button" style='display: none;'>Search Level</button>
             <button onclick="downloadAll()" id="downloadAllLevel-button" style='display: none;'>Download All found</button>
-            <button onclick="showRandomLevel()" id="selectRandomLevel-button" style='display: none;'>Random found Level</button><br>
             <div id="scrollable-objects"></div>
             <br><br>
         </div>
@@ -52,8 +51,8 @@
             <h2>Available Options:</h2>
             <br>
             <div class="checkbox-item">
-                <input type="checkbox" id="downloadAsLevelPack" name="search-option" onclick="">
-                <label class="checkbox-label" for="downloadAsLevelPack">Save in Levelpack</label>
+                <input type="checkbox" id="downloadAsLevelPack-2" name="search-option" onclick="changeDownloadAsLevelPack()">
+                <label class="checkbox-label" for="downloadAsLevelPack-2">Save in Levelpack</label>
                 <div class="dropdown-container">
                     Select Pack:
                     <input type="text" id="levelPackInput-2" placeholder="LevelPack Name">

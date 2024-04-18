@@ -18,6 +18,7 @@ let useProxy = false;
 let currentProxyIndex = 0;
 let proxies = [];
 let proxy = null;
+var existingPacks = {};
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -34,12 +35,21 @@ const partNames = [
 const thisReleaseTag = "Alpha-V1.0.1";
 
 const iconPath = path.join(__dirname, '../SMMDownloader/Data');
+
 const jsonDirectory = path.join(__dirname, '../SMMDownloader/Data');
+const levelpacksDirectory = path.join(__dirname, '../SMMDownloader/Data/LevelPacks');
+const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
+
+const levelpacksJson = path.join(__dirname, '../SMMDownloader/Data/levelpacks.json');
+
+if (!fs.existsSync(levelpacksJson)){
+  fs.mkdirSync(levelpacksJson, { recursive: true });
+  //console.log(`Created directory: ${jsonDirectory}`);
+}
 if (!fs.existsSync(jsonDirectory)){
   fs.mkdirSync(jsonDirectory, { recursive: true });
   //console.log(`Created directory: ${jsonDirectory}`);
 }
-const outputDirectory = path.join(__dirname, '../SMMDownloader/Data/DownloadCache');
 if (!fs.existsSync(outputDirectory)){
     fs.mkdirSync(outputDirectory, { recursive: true });
     //console.log(`Created directory: ${outputDirectory}`);
@@ -65,8 +75,12 @@ async function fetchArchiveUrl(originalUrl, levelObj) {
     };
     try {
       const agent = useProxy && proxy ? new HttpsProxyAgent(`http://${proxy.host}:${proxy.port}`) : undefined;
-
-      const response = await axios.get(apiUrl, { headers, httpsAgent: agent });
+      var response;
+      if (useProxy) {
+        response = await axios.get(apiUrl, { headers, httpsAgent: agent });
+      } else {
+        response = await axios.get(apiUrl, { headers });
+      }
       //console.log(`Fetched archive URL from Wayback Machine: ${JSON.stringify(response.data)}`);
       
       const archiveTimestamp = response.data.first_ts;
@@ -126,7 +140,7 @@ async function processQueue() {
           // Process the next task in the queue
           const task = downloadQueue.shift();
           //console.log(task.levelID);
-          await processUrlWithDelay(task.url, task.levelID, task.levelObj);
+          await processUrlWithDelay(task.url, task.levelID, task.levelObj, task.pack || null);
           tasksProcessedThisMinute++;
 
       } else {
@@ -145,9 +159,9 @@ async function switchProxy() {
   }
 }
 
-async function processUrlWithDelay(url, levelID, levelObj) {
+async function processUrlWithDelay(url, levelID, levelObj, pack) {
   //await new Promise(resolve => setTimeout(resolve, 3000)); // Wait for 3 seconds
-  processUrl(url, levelID, levelObj); // Then call processUrl
+  processUrl(url, levelID, levelObj, pack); // Then call processUrl
 }
 
 async function checkNewRelease() {
@@ -219,7 +233,7 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     }
   }
 
-  function splitFile(filePath, levelid, levelObj) {
+  function splitFile(filePath, levelid, levelObj, pack) {
     if (levelObj.info != "IGNORE") {
       mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"splitFile",levelid:levelObj.levelid,info:"Starting to split file"});
     }
@@ -234,6 +248,8 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     let parts = [];
     let lastIndex = 0;
     let index = 0;
+
+    levelObj["pack"] = pack
 
     const partNamesFirst = [
         "thumbnail0",
@@ -257,10 +273,12 @@ async function downloadFile(fileUrl, outputPath, levelObj) {
     //const partsDirectory = path.join(outputDirectory, `${path.basename(filePath, path.extname(filePath))}_Extracted`);
     var partsDirectory
 
-    if (levelObj.info != "IGNORE") {
+    if (levelObj.info != "IGNORE" && pack == null) {
       partsDirectory = path.join(outputDirectory, `${levelid}`);
-    } else {
+    } else if (levelObj.info == "IGNORE" && pack == null) {
       partsDirectory = path.join(path.join(__dirname, "../SMMDownloader/Data/"+levelObj.coursefolder+"/CourseFiles"), `${levelid}`);
+    } else {
+      partsDirectory = path.join(path.join(levelpacksDirectory, pack), `${levelid}`);
     }
 
     if (!fs.existsSync(partsDirectory)) {
@@ -450,7 +468,7 @@ function copyDefaultSoundFile(outputPath) {
   });
 }
 
-async function processUrl(originalUrl, levelid, levelObj) {
+async function processUrl(originalUrl, levelid, levelObj, pack) {
     mainWindow.webContents.send("fromMain", {action:"download-info",resultType:'IN_PROGRESS',step:"fetchArchiveUrl",levelid:levelObj.levelid,info:"Trying to fetch archive URL from Wayback Machine."});
     const archiveUrl = await fetchArchiveUrlWithRetries(originalUrl, levelObj);
     if (!archiveUrl) {
@@ -463,7 +481,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     const outputPath = path.join(outputDirectory, fileName.replace(/^0+/, ''));
 
     await downloadFile(archiveUrl, outputPath, levelObj);
-    splitFile(outputPath, levelid, levelObj);
+    splitFile(outputPath, levelid, levelObj, pack);
 }
 
   let mainWindow;
@@ -557,7 +575,7 @@ async function processUrl(originalUrl, levelid, levelObj) {
     });
   }
 
-  function folderExists(folderPath) {
+function folderExists(folderPath) {
     try {
         // Check if the folder exists
         fs.accessSync(folderPath, fs.constants.F_OK);
@@ -566,6 +584,19 @@ async function processUrl(originalUrl, levelid, levelObj) {
         // Folder does not exist or cannot be accessed
         return false;
     }
+}
+
+function folderExistsLevels(levelid) {
+  if (folderExists(outputDirectory+"/"+levelid)) {
+    return true;
+  } else {
+    for (const packName in existingPacks) {
+      if (folderExists(levelpacksDirectory+"/"+existingPacks[packName]+"/"+levelid)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 function loadExistingUserIDs(cemupath) {
@@ -581,7 +612,7 @@ function loadExistingUserIDs(cemupath) {
   });
 }
 
-function courseViewerReadSolo(coursepath, levelid, coursefile) {
+function courseViewerReadSolo(coursepath, levelid, coursefile, pack) {
   //console.log(coursepath)
   smmCourseViewer.read(path.join(__dirname, coursepath, levelid, coursefile), function(err, course, objects) {
     if (course) {
@@ -590,7 +621,8 @@ function courseViewerReadSolo(coursepath, levelid, coursefile) {
         objects: objects,
         levelid: levelid,
         name: "",
-        folder: levelid
+        folder: levelid,
+        packname: pack
       };
 
       if (!err) {
@@ -618,7 +650,8 @@ function courseViewerReadSolo(coursepath, levelid, coursefile) {
         levelid: levelObj.levelid,
         course: levelObj.course,
         objects: levelObj.objects,
-        folder: levelid
+        folder: levelid,
+        packname: pack
       })
 
     } else {
@@ -627,11 +660,11 @@ function courseViewerReadSolo(coursepath, levelid, coursefile) {
   });
 }
 
-function courseViewerExtract(coursepath){
+function courseViewerExtract(coursepath, packname){
 
   fs.readdir(coursepath, { withFileTypes: true }, (err, files) => {
     if (err) {
-      writeToLog('[ERROR] '+`Error reading the directory: `+error.message);
+      writeToLog('[ERROR] '+`Error reading the directory: `+err.message);
       console.error('Error reading the directory:', err);
       return;
     }
@@ -657,7 +690,8 @@ function courseViewerExtract(coursepath){
             course: course,
             objects: objects,
             levelid: folders[i],
-            name: ""
+            name: "",
+            packname: packname
           };
   
           if (!err) {
@@ -694,7 +728,8 @@ function courseViewerExtract(coursepath){
                 levelid: level.levelid,
                 course: level.course,
                 objects: level.objects,
-                fileName: folders[index]
+                fileName: folders[index],
+                packname: packname
               }));
             });
   
@@ -716,7 +751,10 @@ function courseViewerExtract(coursepath){
   });
 }
 function loadDownloadedCourses() {
-  courseViewerExtract(outputDirectory);
+  courseViewerExtract(outputDirectory, null);
+  for (const packName in existingPacks) {
+    courseViewerExtract(path.join(__dirname, "../SMMDownloader/Data/LevelPacks/"+existingPacks[packName]), packName);
+  }
 }
 
 function openFolder(folderPath) {
@@ -727,7 +765,7 @@ function loadExistingCourses(cemupath, profileid) {
   //const profileFolder = cemupath;
   if (folderExists(cemupath) && folderExists(path.join(cemupath, "mlc01"))) {
     const profileFolder = path.join(cemupath, "mlc01","usr","save","00050000","1018dd00","user", profileid);
-    courseViewerExtract(profileFolder);
+    courseViewerExtract(profileFolder, null);
   } else {
     mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"mlc01 folder not Found in Cemu Path"});
   }
@@ -736,7 +774,7 @@ function loadExistingCourses(cemupath, profileid) {
 function loadOfficialCourses(coursefolder) {
   //const profileFolder = cemupath;
   if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"))) {
-    courseViewerExtract(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"));
+    courseViewerExtract(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"), null);
   } else {
     // mainWindow.webContents.send("fromMain", {action:"currentLevelsInOfficialDir",levels:null, problem:"Official Dir Missing"});
   }
@@ -794,15 +832,26 @@ function writeToLog(message) {
   });
 }
 
-function deleteCourseFile(levelid) {
+function deleteCourseFile(levelid, pack) {
+  loadLevelPacks()
   //console.log(outputDirectory, levelid)
-  const partFilePath = path.join(outputDirectory, levelid+"");
+  var partFilePath;
+  if (pack == "null") {
+    partFilePath = path.join(outputDirectory, levelid+"");
+  } else {
+    partFilePath = path.join(levelpacksDirectory, existingPacks[pack], levelid+"");
+  }
   fs.rm(partFilePath, { recursive: true, force: true }, (err) => {
       if (err) throw err;
       removeKeyFromJSONFileSafe(levelid+"")
       mainWindow.webContents.send("fromMain", {action:"courseFileDeleted",levelid:levelid});
       //console.log('File deleted successfully!');
     });
+}
+
+function loadLevelPacks() {
+  const data = fs.readFileSync(levelpacksJson, 'utf8');
+  existingPacks = JSON.parse(data);
 }
 
 async function resetOfficialCoursefiles(coursefolder) {
@@ -879,7 +928,7 @@ async function resetOfficialCoursefiles(coursefolder) {
     } else if (args.action === "search-level") {
       searchLevelInDB(args.searchTypes, args.searchPhrase);
     } else if (args.action === "loadSubArea") {
-      courseViewerReadSolo(args.folderpath, args.levelid, args.filename);
+      courseViewerReadSolo(args.folderpath, args.levelid, args.filename, args.pack);
     } else if (args.action === "get-smm1-cached-officials-testing") {
       loadOfficialCourses("OfficialCourses");
     } else if (args.action === "reset-official-courses") {
@@ -891,10 +940,10 @@ async function resetOfficialCoursefiles(coursefolder) {
     } else if (args.action === "openProxies") {
       shell.openExternal(path.join(jsonDirectory,"/proxies.txt"));
     } else if (args.action === "checkIfAlreadyDownloaded") {
-      if (folderExists(outputDirectory+"/"+args.levelID)) {
-        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID});
+      if (folderExistsLevels(args.levelID)) {
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID})
       } else {
-        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID});
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID})
       }
     } else if (args.action === "get-smm1-cached-downloads") {
       loadDownloadedCourses();
@@ -908,7 +957,42 @@ async function resetOfficialCoursefiles(coursefolder) {
     }else if (args.action === "write-to-log") {
       writeToLog(args.message);
     } else if (args.action === "delete-course-file") {
-      deleteCourseFile(args.levelid);
+      deleteCourseFile(args.levelid, args.pack);
+    } else if (args.action === "download-level-to-pack") {
+      const outputDirectoryPath = levelpacksDirectory + "/" + existingPacks[args.pack] + "/" + args.levelID;
+      useProxy = args.useProxy;
+
+      if (folderExists(outputDirectoryPath)) {
+        mainWindow.webContents.send("fromMain", {
+          action: "download-info",
+          resultType: 'ERROR',
+          step: "initializing",
+          levelid: args.levelID,
+          info: "Level folder already exists."
+        });
+        return;
+      }
+    
+      mainWindow.webContents.send("fromMain", {
+        action: "download-info",
+        resultType: 'INIT',
+        step: "startingProcess",
+        info: "Starting download process for level: " + args.levelID
+      });
+    
+      // Add the download task to the queue
+      downloadQueue.push({ url: args.url, levelID: args.levelID, levelObj: args.levelObj, pack: existingPacks[args.pack] });
+      queueEventEmitter.emit('newTask'); // Signal that a new task has been added
+    
+      // Ensure the queue processor is running
+      if (!isProcessingQueue) {
+        isProcessingQueue = true;
+        processQueue().catch(error => {
+          writeToLog('[Error] '+`Error processing download queue: `+error.message);
+          console.error('Error processing download queue:', error);
+          isProcessingQueue = false; // Reset the processing flag in case of error
+        });
+      }
     }
   });
 
@@ -917,6 +1001,7 @@ async function resetOfficialCoursefiles(coursefolder) {
     writeToLog(error);
   });
   
+loadLevelPacks();
 
   //startProcess();
 

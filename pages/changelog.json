@@ -22,6 +22,9 @@
         "NOTE: This is a kinda pre release of the next Alpha, just wanted to push the update checker fast"
     ],
     "Alpha-V1.0.1 -----x----- [Mo Features Update]" : [
-        "* Finally fixxed Random Level Search"
+        "+ Added Level Packs, you can now create Level Packs and add Levels to them!",
+        "* Fixxed some lag",
+        "* Finally fixxed Random Level Search",
+        "* Fixxed bug on Download all found, which caused errors in Downloading"
     ]
 }
