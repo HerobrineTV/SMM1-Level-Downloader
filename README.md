@@ -29,7 +29,7 @@ All should work from then.
 
 # How does this work?
 I packed my ElectronJS Application into a .exe format by using electron-packager, just run unzip the .zip File from the Releases
-https://github.com/HerobrineTV/SMM1-Level-Downloader/releases/tag/Alpha-V1.0.0
+https://github.com/HerobrineTV/SMM1-Level-Downloader/releases/
 The Zip u need is called: "smm1-level-downloader-win32-x64.zip" and is being found there.
 
 It gathers the Archive.org download link for the Searched Level from my Database.
