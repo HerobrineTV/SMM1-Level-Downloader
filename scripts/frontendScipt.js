@@ -807,14 +807,32 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max) || 0;
 }
 
-// Function to calculate the checksum
 function calculateChecksum(idno) {
-    const key = CryptoJS.MD5("9f2b4678");
-    const data = structPack('<Q', idno);
-    const hmac = CryptoJS.HmacMD5(data, key);
-    const checksum = hmac.toString(CryptoJS.enc.Hex).substring(2, 6).toUpperCase();
-    return checksum;
+    // Convert the data ID to a hexadecimal string
+    const idHex = idno.toString(16).padStart(8, '0');
+
+    // Step 1: Compute the MD5 hash of the access key
+    const accessKey = "9f2b4678";
+    const key = CryptoJS.MD5(accessKey);
+
+    // Step 2: Transform the data ID into an 8-byte little-endian number
+    const data = new ArrayBuffer(8);
+    const dataView = new DataView(data);
+    for (let i = 0; i < 8; i += 2) {
+        const byte = parseInt(idHex.substr(i, 2), 16);
+        dataView.setUint8(7 - i, byte);
+    }
+
+    // Step 3: Compute the HMAC of the data ID using the MD5 hash as the key
+    const hmac = CryptoJS.HmacMD5(CryptoJS.lib.WordArray.create(new Uint8Array(data)), key);
+
+    // Step 4: Take the third and fourth byte of the HMAC, reverse their order, and return them as the checksum
+    const checksum = hmac.toString(CryptoJS.enc.Hex).substr(6, 2) + hmac.toString(CryptoJS.enc.Hex).substr(4, 2);
+    
+    return checksum.toUpperCase();
 }
+
+    //structPack('<Q', idno.toString(16));
 
 // Function to pack data into struct
 function structPack(format, value) {
@@ -1709,7 +1727,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (data.html == "<h1>Level Cant be displayed! Broken File!</h1>" || data.course == null || data.objects == null) {
                 document.getElementById(`courseName-${data.levelid}`).innerHTML = "<h1>Level with ID: "+data.levelid+" Cant be displayed! Broken File!</h1>"
             } else {
-                document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${data.levelid}</b><br>`
+                document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${generateCode(data.levelid)} (${data.levelid})</b><br>`
                 var courseInfoHTML = ``;
                 if (lastLoadedDownloads[data.levelid]) {
                     courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
