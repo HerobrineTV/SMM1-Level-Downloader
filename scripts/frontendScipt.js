@@ -429,9 +429,11 @@ function selectAllToDelete() {
             deleteArray = [];
             for (let i = 0; i < valuesArray.length; i++) {
                 //deleteArray.push(valuesArray[i].levelid);
-                markLevelAsDeleting(valuesArray[i]);
+                if (document.getElementById(`object-${valuesArray[i].levelid}`).style.display != "none") {
+                    markLevelAsDeleting(valuesArray[i]);
+                }
             }
-        } else {
+        } else if (isAllSelectedForDel == true) {
             isAllSelectedForDel = false;
             deleteArray = [];
             for (let i = 0; i < valuesArray.length; i++) {

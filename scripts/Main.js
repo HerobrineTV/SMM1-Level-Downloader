@@ -701,7 +701,9 @@ function courseViewerExtract(coursepath, packname){
 
     if (folders.length == 0) {
       // Handle no levels found scenario
-      mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"No Levels Found!"});
+      if (packname == null || packname == "" || packname == "null") {
+        mainWindow.webContents.send("fromMain", {action:"currentLevelsInSMM1ProfileDir",levels:null, problem:"No Levels Found!"});
+      }
       return;
     }
 
