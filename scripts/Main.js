@@ -412,6 +412,31 @@ async function addLevelToJson(levelObj){
       }
 }
 
+async function addPackToJson(packname, packfile){
+
+  let jsonData = {};
+  try {
+      const data = fs.readFileSync(levelpacksJson, 'utf8');
+      jsonData = JSON.parse(data);
+  } catch (error) {
+      writeToLog('[ERROR] '+`Error reading the levelpacks.json JSON file: `+error.message);
+      console.error('Error reading JSON file:', error);
+      return;
+  }
+
+  // Append the object to the JSON Object
+  jsonData[packname] = packfile;
+
+  // Write the updated JSON back to the file
+  try {
+      fs.writeFileSync(levelpacksJson, JSON.stringify(jsonData, null, 2));
+      //console.log('Object added to JSON file successfully.');
+      } catch (error) {
+      console.error('Error writing JSON file:', error);
+      writeToLog('[ERROR] '+`Error writing JSON file: `+error.message);
+  }
+}
+
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -854,6 +879,25 @@ function loadLevelPacks() {
   existingPacks = JSON.parse(data);
 }
 
+function createLevelPack(packname) {
+  //console.log(packname)
+  const folderName = packname.replace(/[^a-zA-Z0-9_]/g, '').replace(/\s/g, '_'); // Replace spaces with underscores
+  const packFolderPath = path.join(levelpacksDirectory, folderName);
+
+  // Check if the folder already exists
+  if (fs.existsSync(packFolderPath)) {
+    mainWindow.webContents.send("fromMain", {action: "packAlreadyExists", packname: packname});
+  } else {
+
+    addPackToJson(packname, folderName)
+
+    fs.mkdirSync(packFolderPath);
+
+    existingPacks[packname] = folderName;
+    mainWindow.webContents.send("fromMain", {action: "packCreated", packname: packname});
+  }
+}
+
 async function resetOfficialCoursefiles(coursefolder) {
   // First Delete all Files inside of CourseFiles Folder
   if (folderExists(path.join(__dirname, "../SMMDownloader/Data/"+coursefolder+"/CourseFiles"))) {
@@ -933,6 +977,8 @@ async function resetOfficialCoursefiles(coursefolder) {
       loadOfficialCourses("OfficialCourses");
     } else if (args.action === "reset-official-courses") {
       resetOfficialCoursefiles("OfficialCourses");
+    } else if (args.action === "create-pack") {
+      createLevelPack(args.packname);
     } else if (args.action === "exit-app") {
       app.quit();
     } else if (args.action === "openURL") {

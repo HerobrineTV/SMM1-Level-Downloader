@@ -314,7 +314,7 @@ function loadFileInWindow(levelObj) {
             if (downloadAsPack == false) {
                 runLevelDownloader(levelObj)
             } else {
-                runLevelDownloaderToPacks(levelObj, document.getElementById('levelPackInput-1').text || "Default Pack")
+                runLevelDownloaderToPacks(levelObj, document.getElementById('levelPackInput-1').value || "Default Pack")
             }
         })
     }
@@ -973,7 +973,7 @@ async function downloadAll() {
         if (downloadAsPack == false) {
             runLevelDownloader(value)
         } else {
-            runLevelDownloaderToPacks(value, document.getElementById('levelPackInput-1').text || "Default Pack")
+            runLevelDownloaderToPacks(value, document.getElementById('levelPackInput-1').value || "Default Pack")
         }
     }
 }
@@ -1124,11 +1124,11 @@ function loadPageScripts(page) {
         const dropdown2 = document.getElementById('pack-dropdown-2');
         
         levelPackInput1.addEventListener('input', function() {
-          const input = this.value.toLowerCase();
+          const input = this.value
           dropdown1.innerHTML = '';
-
+        
           existingPacks.forEach(pack => {
-            if (pack.toLowerCase().includes(input)) {
+            if (pack.toLowerCase().includes(input.toLowerCase())) {
               const option = document.createElement('a');
               option.textContent = pack;
               option.addEventListener('click', function() {
@@ -1140,37 +1140,47 @@ function loadPageScripts(page) {
             }
           });
         
-          if (input === '') {
-            dropdown1.style.display = 'none';
-          } else {
-            dropdown1.style.display = 'block';
+          // Add the "Create Pack: %Current_Input%" option
+          if (input !== '') {
+            const createOption = createOptionElement("Create Pack: " + input);
+            createOption.addEventListener('click', function() {
+              createPack(input);
+            });
+            dropdown1.appendChild(createOption);
           }
+        
+          toggleDropdownVisibility(dropdown1, input);
         });
         
         levelPackInput2.addEventListener('input', function() {
-            const input = this.value.toLowerCase();
-            dropdown2.innerHTML = '';
-
-            existingPacks.forEach(pack => {
-              if (pack.toLowerCase().includes(input)) {
-                const option = document.createElement('a');
-                option.textContent = pack;
-                option.addEventListener('click', function() {
-                  levelPackInput2.value = pack;
-                  levelPackInput1.value = pack;
-                  dropdown2.style.display = 'none';
-                });
-                dropdown2.appendChild(option);
-              }
-            });
-          
-            if (input === '') {
-              dropdown2.style.display = 'none';
-            } else {
-              dropdown2.style.display = 'block';
+          const input = this.value
+          dropdown2.innerHTML = '';
+        
+          existingPacks.forEach(pack => {
+            if (pack.toLowerCase().includes(input.toLowerCase())) {
+              const option = document.createElement('a');
+              option.textContent = pack;
+              option.addEventListener('click', function() {
+                levelPackInput1.value = pack;
+                levelPackInput2.value = pack;
+                dropdown2.style.display = 'none';
+              });
+              dropdown2.appendChild(option);
             }
           });
-
+        
+          // Add the "Create Pack: %Current_Input%" option
+          if (input !== '') {
+            const createOption = createOptionElement("Create Pack: " + input);
+            createOption.addEventListener('click', function() {
+              createPack(input);
+            });
+            dropdown2.appendChild(createOption);
+          }
+        
+          toggleDropdownVisibility(dropdown2, input);
+        });
+        
         // Close the dropdown if the user clicks outside of it
         document.addEventListener('click', function(event) {
           if (!event.target.matches('#levelPackInput-1') && !event.target.matches('#levelPackInput-2')) {
@@ -1178,6 +1188,35 @@ function loadPageScripts(page) {
             dropdown2.style.display = 'none';
           }
         });
+        
+        // Function to create an option element
+        function createOptionElement(text) {
+          const option = document.createElement('a');
+          option.textContent = text;
+          option.classList.add('dropdown-item');
+          return option;
+        }
+        
+        // Function to toggle dropdown visibility based on input
+        function toggleDropdownVisibility(dropdown, input) {
+          if (input === '') {
+            dropdown.style.display = 'none';
+          } else {
+            dropdown.style.display = 'block';
+          }
+        }
+        
+        // Function to handle creating a new pack
+        function createPack(input) {
+          const newPack = input.trim();
+          if (existingPacks.includes(newPack) || newPack == "") {
+            return;
+          } else {
+            window.api.send("toMain", {action:"create-pack", packname: newPack})
+          }
+          console.log("Creating Pack:", input);
+        }
+        
 
     } else if (page == "../pages/savedLevels.html") {
         deleteArray = [];
@@ -1719,6 +1758,14 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             //document.getElementById('scrollable-objects').innerHTML = `<h2></h2>`;
             displayLevels(data.levels);
+        }
+        if (data.action == "packCreated") {
+            const levelPackInput1 = document.getElementById('levelPackInput-1');
+            const levelPackInput2 = document.getElementById('levelPackInput-2');
+    
+            levelPackInput1.value = data.packname;
+            levelPackInput2.value = data.packname;
+            loadLevelPacks();
         }
         if (data.action == "displayCourse") {
             //console.log(data.course.name)
