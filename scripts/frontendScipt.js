@@ -638,10 +638,11 @@ function addObjects(levels) {
             <div id="packName-${obj.levelid}"></div>
             <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
             `;
-            objectDiv.addEventListener('click', () => {
+            function clickHandler() {
                 objectClicked(obj.levelid, obj)
-                //console.log("CLICKED")
-            });
+                //console.log("CLICKED-1")
+            }
+            objectDiv.onclick = clickHandler
         }
         objectsContainer.appendChild(objectDiv);
     });
@@ -1782,11 +1783,30 @@ window.addEventListener('DOMContentLoaded', () => {
                     courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
                     const objectDiv = document.getElementById(`object-${data.levelid}`)
                     objectDiv.setAttribute('packName', data.packname || null)
-                    objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
+                    function clickHandler() {
+                        objectClicked(data.levelid, lastLoadedDownloads[data.levelid]);
+                        //console.log("CLICKED-2");
+                    }
+                    objectDiv.onclick = clickHandler
                 } else {
                     const objectDiv = document.getElementById(`object-${data.levelid}`)
                     objectDiv.setAttribute('packName', data.packname || null)
-                    objectDiv.addEventListener('click', () => objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}));   
+                    function clickHandler() {
+                        objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name});
+                        //console.log("CLICKED-3");
+                    }
+                    objectDiv.onclick = clickHandler  
+                }
+                if (data.packname) {
+                    packdiv = document.getElementById(`packName-${data.packname}`)
+                    if (!packdiv) {
+                        packdiv = document.createElement('div')
+                        packdiv.id = `packName-${data.packname}`
+                        packdiv.classList.add('packName')
+                        document.getElementById('scrollable-objects').appendChild(packdiv)
+                        packdiv.innerHTML = `<b>Pack Name:</b> ${data.packname}<br>`
+                        packdiv.appendChild(document.getElementById(`object-${data.levelid}`))
+                    }
                 }
     //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
     //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`

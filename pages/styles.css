@@ -615,7 +615,16 @@ textarea::placeholder {
     text-decoration: none;
     display: block;
   }
-  
+
   .dropdown-content a:hover {
     background-color: #f1f1f1;
+  }
+
+  .packName {
+    padding-left: inherit;
+    background: #ffe4c414;
+  }
+
+  .packName .object {
+    display: none;
   }
