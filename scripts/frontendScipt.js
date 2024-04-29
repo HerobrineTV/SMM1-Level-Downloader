@@ -659,8 +659,15 @@ function searchDivs(searchQuery, parentId) {
     for (var i = 0; i < childDivs.length; i++) {
         var currentDiv = childDivs[i];
 
-        // If the current div does not contain the search query in its data-name attribute or innerText
-        if (!currentDiv.getAttribute('data-name').toLowerCase().includes(searchQuery.toLowerCase()) && !currentDiv.innerText.toLowerCase().includes(searchQuery.toLowerCase())) {
+        if (searchQuery.toLowerCase() == '') {
+            const packname = currentDiv.getAttribute('packName')
+            if (packname && document.getElementById(`packName-${packname}`) && document.getElementById(`packName-${packname}`).getAttribute('content-visible') == 'hidden') {
+                currentDiv.style.display = 'none';
+            } else {
+                currentDiv.style.display = '';
+            }
+
+        } else if (!currentDiv.getAttribute('data-name').toLowerCase().includes(searchQuery.toLowerCase()) && !currentDiv.innerText.toLowerCase().includes(searchQuery.toLowerCase())) {
             // Make the div invisible
             currentDiv.style.display = 'none';
         } else {
@@ -1144,7 +1151,7 @@ function loadPageScripts(page) {
           });
         
           // Add the "Create Pack: %Current_Input%" option
-          if (input !== '') {
+          if (input !== '' && input.toLowerCase()!== 'null') {
             const createOption = createOptionElement("Create Pack: " + input);
             createOption.addEventListener('click', function() {
               createPack(input);
@@ -1526,7 +1533,7 @@ function openProxiesFile() {
 
 function deleteLevel(levelid) {
     const objectDiv = document.getElementById(`object-${levelid}`)
-    const pack = objectDiv.getAttribute('packName')
+    const pack = objectDiv.getAttribute('packName') || null
     //console.log(pack);
     window.api.send("toMain", {action:"delete-course-file", levelid:levelid, pack: pack});
 }
@@ -1601,6 +1608,85 @@ const observer = new IntersectionObserver((entries) => {
         }
     });
 });
+
+function createPackDiv(packname, levelid) {
+    console.log(packname);
+    var packdiv = document.createElement('div')
+    packdiv.id = `packName-${packname}`
+    packdiv.classList.add('packName')
+    packdiv.setAttribute('content-visible', 'hidden')
+    document.getElementById('scrollable-objects').prepend(packdiv)
+    packdiv.innerHTML = `<img class="folder-img" id="folder-img-${packname}" src="../pictures/smmdownloader/folder_closed.png"><b class="packTitle">Pack: ${packname}</b><br>`
+    if (levelid != null) {
+        packdiv.appendChild(document.getElementById(`object-${levelid}`))
+    }
+
+    const hoverTextDiv = document.getElementById('hover-text-div')
+
+    var lineDiv = document.createElement('div');
+    lineDiv.classList.add('folder-line');
+    lineDiv.id = `folder-line-${packname}`
+    packdiv.appendChild(lineDiv);
+ 
+    lineDiv.addEventListener('mouseenter', function(event) {
+        lineDiv = document.getElementById(`folder-line-${packname}`)
+        if (event.target === lineDiv) {
+            const mouseY = event.clientY;
+            const mouseX = event.clientX;
+            hoverTextDiv.style.top = `${mouseY+5}px`;
+            hoverTextDiv.style.left = `${mouseX+5}px`;
+            hoverTextDiv.innerText = `Close Pack: ${packname}`;
+            hoverTextDiv.style.display = 'block';
+        } else {
+            hoverTextDiv.innerText = '';
+            hoverTextDiv.style.display = 'none';
+        }
+    });
+    
+    lineDiv.addEventListener('mouseleave', function() {
+        hoverTextDiv.innerText = '';
+        hoverTextDiv.style.display = 'none';
+    });
+    
+    function clickHandler() {
+        packdiv = document.getElementById(`packName-${packname}`)
+        if (packdiv.getAttribute('content-visible') == "hidden") {
+            packdiv.setAttribute('content-visible', 'visible')
+            document.getElementById(`folder-img-${packname}`).src = "../pictures/smmdownloader/folder_open.png";
+            for (let i = 0; i < packdiv.children.length; i++) {
+                if (document.getElementById(packdiv.children[i].id)) {
+                    packdiv.children[i].style.display = "block";
+                }
+            }
+            if (packdiv.children.length == 1) {
+                packdiv.innerHTML += `Pack Empty`
+            }
+            lineDiv.style.display = 'block';
+        } else {
+            packdiv.setAttribute('content-visible', 'hidden')
+            document.getElementById(`folder-img-${packname}`).src = "../pictures/smmdownloader/folder_closed.png";
+            for (let i = 0; i < packdiv.children.length; i++) {
+                if (document.getElementById(packdiv.children[i].id) && !packdiv.children[i].classList.contains('folder-img')) {
+                    packdiv.children[i].style.display = "none";
+                }
+            }
+            lineDiv.style.display = 'none';
+        }
+    }
+    packdiv.addEventListener('click', function(event) {
+        packdiv = document.getElementById(`packName-${packname}`)
+        if (event.target === packdiv) {
+            clickHandler();
+        }
+    });
+
+    lineDiv.addEventListener('click', function(event) {
+        lineDiv = document.getElementById(`folder-line-${packname}`)
+        if (event.target === lineDiv) {
+            clickHandler();
+        }
+    });
+}
 
 function observeNewElements() {
     const elements = document.querySelectorAll('.hidden');
@@ -1797,16 +1883,22 @@ window.addEventListener('DOMContentLoaded', () => {
                     }
                     objectDiv.onclick = clickHandler  
                 }
-                if (data.packname) {
+                if (data.packname && data.packname!= null && data.packname!= "null") {
+                    const objectDiv = document.getElementById(`object-${data.levelid}`)
+                    objectDiv.style.display = "none";
                     packdiv = document.getElementById(`packName-${data.packname}`)
                     if (!packdiv) {
-                        packdiv = document.createElement('div')
-                        packdiv.id = `packName-${data.packname}`
-                        packdiv.classList.add('packName')
-                        document.getElementById('scrollable-objects').appendChild(packdiv)
-                        packdiv.innerHTML = `<b>Pack Name:</b> ${data.packname}<br>`
-                        packdiv.appendChild(document.getElementById(`object-${data.levelid}`))
+                        createPackDiv(data.packname, data.levelid)
+                    } else if (packdiv) {
+                        packdiv.appendChild(objectDiv)
+                        if (packdiv.getAttribute('content-visible') == 'visible') {
+                            objectDiv.style.display = "";
+                        }
                     }
+                } else {
+                    const objectDiv = document.getElementById(`object-${data.levelid}`)
+                    //console.log(data.levelid)
+                    document.getElementById('scrollable-objects').appendChild(objectDiv);
                 }
     //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
     //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
@@ -1817,7 +1909,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 courseInfoHTML += `</div>`
                 enqueueDrawTask(data.levelid, data.course, data.objects)
                 document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
-                if (data.packname != null && data.packname != "null") {
+                if (data.packname != null && data.packname!= "null") {
                     document.getElementById(`packName-${data.levelid}`).innerHTML = `<b>Pack Name:</b> ${data.packname}<br>`
                 } else {
                     document.getElementById(`packName-${data.levelid}`).innerHTML = `<b>Not in a Level Pack</b><br>`
@@ -1826,6 +1918,11 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+const hoverTextDiv = document.createElement('div');
+hoverTextDiv.id = 'hover-text-div';
+hoverTextDiv.classList.add('hover-text');
+document.body.appendChild(hoverTextDiv);
 
 checkServerStatus()
 loadLevelPacks()
