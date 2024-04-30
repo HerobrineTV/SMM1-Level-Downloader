@@ -1060,7 +1060,8 @@ async function resetOfficialCoursefiles(coursefolder) {
   
 loadLevelPacks();
 
-  //startProcess();
+// Comments Below can be Ignored, they are from the Past non UI Version of the App
+// I am keeping them here for future reference
 
 // Course URLS have to be retrieved from https://app.gigasheet.com/spreadsheet/courses-jsonl/1493e4c3_5fed_45cb_b189_2e1428df82d5 or a copy of this sheet
 
@@ -1068,5 +1069,5 @@ loadLevelPacks();
 //processUrl(originalUrl);
 
 
- // GitLens
+// GitLens
  
