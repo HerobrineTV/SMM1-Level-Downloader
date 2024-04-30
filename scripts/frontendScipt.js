@@ -294,8 +294,10 @@ function loadFileInWindow(levelObj) {
             <div id="download-actions-button-1">`
 
                 if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {
-                } else {
+                } else if (currentHTMLPage != "savedLevels") {
                     buildhtml+= `<button class="searchdownload-btn">Download</button>`
+                } else {
+                    buildhtml+= `<button class="deletedownload-btn">Delete</button>`
                 }
 
                 buildhtml+=`<button class="openCourseFolder-btn">Open Folder</button>
@@ -309,7 +311,7 @@ function loadFileInWindow(levelObj) {
     // Add event listeners for the custom dropdown
     setupCustomDropdown();
 
-    if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {} else {
+    if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {} else if (currentHTMLPage != "savedLevels") {
         document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {
             if (downloadAsPack == false) {
                 runLevelDownloader(levelObj)
@@ -317,6 +319,8 @@ function loadFileInWindow(levelObj) {
                 runLevelDownloaderToPacks(levelObj, document.getElementById('levelPackInput-1').value || "Default Pack")
             }
         })
+    } else {
+        document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid, data.pack || null)})
     }
 
     downloadingBar.updateWindow(levelObj.levelid);
@@ -534,14 +538,19 @@ function markLevelAsDeleting(levelObj){
     }
 }
 
-function objectClicked(levelid, levelObj) {
-    //console.log("Clicked")
+function objectClicked(levelid, levelObj, pack) {
+    //console.log("Clicked", existingPacksObj[pack], lastLoadedDownloads[levelid+"_"+existingPacksObj[pack]])
     if (!subAreaClicked) {
         if (levelObj.mode === "light") {
+            //console.log("LIGHT")
             loadFileInWindowLight(levelObj);
         } else {
             if (isDeleteMode == false) {
-                loadFileInWindow(levelObj);
+                if (existingPacksObj[pack] != null && existingPacksObj[pack] != "null") {
+                    loadFileInWindow(lastLoadedDownloads[levelid+"_"+existingPacksObj[pack]])
+                } else {
+                    loadFileInWindow(levelObj);
+                }
             } else {
                 isAllSelectedForDel = false;
                 markLevelAsDeleting(levelObj);
@@ -639,7 +648,7 @@ function addObjects(levels) {
             <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
             `;
             function clickHandler() {
-                objectClicked(obj.levelid, obj)
+                objectClicked(obj.levelid, obj, obj.packname || null)
                 //console.log("CLICKED-1")
             }
             objectDiv.onclick = clickHandler
@@ -1237,6 +1246,7 @@ function loadPageScripts(page) {
             searchDivs(document.getElementById('searchSavedLevelText').value.trim(), 'scrollable-objects');
         })
         loadSavedLevels();
+        loadDownloadedLevels();
     }
 }
 
@@ -1531,9 +1541,9 @@ function openProxiesFile() {
     window.api.send("toMain", {action:"openProxies"});
 }
 
-function deleteLevel(levelid) {
+function deleteLevel(levelid, packname) {
     const objectDiv = document.getElementById(`object-${levelid}`)
-    const pack = objectDiv.getAttribute('packName') || null
+    const pack = objectDiv.getAttribute('packName') || packname || null
     //console.log(pack);
     window.api.send("toMain", {action:"delete-course-file", levelid:levelid, pack: pack});
 }
@@ -1764,7 +1774,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     } else {
                         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
                     }
-                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
+                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid, data.pack || null)})
                 }
                 //console.log("TEST2")
             } else if (data.resultType == "IN_PROGRESS") {
@@ -1812,7 +1822,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     } else {
                         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
                     }
-                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
+                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid, data.pack || null)})
                 }
             }
         }
@@ -1865,20 +1875,22 @@ window.addEventListener('DOMContentLoaded', () => {
             } else {
                 document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${generateCode(data.levelid)} (${data.levelid})</b><br>`
                 var courseInfoHTML = ``;
-                if (lastLoadedDownloads[data.levelid]) {
-                    courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
+                if (lastLoadedDownloads[data.levelid] || lastLoadedDownloads[data.levelid+"_"+existingPacksObj[data.packname]]) {
+                    const levelData = lastLoadedDownloads[data.levelid] || lastLoadedDownloads[data.levelid+"_"+existingPacksObj[data.packname]]
+                    courseInfoHTML += `<b>Uploader:</b> ${levelData.creator} <br><b>Clearrate:</b> ${(levelData.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${levelData.clears} / ${levelData.total_attempts})<br>`
                     const objectDiv = document.getElementById(`object-${data.levelid}`)
                     objectDiv.setAttribute('packName', data.packname || null)
                     function clickHandler() {
-                        objectClicked(data.levelid, lastLoadedDownloads[data.levelid]);
+                        objectClicked(data.levelid, levelData, data.packname || null);
                         //console.log("CLICKED-2");
                     }
                     objectDiv.onclick = clickHandler
                 } else {
+                    //console.log(lastLoadedDownloads[data.levelid+"_"+existingPacksObj[data.packname || null]])
                     const objectDiv = document.getElementById(`object-${data.levelid}`)
                     objectDiv.setAttribute('packName', data.packname || null)
                     function clickHandler() {
-                        objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name});
+                        objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}, data.packname || null);
                         //console.log("CLICKED-3");
                     }
                     objectDiv.onclick = clickHandler  

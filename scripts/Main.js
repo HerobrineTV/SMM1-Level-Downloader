@@ -398,7 +398,11 @@ async function addLevelToJson(levelObj){
       }
   
       // Append the object to the JSON Object
-      jsonData[levelObj.levelid] = levelObj;
+      if (levelObj.pack != "null" && levelObj.pack != null) {
+        jsonData[levelObj.levelid+"_"+levelObj.pack] = levelObj;
+      } else {
+        jsonData[levelObj.levelid] = levelObj;
+      }
 
       // Write the updated JSON back to the file
       try {
@@ -613,14 +617,14 @@ function folderExists(folderPath) {
 
 function folderExistsLevels(levelid) {
   if (folderExists(outputDirectory+"/"+levelid)) {
-    return true;
+    return [true, null];
   } else {
     for (const packName in existingPacks) {
       if (folderExists(levelpacksDirectory+"/"+existingPacks[packName]+"/"+levelid)) {
-        return true;
+        return [true, packName];
       }
     }
-    return false;
+    return [false, null];
   }
 }
 
@@ -863,14 +867,18 @@ function deleteCourseFile(levelid, pack) {
   loadLevelPacks()
   //console.log(outputDirectory, levelid)
   var partFilePath;
-  if (pack == "null") {
+  if (pack == "null" || pack == null) {
     partFilePath = path.join(outputDirectory, levelid+"");
   } else {
     partFilePath = path.join(levelpacksDirectory, existingPacks[pack], levelid+"");
   }
   fs.rm(partFilePath, { recursive: true, force: true }, (err) => {
       if (err) throw err;
-      removeKeyFromJSONFileSafe(levelid+"")
+      if (pack == "null" || pack == null) {
+        removeKeyFromJSONFileSafe(levelid+"")
+      } else {
+        removeKeyFromJSONFileSafe(levelid+"_"+existingPacks[pack])
+      }
       mainWindow.webContents.send("fromMain", {action:"courseFileDeleted",levelid:levelid});
       //console.log('File deleted successfully!');
     });
@@ -988,10 +996,11 @@ async function resetOfficialCoursefiles(coursefolder) {
     } else if (args.action === "openProxies") {
       shell.openExternal(path.join(jsonDirectory,"/proxies.txt"));
     } else if (args.action === "checkIfAlreadyDownloaded") {
-      if (folderExistsLevels(args.levelID)) {
-        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID})
+      const res = folderExistsLevels(args.levelID)
+      if (res[0] == true) {
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:true, levelid:args.levelID, pack:res[1]})
       } else {
-        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID})
+        mainWindow.webContents.send("fromMain", {action:"checkIfAlreadyDownloaded-info",answer:false, levelid:args.levelID, pack:res[1]})
       }
     } else if (args.action === "get-smm1-cached-downloads") {
       loadDownloadedCourses();
