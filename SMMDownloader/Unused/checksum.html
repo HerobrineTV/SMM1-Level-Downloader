@@ -1,0 +1,176 @@
+<html>
+<link rel="stylesheet" type="text/css" href="https://www.mozilla.org/media/css/firefox_developer_whatsnew_mdnplus.703eeb148429.css">
+<style>
+.mandala-container {
+    display: flex;
+    justify-content: center;
+    -webkit-transform: translate(12rem, -8rem);
+    transform: translate(12rem, -8rem);
+    --mandala-primary: #52525e;
+    --mandala-accent-1: #c689ff;
+    --mandala-accent-2: #ffd567;
+    --mandala-accent-3: #88ffd1;
+    --mandala-accent-4: #ff9aa2;
+    --mandala-accent-5: #e0e0e6;
+}
+
+.mandala-container svg {
+    font-size: 1.5rem;
+    font-weight: 300;
+    user-select: none;
+    left: -25%;
+    position: fixed;
+}
+
+.mandala-container.animated .mandala-rotate>svg .mandala-accent-1 {
+    animation: rotation 505s linear infinite;
+}
+.mandala-container.animated .mandala-rotate>svg .mandala-accent-2 {
+    animation: rotation 480s linear infinite reverse;
+}
+.mandala-container.animated .mandala-rotate>svg .mandala-accent-3 {
+    animation: rotation 515s linear infinite;
+}
+.mandala-container.animated .mandala-rotate>svg .mandala-accent-4 {
+    animation: rotation 425s linear infinite reverse;
+}
+.mandala-container.animated .mandala-rotate>svg .mandala-accent-5 {
+    animation: rotation 415s linear infinite;
+}
+.mandala-container svg .mandala-ring {
+    transform-origin: 50% 50%;
+}
+.mandala-container .mandala-accent-1 {
+    font-size: 1.5rem;
+}
+.mandala-container svg>text {
+    fill: var(--mandala-primary);
+}
+.mandala-container.animated.animate-colors .mandala-accent-1>textPath>tspan {
+    fill: var(--mandala-accent-1);
+    animation-delay: -15s;
+}
+.mandala-container.animated.animate-colors svg>text>textPath>tspan {
+    animation: mandala-color-change 50s infinite;
+    animation-timing-function: ease-in-out;
+    fill: var(--mandala-primary);
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(1turn);
+    }
+  }
+  
+@keyframes mandala-color-change {
+    0% {
+        fill: var(--mandala-primary);
+    }
+    10% {
+        fill: var(--mandala-primary);
+    }
+    15% {
+        fill: var(--mandala-accent-1);
+    }
+    20% {
+        fill: var(--mandala-primary);
+    }
+    25% {
+        fill: var(--mandala-primary);
+    }
+    30% {
+        fill: var(--mandala-accent-2);
+    }
+    35% {
+        fill: var(--mandala-primary);
+    }
+    40% {
+        fill: var(--mandala-primary);
+    }
+    50% {
+        fill: var(--mandala-accent-3);
+    }
+    55% {
+        fill: var(--mandala-primary);
+    }
+    60% {
+        fill: var(--mandala-primary);
+    }
+    65% {
+        fill: var(--mandala-accent-4);
+    }
+    70% {
+        fill: var(--mandala-primary);
+    }
+    100% {
+        fill: var(--mandala-primary);
+    }
+}
+</style>
+<body>
+        <div class="mandala-wrapper">
+            <div id="mandala" class="mandala-container animate-colors animated" aria-hidden="true">
+              <div class="mandala-translate mandala-rotate">
+                <svg width="675" height="675" viewBox="0 0 675 675" fill="none" xmlns="http://www.w3.org/2000/svg" class="mandala">
+                  <defs>
+                    <path d="M337.5,337.5 m-320,0 a320,320 0 1,1 640,0 a320,320 0 1,1 -640,0" id="circle1"></path>
+                    <path d="M337.5,337.5 m-280,0 a280,280 0 1,1 560,0 a280,280 0 1,1 -560,0" id="circle2"></path>
+                    <path d="M337.5,337.5 m-240,0 a240,240 0 1,1 480,0 a240,240 0 1,1 -480,0" id="circle3"></path>
+                    <path d="M337.5,337.5 m-200,0 a200,200 0 1,1 400,0 a200,200 0 1,1 -400,0" id="circle4"></path>
+                    <path d="M337.5,337.5 m-160,0 a160,160 0 1,1 320,0 a160,160 0 1,1 -320,0" id="circle5"></path>
+                  </defs>
+                  <text class="mandala-ring mandala-accent-1" dy="70" textLength="2010">
+                    <textPath textLength="2010" href="#circle1">&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>&nbsp;&nbsp;&nbsp;/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan>/<tspan>/</tspan></textPath>
+                  </text>
+                  <text class="mandala-ring mandala-accent-2" dy="70" textLength="1760">
+                    <textPath textLength="1760" href="#circle2">&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan>&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan>&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan>&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan>&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan>&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan>&nbsp;&nbsp;+<tspan>+</tspan>+<tspan>+</tspan>+<tspan>+</tspan></textPath>
+                  </text>
+                  <text class="mandala-ring mandala-accent-3" dy="70" textLength="1507">
+                    <textPath textLength="1507" href="#circle3"><tspan>{</tspan>{<tspan>{</tspan>{&nbsp;<tspan>}</tspan>}<tspan>}</tspan>}&nbsp;&nbsp;<tspan>{</tspan>{<tspan>{</tspan>{&nbsp;<tspan>}</tspan>}<tspan>}</tspan>}&nbsp;&nbsp;<tspan>{</tspan>{<tspan>{</tspan>{&nbsp;<tspan>}</tspan>}<tspan>}</tspan>}&nbsp;&nbsp;<tspan>{</tspan>{<tspan>{</tspan>{&nbsp;<tspan>}</tspan>}<tspan>}</tspan>}&nbsp;&nbsp;<tspan>{</tspan>{<tspan>{</tspan>{&nbsp;<tspan>}</tspan>}<tspan>}</tspan>}&nbsp;&nbsp;<tspan>{</tspan>{<tspan>{</tspan>{&nbsp;<tspan>}</tspan>}<tspan>}</tspan>}&nbsp;&nbsp;</textPath>
+                  </text>
+                  <text class="mandala-ring mandala-accent-4" dy="70" textLength="1257">
+                    <textPath textLength="1257" href="#circle4">&nbsp;&nbsp;&nbsp;<tspan>../../</tspan> &nbsp;&nbsp;&nbsp;../../ &nbsp;&nbsp;&nbsp;<tspan>../../</tspan> &nbsp;&nbsp;&nbsp;../../ &nbsp;&nbsp;&nbsp;<tspan>../../</tspan> &nbsp;&nbsp;&nbsp;../../ &nbsp;&nbsp;&nbsp;<tspan>../../</tspan> &nbsp;&nbsp;&nbsp;../../ </textPath>
+                  </text>
+                  <text class="mandala-ring mandala-accent-5" dy="70" textLength="1005">
+                    <textPath textLength="1005" href="#circle5"><tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;<tspan>&lt;&gt;</tspan>&lt;/&gt;</textPath>
+                  </text>
+                </svg>
+              </div>
+            </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+<script>
+function calculateChecksum(idno) {
+
+    // Generate the key from a fixed MD5 hash of the access key
+    const key = CryptoJS.MD5("9f2b4678");
+
+    // Prepare the data: convert idno to a hexadecimal, ensure it's 16 characters long (8 bytes), little endian format
+    const dataHex = idno.toString(16).padStart(16, '0');
+    let data = CryptoJS.lib.WordArray.create(); // Create an empty word array
+    for (let i = 0; i < dataHex.length; i += 2) {
+        data.words.unshift(parseInt(dataHex.slice(i, i + 2), 16)); // Unshift to prepend in little endian
+    }
+    data.sigBytes = 8; // Set significant bytes to 8, as we are always dealing with 8 bytes
+
+    // Calculate HMAC-MD5 of the data using the key
+    const hmac = CryptoJS.HmacMD5(data, key);
+
+    // Convert HMAC to hex string, take substring of the 3rd and 4th bytes, reverse and return in upper case
+    const checksum = hmac.toString(CryptoJS.enc.Hex).substring(2, 6).toUpperCase();
+    return checksum;
+}
+
+// Testing different idnos
+console.log(`Checksum for 12324867: ${calculateChecksum(12324867)}`);
+console.log(`Checksum for 654321: ${calculateChecksum(654321)}`);
+console.log(`Checksum for 111111: ${calculateChecksum(111111)}`);
+console.log(`Checksum for 222222: ${calculateChecksum(222222)}`);
+console.log(`Checksum for 333333: ${calculateChecksum(333333)}`);
+
+</script>
+</html>

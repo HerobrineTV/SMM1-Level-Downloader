@@ -3,6 +3,7 @@ const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 const backupCache = ('../SMMDownloader/Data/backupped.json');
 const changelog = ('../pages/changelog.json');
+const levelpacksFile = ('../SMMDownloader/Data/levelpacks.json');
 let SettingsData;
 let lastLoadedDownloads = {};
 const totalSteps = 12;
@@ -16,6 +17,8 @@ let deleteArray = [];
 var isloadingLevels = false;
 var connerrorCooldown = false;
 var subAreaClicked = false;
+var existingPacks = [];
+var existingPacksObj = {};
 var imageUrls = [
     "../pictures/smmdownloader/WU-groundblock.png", 
     "../pictures/smmdownloader/WU-questionmarkblock.png", 
@@ -30,7 +33,30 @@ const formatCodes = {
     'Q': 8
   };
 
-  const existingPacks = ['Level Pack 1', 'Level Pack 2', 'Level Pack 3', 'Level Pack 1', 'Level Pack 2', 'Level Pack 3', 'Level Pack 1', 'Level Pack 2', 'Level Pack 3'];
+var downloadAsPack = false;
+
+let debounceServerStatusTimer;
+
+async function checkServerStatus() {
+    const url = "https://api.bobac-analytics.com/smm1/ping";
+    const response = await fetch(url);
+
+    if (response.status == 200) {
+        document.getElementById('onlinedisplay').innerText = "API: 🟢";
+        console.log("API Reachable 🟢")
+    } else {
+        document.getElementById('onlinedisplay').innerText = "API: 🔴";
+        console.log("API Unreachable 🔴")
+    }
+
+    // Set a debounce timer to wait for 1 second before allowing the function to be called again
+    debounceTimer = setTimeout(checkServerStatus, 30000);
+}
+
+// Function to clear the debounce timer
+function clearDebounceTimer() {
+    clearTimeout(debounceTimer);
+}
 
 // Function to change image source after each bounce
 function changeImageSrc() {
@@ -81,10 +107,10 @@ var downloadingBar = {
                 downloadingBarContainerWindow.children[0].style.width = progressPercentage + '%';
         
                 if (currentStep[levelid] == this.maxSteps) {
-                    delay(1000).then(() => {
+                    setTimeout(() => {
                         downloadingBarContainerWindow.innerHTML = `<p2>Download Complete</p2>`;
                         downloadingBarContainerWindow.style.display = 'contents';
-                    })
+                    }, 1000)
                   }
             }
         }
@@ -103,10 +129,10 @@ var downloadingBar = {
                 }
           
                 if (currentStep[levelid] == this.maxSteps) {
-                  delay(1000).then(() => {
+                    setTimeout(() => {
                       barcontainer.innerHTML = `<p2>Download Complete</p2>`;
                       barcontainer.style.display = 'contents';
-                  })
+                  }, 1000)
                 }
             }
         }
@@ -128,15 +154,8 @@ var downloadingBar = {
                 barcontainer.style.display = 'contents';
                 barcontainer.style.color = 'crimson';
             }
-            //delay(60000).then(() => {
-            //    this.resetBar(levelid);
-            //})
     }
 };
-
-async function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
 
 function CEMUcheckBoxChanged() {
     if (SettingsData.useCemuDir == false) {
@@ -148,6 +167,18 @@ function CEMUcheckBoxChanged() {
     } else {
         document.getElementById('optionalCEMU').innerHTML = ``
         setSetting("useCemuDir", false)
+    }
+}
+
+function changeDownloadAsLevelPack() {
+    if (downloadAsPack == false) {
+        downloadAsPack = true;
+        document.getElementById("downloadAsLevelPack-1").checked = true;
+        document.getElementById("downloadAsLevelPack-2").checked = true;
+    } else {
+        downloadAsPack = false;
+        document.getElementById("downloadAsLevelPack-1").checked = false;
+        document.getElementById("downloadAsLevelPack-2").checked = false;
     }
 }
 
@@ -265,8 +296,10 @@ function loadFileInWindow(levelObj) {
             <div id="download-actions-button-1">`
 
                 if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {
-                } else {
+                } else if (currentHTMLPage != "savedLevels") {
                     buildhtml+= `<button class="searchdownload-btn">Download</button>`
+                } else {
+                    buildhtml+= `<button class="deletedownload-btn">Delete</button>`
                 }
 
                 buildhtml+=`<button class="openCourseFolder-btn">Open Folder</button>
@@ -280,17 +313,29 @@ function loadFileInWindow(levelObj) {
     // Add event listeners for the custom dropdown
     setupCustomDropdown();
 
-    if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {} else {
-        document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {runLevelDownloader(levelObj)})
+    if (barcontainer && (barcontainer.innerHTML == `<p2>Download Complete</p2>` || barcontainer.innerHTML == `<p2>Already Downloaded</p2>`)) {} else if (currentHTMLPage != "savedLevels") {
+        document.getElementsByClassName("searchdownload-btn")[0].addEventListener("click", () => {
+            if (downloadAsPack == false) {
+                runLevelDownloader(levelObj)
+            } else {
+                runLevelDownloaderToPacks(levelObj, document.getElementById('levelPackInput-1').value || "Default Pack")
+            }
+        })
+    } else {
+        document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid, data.pack || null)})
     }
 
     downloadingBar.updateWindow(levelObj.levelid);
 
     if (currentHTMLPage === "savedLevels") {
         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
-        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(levelObj.levelid)})
+        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {
+            openCourseFolder(levelObj.levelid)
+        })
     } else {
-        document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+        if (document.getElementsByClassName("openCourseFolder-btn")[0]) {
+            document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
+        }
     }
 
     if (SettingsData.useCemuDir == false || SettingsData.CemuDirPath == "") {
@@ -343,7 +388,9 @@ function loadFileInWindowLight(levelObj) {
     `;
 
     if (currentHTMLPage === "savedLevels") {
-        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(levelObj.levelid)})
+        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {
+            openCourseFolder(levelObj.levelid)
+        })
     }
 
     modal.style.display = "block";
@@ -388,9 +435,11 @@ function selectAllToDelete() {
             deleteArray = [];
             for (let i = 0; i < valuesArray.length; i++) {
                 //deleteArray.push(valuesArray[i].levelid);
-                markLevelAsDeleting(valuesArray[i]);
+                if (document.getElementById(`object-${valuesArray[i].levelid}`).style.display != "none") {
+                    markLevelAsDeleting(valuesArray[i]);
+                }
             }
-        } else {
+        } else if (isAllSelectedForDel == true) {
             isAllSelectedForDel = false;
             deleteArray = [];
             for (let i = 0; i < valuesArray.length; i++) {
@@ -491,14 +540,19 @@ function markLevelAsDeleting(levelObj){
     }
 }
 
-function objectClicked(levelid, levelObj) {
-    //console.log("Clicked")
+function objectClicked(levelid, levelObj, pack) {
+    //console.log("Clicked", existingPacksObj[pack], lastLoadedDownloads[levelid+"_"+existingPacksObj[pack]])
     if (!subAreaClicked) {
         if (levelObj.mode === "light") {
+            //console.log("LIGHT")
             loadFileInWindowLight(levelObj);
         } else {
             if (isDeleteMode == false) {
-                loadFileInWindow(levelObj);
+                if (existingPacksObj[pack] != null && existingPacksObj[pack] != "null") {
+                    loadFileInWindow(lastLoadedDownloads[levelid+"_"+existingPacksObj[pack]])
+                } else {
+                    loadFileInWindow(levelObj);
+                }
             } else {
                 isAllSelectedForDel = false;
                 markLevelAsDeleting(levelObj);
@@ -508,6 +562,7 @@ function objectClicked(levelid, levelObj) {
 }
 
 function subAreaBtnClicked(levelid) {
+    loadLevelPacks()
     const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
     const objectDiv = document.getElementById(`object-${levelid}`);
     const btn = document.getElementById(`button-${levelid}`);
@@ -516,10 +571,16 @@ function subAreaBtnClicked(levelid) {
     subAreaClicked = true;
     var path = "";
     var filename = "";
+
     //console.log("Clicked")
+    var pack = objectDiv.getAttribute('packName')
 
     if (savedLevelsDrop.value == "downloaded") {
-        path = "../SMMDownloader/Data/DownloadCache"
+        if (pack != null && pack != "null") {
+            path = "../SMMDownloader/Data/LevelPacks/" + existingPacksObj[pack]
+        } else {
+            path = "../SMMDownloader/Data/DownloadCache"
+        }
     } else if (savedLevelsDrop.value == "official-testing") {
         path = "../SMMDownloader/Data/OfficialCourses/CourseFiles"
     } else if (savedLevelsDrop.value == "cemu") {
@@ -531,13 +592,15 @@ function subAreaBtnClicked(levelid) {
         filename = "course_data_sub.cdt"
         btn.innerText = "Switch to Overworld";
         objectDiv.setAttribute('current-layer', "underworld");
+        objectDiv.setAttribute('packName', pack)
     } else {
         filename = "course_data.cdt"
         btn.innerText = "Switch to Sub Area";
         objectDiv.setAttribute('current-layer', "overworld");
+        objectDiv.setAttribute('packName', pack)
     }
     //console.log(path)
-    window.api.send("toMain", {action:"loadSubArea", folderpath:path, levelid:levelid, filename:filename});
+    window.api.send("toMain", {action:"loadSubArea", folderpath:path, levelid:levelid, filename:filename, pack:pack});
 
     setTimeout(() => {
         subAreaClicked = false;
@@ -546,10 +609,16 @@ function subAreaBtnClicked(levelid) {
 
 function addObjects(levels) {
     const objectsContainer = document.getElementById('scrollable-objects');
-    if (SettingsData.currentPage == 1){objectsContainer.innerHTML = '';}
+    if (SettingsData.currentPage == 1 && currentHTMLPage != "savedLevels"){objectsContainer.innerHTML = '';}
     //console.log(levels);
     levels.forEach(obj => {
-        const objectDiv = document.createElement('div');
+        //console.log(obj.levelid);
+        var objectDiv;
+        if (document.getElementById(`object-${obj.levelid}`)) {
+            objectDiv = document.getElementById(`object-${obj.levelid}`);
+        } else {
+            objectDiv = document.createElement('div');
+        }
         if (currentHTMLPage == "main") {
             checkIfLevelisAlreadyDownloaded(obj.levelid);
         }
@@ -568,6 +637,7 @@ function addObjects(levels) {
             +`<div id="courseInfoDisplay-${obj.levelid}"></div>`
         //    +`<div>Course Folder: ${obj.folder}</div>`
             +`<div class="downloaded-display"></div>`
+            +`<div id="packName-${obj.levelid}"></div>`
             +`<div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>`;
         } else {
             objectDiv.innerHTML = `
@@ -576,9 +646,14 @@ function addObjects(levels) {
             <div>Creator: ${obj.creator}</div>
             <div>Clear Rate: ${(obj.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2')}%</div>
             <div class="downloaded-display"></div>
+            <div id="packName-${obj.levelid}"></div>
             <div id="downloadingBarContainer-${obj.levelid}" class="downloadingBarContainerClass" style=""><div id="downloadingBarProgress"></div></div>
             `;
-            objectDiv.addEventListener('click', () => objectClicked(obj.levelid, obj));
+            function clickHandler() {
+                objectClicked(obj.levelid, obj, obj.packname || null)
+                //console.log("CLICKED-1")
+            }
+            objectDiv.onclick = clickHandler
         }
         objectsContainer.appendChild(objectDiv);
     });
@@ -595,8 +670,15 @@ function searchDivs(searchQuery, parentId) {
     for (var i = 0; i < childDivs.length; i++) {
         var currentDiv = childDivs[i];
 
-        // If the current div does not contain the search query in its data-name attribute or innerText
-        if (!currentDiv.getAttribute('data-name').toLowerCase().includes(searchQuery.toLowerCase()) && !currentDiv.innerText.toLowerCase().includes(searchQuery.toLowerCase())) {
+        if (searchQuery.toLowerCase() == '') {
+            const packname = currentDiv.getAttribute('packName')
+            if (packname && document.getElementById(`packName-${packname}`) && document.getElementById(`packName-${packname}`).getAttribute('content-visible') == 'hidden') {
+                currentDiv.style.display = 'none';
+            } else {
+                currentDiv.style.display = '';
+            }
+
+        } else if (!currentDiv.getAttribute('data-name').toLowerCase().includes(searchQuery.toLowerCase()) && !currentDiv.innerText.toLowerCase().includes(searchQuery.toLowerCase())) {
             // Make the div invisible
             currentDiv.style.display = 'none';
         } else {
@@ -694,15 +776,10 @@ function onScrollToBottom() {
 
 // Following needs to be reworked, since it has to use the EntryID instead of the LevelID
 function findRandomLevel() {
-    const ranID = getRandomInt(12000000)
+    const ranID = getRandomInt(18118278)
 
     SettingsData.currentPage = 1;
-    const apiUrl = `${SettingsData.APILink}/searchLevels/${encodeURIComponent(ranID)}/1`
-    +`?coursename=0`
-    +`&courseid=1`
-    +`&creatorname=0`
-    +`&creatorid=0`
-    +`&searchexact=0`;
+    const apiUrl = `${SettingsData.APILink}/searchRandomLevels/${encodeURIComponent(ranID)}`;
         
         // Make a GET request to the API
         fetch(apiUrl)
@@ -715,6 +792,14 @@ function findRandomLevel() {
                 return response.json();
             })
             .then(data => {
+                if (data.error) {
+                    if (data.error == "No Random Level Found!") {
+                        findRandomLevel(); 
+                    } else {
+                        console.error('There was a problem with the fetch operation:', data.error);
+                    }
+                    return;
+                }
                 // Handle the JSON data from the API
                 //console.log(data); // You can process the data here
                 if (SettingsData.currentPage == 1) {
@@ -727,9 +812,10 @@ function findRandomLevel() {
                 if (data.length > 0) {
                     // SettingsData.recentFoundLevels
                     document.getElementById("downloadAllLevel-button").style.display = ""
-                    document.getElementById("selectRandomLevel-button").style.display = ""
                 }
-                displayLevels(data);
+                if (!data.error && data.length > 0) {
+                    displayLevels(data);
+                }
             })
             .catch(error => {
                 // Handle errors that occur during the fetch
@@ -742,24 +828,32 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max) || 0;
 }
 
-function showRandomLevel() {
-    var recentLevelsArr = currentLoadedLevels;
-    var arrayIndex = getRandomInt(recentLevelsArr.length);
-    if (arrayIndex < 0) {arrayIndex = 0;}
-    //console.log(recentLevelsArr)
-    //console.log(recentLevelsArr[arrayIndex])
-    loadFileInWindow(recentLevelsArr[arrayIndex])
-    //runLevelDownloader(SettingsData.recentFoundLevels[arrayIndex])
+function calculateChecksum(idno) {
+    // Convert the data ID to a hexadecimal string
+    const idHex = idno.toString(16).padStart(8, '0');
+
+    // Step 1: Compute the MD5 hash of the access key
+    const accessKey = "9f2b4678";
+    const key = CryptoJS.MD5(accessKey);
+
+    // Step 2: Transform the data ID into an 8-byte little-endian number
+    const data = new ArrayBuffer(8);
+    const dataView = new DataView(data);
+    for (let i = 0; i < 8; i += 2) {
+        const byte = parseInt(idHex.substr(i, 2), 16);
+        dataView.setUint8(7 - i, byte);
+    }
+
+    // Step 3: Compute the HMAC of the data ID using the MD5 hash as the key
+    const hmac = CryptoJS.HmacMD5(CryptoJS.lib.WordArray.create(new Uint8Array(data)), key);
+
+    // Step 4: Take the third and fourth byte of the HMAC, reverse their order, and return them as the checksum
+    const checksum = hmac.toString(CryptoJS.enc.Hex).substr(6, 2) + hmac.toString(CryptoJS.enc.Hex).substr(4, 2);
+    
+    return checksum.toUpperCase();
 }
 
-// Function to calculate the checksum
-function calculateChecksum(idno) {
-    const key = CryptoJS.MD5("9f2b4678");
-    const data = structPack('<Q', idno);
-    const hmac = CryptoJS.HmacMD5(data, key);
-    const checksum = hmac.toString(CryptoJS.enc.Hex).substring(2, 6).toUpperCase();
-    return checksum;
-}
+    //structPack('<Q', idno.toString(16));
 
 // Function to pack data into struct
 function structPack(format, value) {
@@ -868,7 +962,6 @@ function lazyLevelLoading(page) {
                 if (data.length > 0) {
                     // SettingsData.recentFoundLevels
                     document.getElementById("downloadAllLevel-button").style.display = ""
-                    document.getElementById("selectRandomLevel-button").style.display = ""
                 }
                 loadingholder.style.display = "none";
                 isloadingLevels = false;
@@ -886,10 +979,10 @@ function lazyLevelLoading(page) {
                 loadingholder.style.color = "red";
                 loadingholder.textContent = "Couldn't connect to the server. Please Check your Connection or try again later.";
                 isloadingLevels = false;
-                delay(5000).then(() => {
+                setTimeout(() => {
                     connerrorCooldown = false;
                     loadingholder.remove();
-                })
+                }, 5000);
             });
 }
 
@@ -898,21 +991,11 @@ async function downloadAll() {
     var count = 0
     for (const [key, value] of Object.entries(SettingsData.recentFoundLevels)) {
         
-        runLevelDownloader(value)
-        /*
-        levels[count] = value;
-        count++;
-        
-        if (count >= 10) {
-            for (var i = 0; i < levels.length; i++) {
-                runLevelDownloader(levels[i])
-                //console.log(count, value);
-            }
-            //await delay(1000).then(() => {
-                count = 0;
-                levels = [];
-            //});
-        }*/
+        if (downloadAsPack == false) {
+            runLevelDownloader(value)
+        } else {
+            runLevelDownloaderToPacks(value, document.getElementById('levelPackInput-1').value || "Default Pack")
+        }
     }
 }
 
@@ -933,6 +1016,21 @@ function searchLevel() {
 
 function selectFolder() {
     window.api.send("toMain", {action:"select-folder"});
+}
+
+function runLevelDownloaderToPacks(levelObj, pack) {
+
+    downloadingBar.addBar(levelObj.levelid);
+
+    const levelDisplayObjDownloadActions = document.getElementById(`download-actions`)
+    if (levelDisplayObjDownloadActions) {
+        levelDisplayObjDownloadActions.innerHTML = `<p>Downloading...</p>`
+    }
+
+    link = levelObj.url;
+    levelID = levelObj.levelid;
+    currentStep[levelObj.levelid] = 1;
+    window.api.send("toMain", {action:"download-level-to-pack", url:link, levelID:levelID, levelObj:levelObj, useProxy:SettingsData.useProxy, pack:pack});
 }
 
 function runLevelDownloader(levelObj) {
@@ -1016,6 +1114,10 @@ function loadPageScripts(page) {
         if(SettingsData.searchParams.SearchExact == true) {
             document.getElementById("useseExactSearch").checked = true;
         }
+        if(downloadAsPack == true) {
+            document.getElementById("downloadAsLevelPack-1").checked = true;
+            document.getElementById("downloadAsLevelPack-2").checked = true;
+        }
 
         if (amounttrue > 0) {
             document.getElementById("searchLevel-item").innerHTML = `<label class="searchLevel-label" for="searchLevelText">Search: </label><input type="text" id="searchLevelText" name="searchLevel-option" value="">`
@@ -1043,11 +1145,11 @@ function loadPageScripts(page) {
         const dropdown2 = document.getElementById('pack-dropdown-2');
         
         levelPackInput1.addEventListener('input', function() {
-          const input = this.value.toLowerCase();
+          const input = this.value
           dropdown1.innerHTML = '';
-
+        
           existingPacks.forEach(pack => {
-            if (pack.toLowerCase().includes(input)) {
+            if (pack.toLowerCase().includes(input.toLowerCase())) {
               const option = document.createElement('a');
               option.textContent = pack;
               option.addEventListener('click', function() {
@@ -1059,37 +1161,47 @@ function loadPageScripts(page) {
             }
           });
         
-          if (input === '') {
-            dropdown1.style.display = 'none';
-          } else {
-            dropdown1.style.display = 'block';
+          // Add the "Create Pack: %Current_Input%" option
+          if (input !== '' && input.toLowerCase()!== 'null') {
+            const createOption = createOptionElement("Create Pack: " + input);
+            createOption.addEventListener('click', function() {
+              createPack(input);
+            });
+            dropdown1.appendChild(createOption);
           }
+        
+          toggleDropdownVisibility(dropdown1, input);
         });
         
         levelPackInput2.addEventListener('input', function() {
-            const input = this.value.toLowerCase();
-            dropdown2.innerHTML = '';
-
-            existingPacks.forEach(pack => {
-              if (pack.toLowerCase().includes(input)) {
-                const option = document.createElement('a');
-                option.textContent = pack;
-                option.addEventListener('click', function() {
-                  levelPackInput2.value = pack;
-                  levelPackInput1.value = pack;
-                  dropdown2.style.display = 'none';
-                });
-                dropdown2.appendChild(option);
-              }
-            });
-          
-            if (input === '') {
-              dropdown2.style.display = 'none';
-            } else {
-              dropdown2.style.display = 'block';
+          const input = this.value
+          dropdown2.innerHTML = '';
+        
+          existingPacks.forEach(pack => {
+            if (pack.toLowerCase().includes(input.toLowerCase())) {
+              const option = document.createElement('a');
+              option.textContent = pack;
+              option.addEventListener('click', function() {
+                levelPackInput1.value = pack;
+                levelPackInput2.value = pack;
+                dropdown2.style.display = 'none';
+              });
+              dropdown2.appendChild(option);
             }
           });
-
+        
+          // Add the "Create Pack: %Current_Input%" option
+          if (input !== '') {
+            const createOption = createOptionElement("Create Pack: " + input);
+            createOption.addEventListener('click', function() {
+              createPack(input);
+            });
+            dropdown2.appendChild(createOption);
+          }
+        
+          toggleDropdownVisibility(dropdown2, input);
+        });
+        
         // Close the dropdown if the user clicks outside of it
         document.addEventListener('click', function(event) {
           if (!event.target.matches('#levelPackInput-1') && !event.target.matches('#levelPackInput-2')) {
@@ -1097,6 +1209,35 @@ function loadPageScripts(page) {
             dropdown2.style.display = 'none';
           }
         });
+        
+        // Function to create an option element
+        function createOptionElement(text) {
+          const option = document.createElement('a');
+          option.textContent = text;
+          option.classList.add('dropdown-item');
+          return option;
+        }
+        
+        // Function to toggle dropdown visibility based on input
+        function toggleDropdownVisibility(dropdown, input) {
+          if (input === '') {
+            dropdown.style.display = 'none';
+          } else {
+            dropdown.style.display = 'block';
+          }
+        }
+        
+        // Function to handle creating a new pack
+        function createPack(input) {
+          const newPack = input.trim();
+          if (existingPacks.includes(newPack) || newPack == "") {
+            return;
+          } else {
+            window.api.send("toMain", {action:"create-pack", packname: newPack})
+          }
+          console.log("Creating Pack:", input);
+        }
+        
 
     } else if (page == "../pages/savedLevels.html") {
         deleteArray = [];
@@ -1107,6 +1248,7 @@ function loadPageScripts(page) {
             searchDivs(document.getElementById('searchSavedLevelText').value.trim(), 'scrollable-objects');
         })
         loadSavedLevels();
+        loadDownloadedLevels();
     }
 }
 
@@ -1142,6 +1284,7 @@ function loadSavedLevels(){
         _backuppedFolderbtn.style.display = "none"
         _cemuFolderbtn.style.display = "none"
         _officialFolderbtn.style.display = "none"
+        document.getElementById('scrollable-objects').innerHTML = "";
         loadDownloadedLevels()
     } else if (savedLevelsDrop.value == "official-testing") {
         deleteArray = [];
@@ -1152,6 +1295,7 @@ function loadSavedLevels(){
         _cemuFolderbtn.style.display = "none"
         multideletebtn.style.display = "none"
         _officialFolderbtn.style.display = ""
+        document.getElementById('scrollable-objects').innerHTML = "";
         loadOfficialLevels("testing")
     } else if (savedLevelsDrop.value == "cemu") {
         deleteArray = [];
@@ -1164,6 +1308,7 @@ function loadSavedLevels(){
         if (SettingsData.CemuDirPath != "") {
             _cemuFolderbtn.style.display = ""
         }
+        document.getElementById('scrollable-objects').innerHTML = "";
         loadLevelsfromCEMU()
     } else if (savedLevelsDrop.value == "backupped") {
         deleteArray = [];
@@ -1173,6 +1318,7 @@ function loadSavedLevels(){
         _backuppedFolderbtn.style.display = ""
         _cemuFolderbtn.style.display = "none"
         _officialFolderbtn.style.display = "none"
+        document.getElementById('scrollable-objects').innerHTML = "";
         loadBackuppedLevels()
     }
 }
@@ -1203,11 +1349,17 @@ function openCourseFolder(levelid) {
     const savedLevelsDrop = document.getElementById('savedlevelsDropdown')
     var ParentDir = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
     ParentDir = ParentDir.substring(0, ParentDir.lastIndexOf('/'));
+    const objectDiv = document.getElementById(`object-${levelid}`)
+    const pack = objectDiv.getAttribute('packName')
     if (savedLevelsDrop.value == "official-testing") {
         window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/OfficialCourses/CourseFiles/"+levelid})
     }
     if (savedLevelsDrop.value == "downloaded") {
-        window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/DownloadCache/"+levelid})
+        if (pack == null || pack == "null") {
+            window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/DownloadCache/"+levelid})
+        } else {
+            window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/LevelPacks/"+existingPacksObj[pack]+"/"+levelid})
+        }
     }
     if (savedLevelsDrop.value == "backupped") {
         window.api.send("toMain", {action:"open-folder", path: ParentDir+"/SMMDownloader/Data/BackupCache/"+levelid})
@@ -1256,6 +1408,20 @@ function loadSettings() {
         .then(response => response.json())
         .then(data => {
             SettingsData = data;
+        })
+        .catch(error => console.log(error));
+}
+
+function loadLevelPacks() {
+    fetch(levelpacksFile)
+        .then(response => response.json())
+        .then(data => {
+            var num = 0
+            for (const packName in data) {
+                existingPacks[num] = packName;
+                num++
+            }
+            existingPacksObj = data
         })
         .catch(error => console.log(error));
 }
@@ -1377,8 +1543,11 @@ function openProxiesFile() {
     window.api.send("toMain", {action:"openProxies"});
 }
 
-function deleteLevel(levelid) {
-    window.api.send("toMain", {action:"delete-course-file", levelid:levelid});
+function deleteLevel(levelid, packname) {
+    const objectDiv = document.getElementById(`object-${levelid}`)
+    const pack = objectDiv.getAttribute('packName') || packname || null
+    //console.log(pack);
+    window.api.send("toMain", {action:"delete-course-file", levelid:levelid, pack: pack});
 }
 
 function checkIfLevelisAlreadyDownloaded(levelid){
@@ -1452,6 +1621,85 @@ const observer = new IntersectionObserver((entries) => {
     });
 });
 
+function createPackDiv(packname, levelid) {
+    console.log(packname);
+    var packdiv = document.createElement('div')
+    packdiv.id = `packName-${packname}`
+    packdiv.classList.add('packName')
+    packdiv.setAttribute('content-visible', 'hidden')
+    document.getElementById('scrollable-objects').prepend(packdiv)
+    packdiv.innerHTML = `<img class="folder-img" id="folder-img-${packname}" src="../pictures/smmdownloader/folder_closed.png"><b class="packTitle">Pack: ${packname}</b><br>`
+    if (levelid != null) {
+        packdiv.appendChild(document.getElementById(`object-${levelid}`))
+    }
+
+    const hoverTextDiv = document.getElementById('hover-text-div')
+
+    var lineDiv = document.createElement('div');
+    lineDiv.classList.add('folder-line');
+    lineDiv.id = `folder-line-${packname}`
+    packdiv.appendChild(lineDiv);
+ 
+    lineDiv.addEventListener('mouseenter', function(event) {
+        lineDiv = document.getElementById(`folder-line-${packname}`)
+        if (event.target === lineDiv) {
+            const mouseY = event.clientY;
+            const mouseX = event.clientX;
+            hoverTextDiv.style.top = `${mouseY+5}px`;
+            hoverTextDiv.style.left = `${mouseX+5}px`;
+            hoverTextDiv.innerText = `Close Pack: ${packname}`;
+            hoverTextDiv.style.display = 'block';
+        } else {
+            hoverTextDiv.innerText = '';
+            hoverTextDiv.style.display = 'none';
+        }
+    });
+    
+    lineDiv.addEventListener('mouseleave', function() {
+        hoverTextDiv.innerText = '';
+        hoverTextDiv.style.display = 'none';
+    });
+    
+    function clickHandler() {
+        packdiv = document.getElementById(`packName-${packname}`)
+        if (packdiv.getAttribute('content-visible') == "hidden") {
+            packdiv.setAttribute('content-visible', 'visible')
+            document.getElementById(`folder-img-${packname}`).src = "../pictures/smmdownloader/folder_open.png";
+            for (let i = 0; i < packdiv.children.length; i++) {
+                if (document.getElementById(packdiv.children[i].id)) {
+                    packdiv.children[i].style.display = "block";
+                }
+            }
+            if (packdiv.children.length == 1) {
+                packdiv.innerHTML += `Pack Empty`
+            }
+            lineDiv.style.display = 'block';
+        } else {
+            packdiv.setAttribute('content-visible', 'hidden')
+            document.getElementById(`folder-img-${packname}`).src = "../pictures/smmdownloader/folder_closed.png";
+            for (let i = 0; i < packdiv.children.length; i++) {
+                if (document.getElementById(packdiv.children[i].id) && !packdiv.children[i].classList.contains('folder-img')) {
+                    packdiv.children[i].style.display = "none";
+                }
+            }
+            lineDiv.style.display = 'none';
+        }
+    }
+    packdiv.addEventListener('click', function(event) {
+        packdiv = document.getElementById(`packName-${packname}`)
+        if (event.target === packdiv) {
+            clickHandler();
+        }
+    });
+
+    lineDiv.addEventListener('click', function(event) {
+        lineDiv = document.getElementById(`folder-line-${packname}`)
+        if (event.target === lineDiv) {
+            clickHandler();
+        }
+    });
+}
+
 function observeNewElements() {
     const elements = document.querySelectorAll('.hidden');
     elements.forEach((element) => {
@@ -1522,11 +1770,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     if (currentHTMLPage === "savedLevels") {
                         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
-                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(data.levelid)})
+                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {
+                            openCourseFolder(data.levelid)
+                        })
                     } else {
                         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
                     }
-                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
+                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid, data.pack || null)})
                 }
                 //console.log("TEST2")
             } else if (data.resultType == "IN_PROGRESS") {
@@ -1568,11 +1818,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     if (currentHTMLPage === "savedLevels") {
                         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "";
-                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {openCourseFolder(data.levelid)})
+                        document.getElementsByClassName("openCourseFolder-btn")[0].addEventListener("click", () => {
+                            openCourseFolder(data.levelid)
+                        })
                     } else {
                         document.getElementsByClassName("openCourseFolder-btn")[0].style.display = "none";
                     }
-                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid)})
+                    document.getElementsByClassName("deletedownload-btn")[0].addEventListener("click", () => {deleteLevel(data.levelid, data.pack || null)})
                 }
             }
         }
@@ -1605,23 +1857,62 @@ window.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('scrollable-objects').innerHTML = `<h2>${data.problem}</h2>`
                 return;
             }
-            document.getElementById('scrollable-objects').innerHTML = `<h2></h2>`;
+            //document.getElementById('scrollable-objects').innerHTML = `<h2></h2>`;
             displayLevels(data.levels);
         }
+        if (data.action == "packCreated") {
+            const levelPackInput1 = document.getElementById('levelPackInput-1');
+            const levelPackInput2 = document.getElementById('levelPackInput-2');
+    
+            levelPackInput1.value = data.packname;
+            levelPackInput2.value = data.packname;
+            loadLevelPacks();
+        }
         if (data.action == "displayCourse") {
+            //console.log(data.course.name)
+            //console.log(data)
             subAreaClicked = false;
             if (data.html == "<h1>Level Cant be displayed! Broken File!</h1>" || data.course == null || data.objects == null) {
                 document.getElementById(`courseName-${data.levelid}`).innerHTML = "<h1>Level with ID: "+data.levelid+" Cant be displayed! Broken File!</h1>"
             } else {
-                document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${data.levelid}</b><br>`
+                document.getElementById(`courseName-${data.levelid}`).innerHTML = `<b>${data.course.name} (${data.course.mode})<br>Level-ID: ${generateCode(data.levelid)} (${data.levelid})</b><br>`
                 var courseInfoHTML = ``;
-                if (lastLoadedDownloads[data.levelid]) {
-                    courseInfoHTML += `<b>Uploader:</b> ${lastLoadedDownloads[data.levelid].creator} <br><b>Clearrate:</b> ${(lastLoadedDownloads[data.levelid].clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${lastLoadedDownloads[data.levelid].clears} / ${lastLoadedDownloads[data.levelid].total_attempts})<br>`
+                if (lastLoadedDownloads[data.levelid] || lastLoadedDownloads[data.levelid+"_"+existingPacksObj[data.packname]]) {
+                    const levelData = lastLoadedDownloads[data.levelid] || lastLoadedDownloads[data.levelid+"_"+existingPacksObj[data.packname]]
+                    courseInfoHTML += `<b>Uploader:</b> ${levelData.creator} <br><b>Clearrate:</b> ${(levelData.clearrate*100).toFixed(2).replace(/(\.0+|(\.\d+?)0+)$/, '$2') || "0.00%"}% (${levelData.clears} / ${levelData.total_attempts})<br>`
                     const objectDiv = document.getElementById(`object-${data.levelid}`)
-                    objectDiv.addEventListener('click', () => objectClicked(data.levelid, lastLoadedDownloads[data.levelid]));   
+                    objectDiv.setAttribute('packName', data.packname || null)
+                    function clickHandler() {
+                        objectClicked(data.levelid, levelData, data.packname || null);
+                        //console.log("CLICKED-2");
+                    }
+                    objectDiv.onclick = clickHandler
+                } else {
+                    //console.log(lastLoadedDownloads[data.levelid+"_"+existingPacksObj[data.packname || null]])
+                    const objectDiv = document.getElementById(`object-${data.levelid}`)
+                    objectDiv.setAttribute('packName', data.packname || null)
+                    function clickHandler() {
+                        objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}, data.packname || null);
+                        //console.log("CLICKED-3");
+                    }
+                    objectDiv.onclick = clickHandler  
+                }
+                if (data.packname && data.packname!= null && data.packname!= "null") {
+                    const objectDiv = document.getElementById(`object-${data.levelid}`)
+                    objectDiv.style.display = "none";
+                    packdiv = document.getElementById(`packName-${data.packname}`)
+                    if (!packdiv) {
+                        createPackDiv(data.packname, data.levelid)
+                    } else if (packdiv) {
+                        packdiv.appendChild(objectDiv)
+                        if (packdiv.getAttribute('content-visible') == 'visible') {
+                            objectDiv.style.display = "";
+                        }
+                    }
                 } else {
                     const objectDiv = document.getElementById(`object-${data.levelid}`)
-                    objectDiv.addEventListener('click', () => objectClicked(data.levelid, {levelid : data.levelid, mode: "light", name : data.course.name}));   
+                    //console.log(data.levelid)
+                    document.getElementById('scrollable-objects').appendChild(objectDiv);
                 }
     //            courseInfoHTML += `<b>Date</b>: ${data.course.year}/${data.course.month}/${data.course.day} - ${data.course.hour}:${data.course.minute}<br>`
     //            courseInfoHTML += `<b>Folder</b>: ${data.fileName} (0)<br>`
@@ -1632,7 +1923,20 @@ window.addEventListener('DOMContentLoaded', () => {
                 courseInfoHTML += `</div>`
                 enqueueDrawTask(data.levelid, data.course, data.objects)
                 document.getElementById(`courseInfoDisplay-${data.levelid}`).innerHTML = courseInfoHTML;
+                if (data.packname != null && data.packname!= "null") {
+                    document.getElementById(`packName-${data.levelid}`).innerHTML = `<b>Pack Name:</b> ${data.packname}<br>`
+                } else {
+                    document.getElementById(`packName-${data.levelid}`).innerHTML = `<b>Not in a Level Pack</b><br>`
+                }
             }
         }
     });
 });
+
+const hoverTextDiv = document.createElement('div');
+hoverTextDiv.id = 'hover-text-div';
+hoverTextDiv.classList.add('hover-text');
+document.body.appendChild(hoverTextDiv);
+
+checkServerStatus()
+loadLevelPacks()
