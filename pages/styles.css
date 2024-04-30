@@ -666,3 +666,15 @@ textarea::placeholder {
     min-width: 6vh;
     min-height: 6vh;
 }
+
+.online-info {
+    position: fixed;
+    left: 0vw;
+    bottom: 0vw;
+}
+
+.version-info {
+    position: fixed;
+    right: 0vw;
+    bottom: 0vw;
+}

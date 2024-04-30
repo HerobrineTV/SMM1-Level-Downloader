@@ -42,9 +42,11 @@ async function checkServerStatus() {
     const response = await fetch(url);
 
     if (response.status == 200) {
-        console.log("Online")
+        document.getElementById('onlinedisplay').innerText = "API: 🟢";
+        console.log("API Reachable 🟢")
     } else {
-        console.log("Offline")
+        document.getElementById('onlinedisplay').innerText = "API: 🔴";
+        console.log("API Unreachable 🔴")
     }
 
     // Set a debounce timer to wait for 1 second before allowing the function to be called again
