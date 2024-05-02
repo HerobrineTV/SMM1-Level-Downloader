@@ -116,7 +116,7 @@ label {
     font-family: "Pixelify Sans", sans-serif;
     font-weight: 400;
     font-style: normal;
-    max-width: 80%;
+    max-width: 90%;
     margin: 0 auto;
     padding: 1%;
     background-color: #994220; /* Light gray background */
@@ -230,7 +230,7 @@ input[type="text"] {
     max-height: 80vh;
     overflow-y: auto;
     border: 1vw solid #994220;
-    padding-inline: 5vw;
+    padding-inline: 2vw;
     margin-top: 2vh;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     text-shadow: 0 0 black;
@@ -615,7 +615,66 @@ textarea::placeholder {
     text-decoration: none;
     display: block;
   }
-  
+
   .dropdown-content a:hover {
     background-color: #f1f1f1;
   }
+
+  .packName {
+    padding-left: inherit;
+    background: #ffe4c414;
+    position: relative;
+    min-height: 5vh;
+  }
+
+  .packTitle {
+    font-size: 4vh;
+    top: 1vh;
+    position: absolute;
+    left: 9vw;
+  }
+
+/*
+  .packName .object {
+    display: none;
+  }
+*/
+  .folder-line {
+    position: absolute;
+    top: 5%;
+    left: 1%;
+    height: 90%;
+    width: 1vw;
+    background-color: black;
+    display: none;
+    cursor: pointer;
+    border-radius: 100px;
+}
+
+.hover-text {
+    position: absolute;
+    left: 0;
+    background-color: white;
+    padding: 5px;
+    border: 1px solid black;
+    display: none;
+}
+
+.folder-img {
+    max-height: 6vh;
+    max-width: 6vh;
+    min-width: 6vh;
+    min-height: 6vh;
+}
+
+.online-info {
+    position: fixed;
+    left: 0vw;
+    bottom: 0vw;
+}
+
+.version-info {
+    position: fixed;
+    right: 0vw;
+    bottom: 0vw;
+}

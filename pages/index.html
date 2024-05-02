@@ -14,6 +14,8 @@
 
     <body>         
         <div class="toolbar">
+            <div id="onlinedisplay" class="online-info">API: 🟢</div>
+            <div id="versiondisplay" class="version-info">Alpha-V1.0.1</div>
             <button onclick="loadPage('../pages/main.html')">Download Courses</button>
             <button onclick="loadPage(`../pages/savedLevels.html`)">Saved Courses</button>
             <button onclick="loadPage('../pages/settings.html')">Settings</button>
@@ -45,6 +47,7 @@
             <li>Delete Levels (Currently Downloads only please, else it could break stuff!!!)</li>
             <li>Import Levels from other Archives as long as they are saved the same Way!</li>
             <li>Search by the Official Level IDs through the Database, but make sure u disabled all other searches (except fast search) else it wont work</li>
+            <li>Save your Downloads to Level Packs for a better Overviwe of your Levels</li>
         </div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
         <script src="../node_modules/smm-course-viewer/lib/CourseObject.js"></script>

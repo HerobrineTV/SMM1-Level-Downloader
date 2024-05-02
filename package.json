@@ -1,6 +1,6 @@
 {
   "name": "smm1-level-downloader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A UI Based Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection",
   "main": "scripts/Main.js",
   "devDependencies": {
