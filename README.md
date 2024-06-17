@@ -1,6 +1,10 @@
 # SMM1-Level-Downloader
 A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachines Level Collection
 
+![License](https://img.shields.io/github/license/HerobrineTV/SMM1-Level-Downloader)
+![Version](https://img.shields.io/github/v/release/HerobrineTV/SMM1-Level-Downloader)
+![Contributors](https://img.shields.io/github/contributors/HerobrineTV/SMM1-Level-Downloader)
+
 ![Screenshot 2024-04-08 153652](https://github.com/HerobrineTV/SMM1-Level-Downloader/assets/70803896/d31ae25c-182e-429e-a553-c74e6e5c4195)
 
 # Features:
