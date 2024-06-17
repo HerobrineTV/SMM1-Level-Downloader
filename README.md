@@ -65,3 +65,6 @@ And next time u press "Reset Official Courses", it will get loaded if it is a va
 # Important Note
 U have to create the course Files ingame and not by creating a Folder, else they wont show up!
 All Copyright of the Used Images goes to Nintendo
+
+# Repo Views:
+![Visitor Count](https://profile-counter.glitch.me/Nightyonlyy/count.svg)
