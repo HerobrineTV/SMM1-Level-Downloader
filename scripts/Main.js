@@ -1,5 +1,8 @@
 const axios = require('axios');
-const { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } = require('electron');
+const electronHost = process.env.SMM_AVALONIA_BRIDGE === '1'
+  ? require('./avalonia-electron-shim')
+  : require('electron');
+const { app, BrowserWindow, dialog, ipcMain, shell, nativeImage } = electronHost;
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');

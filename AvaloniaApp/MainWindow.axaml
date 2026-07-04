@@ -1,0 +1,907 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:SMMDownloader.Avalonia.Controls"
+        xmlns:models="clr-namespace:SMMDownloader.Avalonia.Models"
+        x:Class="SMMDownloader.Avalonia.MainWindow"
+        Title="Super Mario Maker 1 Level Downloader"
+        Width="1180"
+        Height="760"
+        MinWidth="980"
+        MinHeight="640"
+        Icon="/Assets/Icon.png">
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="Padding" Value="13,8" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="Background" Value="#F9C74F" />
+      <Setter Property="Foreground" Value="#2B1605" />
+      <Setter Property="BorderBrush" Value="#8F4F17" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Foreground" Value="#2B1605" />
+      <Setter Property="Background" Value="#FFD96A" />
+    </Style>
+    <Style Selector="Button:pressed">
+      <Setter Property="Foreground" Value="#2B1605" />
+      <Setter Property="Background" Value="#EFB934" />
+    </Style>
+    <Style Selector="Button:disabled">
+      <Setter Property="Foreground" Value="#6B4A23" />
+    </Style>
+    <Style Selector="Button /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="Button:pointerover /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="Button:pressed /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="Button:disabled /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#6B4A23" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="CornerRadius" Value="5" />
+    </Style>
+    <Style Selector="TextBox:pointerover">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="TextBox:focus">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+      <Setter Property="BorderThickness" Value="1.5" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+    <Style Selector="ComboBox:pointerover">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover TextBlock">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected TextBlock">
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="CheckBox">
+      <Setter Property="Margin" Value="0,0,14,0" />
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox:pointerover">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox:pressed">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox:checked">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox:pointerover /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox:pressed /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="#FFF4BD" />
+      <Setter Property="Foreground" Value="#241301" />
+      <Setter Property="BorderBrush" Value="#9B5A1E" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="5" />
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:selected">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover TextBlock">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:selected TextBlock">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="TreeView">
+      <Setter Property="Background" Value="#FFF4BD" />
+      <Setter Property="Foreground" Value="#241301" />
+      <Setter Property="BorderBrush" Value="#9B5A1E" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="5" />
+    </Style>
+    <Style Selector="TreeViewItem">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="TreeViewItem:pointerover">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="TreeViewItem:selected">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="TreeViewItem:pointerover TextBlock">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="TreeViewItem:selected TextBlock">
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="TabControl">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="TabItem">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#2B1605" />
+      <Setter Property="Padding" Value="16,9" />
+    </Style>
+    <Style Selector="TabItem:pointerover">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="TabItem:selected">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="TabItem:pointerover TextBlock">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="TabItem:selected TextBlock">
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="Border.panel">
+      <Setter Property="BorderBrush" Value="#7B4A20" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="14" />
+      <Setter Property="Background" Value="#FFF1AE" />
+      <Setter Property="BoxShadow" Value="0 4 0 0 #6E3F17" />
+    </Style>
+    <Style Selector="TextBlock.sectionTitle">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="#2B1605" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="#6B4A23" />
+    </Style>
+    <Style Selector="Border.statChip">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Padding" Value="6,3" />
+      <Setter Property="Margin" Value="0,0,6,6" />
+    </Style>
+  </Window.Styles>
+
+  <Grid>
+    <controls:FloatingSpriteBackgroundControl />
+    <Grid RowDefinitions="Auto,*">
+      <Border Grid.Row="0"
+              Margin="16,14,16,10"
+              Padding="14,10"
+              CornerRadius="6"
+              Background="#E94B35"
+              BorderBrush="#7B2018"
+              BorderThickness="2"
+              BoxShadow="0 4 0 0 #65180F">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Border Width="34" Height="34" Background="#F9C74F" BorderBrush="#7B2018" BorderThickness="2" CornerRadius="4">
+              <TextBlock Text="?" FontSize="22" FontWeight="Bold" Foreground="#2B1605" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="Super Mario Maker 1 Level Downloader"
+                       FontSize="22"
+                       FontWeight="Bold"
+                       Foreground="#2B1605"
+                       VerticalAlignment="Center" />
+          </StackPanel>
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Border Background="#FFF8D6"
+                    BorderBrush="#7B2018"
+                    BorderThickness="2"
+                    CornerRadius="5"
+                    Padding="10,5">
+              <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+                <Border x:Name="ApiStatusDot"
+                        Width="10"
+                        Height="10"
+                        Background="#A86725"
+                        CornerRadius="5"
+                        VerticalAlignment="Center" />
+                <TextBlock x:Name="ApiStatusText"
+                           Text="API: Checking"
+                           Foreground="#2B1605"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+            <Button x:Name="UpdateButton"
+                    Content="Update available"
+                    IsVisible="False"
+                    Click="UpdateButton_OnClick" />
+            <Border Background="#FFF8D6"
+                    BorderBrush="#7B2018"
+                    BorderThickness="2"
+                    CornerRadius="5"
+                    Padding="10,5">
+              <TextBlock x:Name="StatusText"
+                         Text="Ready"
+                         Foreground="#2B1605"
+                         FontWeight="SemiBold"
+                         HorizontalAlignment="Right"
+                         VerticalAlignment="Center" />
+            </Border>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+    <TabControl x:Name="MainTabs" Grid.Row="1" Margin="16,0,16,16">
+      <TabItem x:Name="DownloadTab" Header="Download">
+        <Grid RowDefinitions="Auto,*" Margin="0,12,0,0">
+          <Border Classes="panel" Grid.Row="0">
+            <StackPanel Spacing="10">
+              <TextBlock x:Name="SearchCoursesTitle" Text="Search Courses" Classes="sectionTitle" />
+              <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBox x:Name="SearchTextBox"
+                         Watermark="Level name, level ID, creator name or creator ID" />
+                <Button x:Name="SearchButton" Grid.Column="1" Content="Search" Click="SearchButton_OnClick" />
+                <Button x:Name="RandomButton" Grid.Column="2" Content="Random" Click="RandomButton_OnClick" />
+              </Grid>
+              <WrapPanel>
+                <CheckBox x:Name="SearchLevelNameCheckBox" Content="Level Name" />
+                <CheckBox x:Name="SearchLevelIdCheckBox" Content="Level ID" />
+                <CheckBox x:Name="SearchCreatorNameCheckBox" Content="Creator Name" />
+                <CheckBox x:Name="SearchCreatorIdCheckBox" Content="Creator ID" />
+                <CheckBox x:Name="SearchExactCheckBox" Content="Exact" />
+              </WrapPanel>
+              <WrapPanel>
+                <CheckBox x:Name="DownloadToPackCheckBox" Content="Save in Level Pack" />
+                <TextBox x:Name="PackNameTextBox" Width="220" Watermark="Level Pack Name" />
+                <Button x:Name="CreatePackButton" Content="Create Pack" Click="CreatePackButton_OnClick" />
+                <Button x:Name="DownloadAllButton" Content="Download All Results" Click="DownloadAllButton_OnClick" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="12" Margin="0,12,0,0">
+            <Border Classes="panel">
+              <ListBox x:Name="SearchResultsListBox"
+                       SelectionChanged="SearchResultsListBox_OnSelectionChanged"
+                       ScrollViewer.ScrollChanged="SearchResultsListBox_OnScrollChanged">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9" Margin="0,5">
+                      <Border Width="72"
+                              Height="42"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              Cursor="Hand"
+                              PointerPressed="SearchThumbnail_OnPointerPressed"
+                              IsVisible="{Binding HasThumbnail}">
+                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                      </Border>
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#241301" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasCreatorMiiImage}">
+                            <Border Width="28"
+                                    Height="28"
+                                    Background="#E9D58A"
+                                    BorderBrush="#8F4F17"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    ClipToBounds="True"
+                                    Cursor="Hand"
+                                    PointerPressed="CreatorMii_OnPointerPressed">
+                              <Image Source="{Binding CreatorMiiImage}" Stretch="UniformToFill" />
+                            </Border>
+                            <TextBlock Text="Creator" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                          </StackPanel>
+                          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWorldRecordMiiImage}">
+                            <Border Width="28"
+                                    Height="28"
+                                    Background="#E9D58A"
+                                    BorderBrush="#8F4F17"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    ClipToBounds="True"
+                                    Cursor="Hand"
+                                    PointerPressed="WorldRecordMii_OnPointerPressed">
+                              <Image Source="{Binding WorldRecordMiiImage}" Stretch="UniformToFill" />
+                            </Border>
+                            <TextBlock Text="WR" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                          </StackPanel>
+                        </StackPanel>
+                        <WrapPanel>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="#" />
+                              <Run Text="{Binding DisplayCode}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="✓ " />
+                              <Run Text="{Binding ClearRateText}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="▶ " />
+                              <Run Text="{Binding TotalAttemptsText}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="★ " />
+                              <Run Text="{Binding StarsText}" />
+                            </TextBlock>
+                          </Border>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding SearchResultStatus}" FontSize="12" Foreground="#1A7A3A" />
+                      </StackPanel>
+                      <Button Grid.Column="2"
+                              Content="{Binding DownloadButtonText}"
+                              IsEnabled="{Binding CanDownload}"
+                              Click="DownloadLevelButton_OnClick" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Border>
+            <Border Classes="panel" Grid.Column="1">
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="8">
+                  <TextBlock x:Name="SelectedCourseTitle" Text="Selected Course" Classes="sectionTitle" />
+                  <TextBlock x:Name="SelectedLevelTitle" Text="No course selected" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
+                  <StackPanel x:Name="SelectedCourseDetailsPanel" Spacing="8" IsVisible="False">
+                  <Grid x:Name="SelectedCreatorRow" ColumnDefinitions="64,*" ColumnSpacing="10" IsVisible="False">
+                    <StackPanel x:Name="SelectedCreatorMiiPanel" Spacing="3" IsVisible="False">
+                      <Border Width="46"
+                              Height="46"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              Cursor="Hand"
+                              PointerPressed="SelectedCreatorMii_OnPointerPressed">
+                        <Image x:Name="SelectedCreatorMiiImage" Stretch="UniformToFill" />
+                      </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="SelectedCreatorHeader" Text="Creator" FontSize="11" Classes="muted" />
+                      <TextBlock x:Name="SelectedCreatorNameText" Text="-" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid x:Name="SelectedWorldRecordRow" ColumnDefinitions="64,*" ColumnSpacing="10" IsVisible="False">
+                    <StackPanel x:Name="SelectedWorldRecordMiiPanel" Spacing="3" IsVisible="False">
+                      <Border Width="46"
+                              Height="46"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              Cursor="Hand"
+                              PointerPressed="SelectedWorldRecordMii_OnPointerPressed">
+                        <Image x:Name="SelectedWorldRecordMiiImage" Stretch="UniformToFill" />
+                      </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="SelectedWorldRecordHeader" Text="World Record" FontSize="11" Classes="muted" />
+                      <TextBlock x:Name="SelectedWorldRecordText" Text="-" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </StackPanel>
+                  </Grid>
+                  <TextBlock x:Name="SelectedUploadText" TextWrapping="Wrap" Foreground="#2B1605" />
+                  <WrapPanel>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SelectedStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SelectedTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SelectedClearsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SelectedClearRateText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                  </WrapPanel>
+                  <Border x:Name="SearchSelectedPreviewPanel"
+                          Height="160"
+                          BorderBrush="#A86725"
+                          BorderThickness="1.5"
+                          CornerRadius="5"
+                          Padding="6"
+                          Background="#FFF8D6"
+                          Cursor="Hand"
+                          PointerPressed="SearchSelectedPreviewPanel_OnPointerPressed"
+                          IsVisible="False">
+                    <Viewbox Stretch="Uniform">
+                      <controls:CoursePreviewControl x:Name="SearchSelectedPreviewCanvas" />
+                    </Viewbox>
+                  </Border>
+                  </StackPanel>
+                  <StackPanel x:Name="SelectedDownloadStatusPanel" Spacing="8" IsVisible="False">
+                    <ProgressBar x:Name="DownloadProgressBar" Minimum="0" Maximum="100" Height="8" />
+                    <TextBlock x:Name="DownloadStatusText" TextWrapping="Wrap" Foreground="#2B1605" />
+                  </StackPanel>
+                </StackPanel>
+              </ScrollViewer>
+            </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem x:Name="SavedCoursesTab" Header="Saved Courses">
+        <Grid RowDefinitions="Auto,*" Margin="0,12,0,0">
+          <WrapPanel Grid.Row="0" Margin="0,0,0,12">
+            <ComboBox x:Name="SavedSourceComboBox" Width="230" SelectionChanged="SavedSourceComboBox_OnSelectionChanged">
+              <ComboBoxItem Content="Downloaded in Cache" Tag="downloaded" IsSelected="True" />
+              <ComboBoxItem Content="Level Packs" Tag="packs" />
+              <ComboBoxItem Content="Official Testing Courses" Tag="official" />
+              <ComboBoxItem Content="Cemu Profile Courses" Tag="cemu" />
+              <ComboBoxItem Content="Backupped Courses" Tag="backupped" />
+            </ComboBox>
+            <TextBox x:Name="SavedSearchTextBox" Width="260" Watermark="Filter saved courses" TextChanged="SavedSearchTextBox_OnTextChanged" />
+            <Button x:Name="RefreshSavedButton" Content="Refresh" Click="RefreshSavedButton_OnClick" />
+            <Button x:Name="OpenSavedFolderButton" Content="Open Folder" Click="OpenSavedFolderButton_OnClick" />
+            <Button x:Name="DeleteSavedButton" Content="Delete Selected" Click="DeleteSavedButton_OnClick" />
+            <Button x:Name="ResetOfficialButton" Content="Reset Official Courses" Click="ResetOfficialButton_OnClick" />
+          </WrapPanel>
+          <Grid Grid.Row="1" ColumnDefinitions="360,*" ColumnSpacing="12">
+            <Border Classes="panel">
+              <TreeView x:Name="SavedLevelsTreeView" SelectionChanged="SavedLevelsTreeView_OnSelectionChanged">
+                <TreeView.DataTemplates>
+                  <TreeDataTemplate DataType="models:SavedLevelNode" ItemsSource="{Binding Children}">
+                    <Grid ColumnDefinitions="72,*" ColumnSpacing="9" Margin="0,5">
+                      <Border Width="72"
+                              Height="42"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              IsVisible="{Binding HasThumbnail}">
+                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                      </Border>
+                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="#241301" />
+                        <TextBlock Text="{Binding ShortInfo}" FontSize="12" Classes="muted" />
+                      </StackPanel>
+                    </Grid>
+                  </TreeDataTemplate>
+                </TreeView.DataTemplates>
+              </TreeView>
+            </Border>
+            <Border Classes="panel" Grid.Column="1">
+              <Grid>
+                <Button x:Name="RefreshSavedMetadataButton"
+                        Width="30"
+                        Height="30"
+                        Padding="0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        IsVisible="False"
+                        ToolTip.Tip="Refresh Data"
+                        Click="RefreshSavedMetadataButton_OnClick">
+                  <Path Width="15"
+                        Height="15"
+                        Stretch="Uniform"
+                        Data="M21 2 L21 8 L15 8 M3 12 A9 9 0 0 1 18 5.3 L21 8 M3 22 L3 16 L9 16 M21 12 A9 9 0 0 1 6 18.7 L3 16"
+                        Stroke="#2B1605"
+                        StrokeThickness="2"
+                        StrokeLineCap="Round" />
+                </Button>
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="0,0,0,0">
+                  <TextBlock x:Name="SavedLevelTitle"
+                             Grid.Row="0"
+                             Margin="0,0,38,8"
+                             Text="Select a saved course"
+                             FontSize="17"
+                             FontWeight="Bold"
+                             Foreground="#2B1605"
+                             TextWrapping="Wrap" />
+                  <Grid x:Name="SavedLevelDetailsPanel" Grid.Row="1" Grid.RowSpan="4" RowDefinitions="Auto,Auto,Auto,*" IsVisible="False">
+                  <Grid Grid.Row="0" ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" Margin="0,0,0,10">
+                    <TextBlock x:Name="SavedCreatorHeader" Text="Creator" FontSize="11" Classes="muted" />
+                    <TextBlock x:Name="SavedClearRateHeader" Text="Clear Rate" Grid.Column="1" FontSize="11" Classes="muted" />
+                    <TextBlock x:Name="SavedWorldRecordHeader" Text="World Record" Grid.Column="2" FontSize="11" Classes="muted" />
+                    <DockPanel Grid.Row="1" LastChildFill="True">
+                      <Border x:Name="CreatorMiiBorder"
+                              Width="32"
+                              Height="32"
+                              Margin="0,0,7,0"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              Cursor="Hand"
+                              PointerPressed="SavedCreatorMii_OnPointerPressed"
+                              IsVisible="False">
+                        <Image x:Name="CreatorMiiImage" Stretch="UniformToFill" />
+                      </Border>
+                      <TextBlock x:Name="SavedLevelCreatorText" Text="-" FontWeight="SemiBold" Foreground="#2B1605" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock x:Name="SavedLevelClearRateText" Grid.Row="1" Grid.Column="1" Text="-" FontWeight="SemiBold" Foreground="#2B1605" TextWrapping="Wrap" />
+                    <DockPanel Grid.Row="1" Grid.Column="2" LastChildFill="True">
+                      <Border x:Name="WorldRecordMiiBorder"
+                              Width="32"
+                              Height="32"
+                              Margin="0,0,7,0"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              Cursor="Hand"
+                              PointerPressed="SavedWorldRecordMii_OnPointerPressed"
+                              IsVisible="False">
+                        <Image x:Name="WorldRecordMiiImage" Stretch="UniformToFill" />
+                      </Border>
+                      <TextBlock x:Name="SavedLevelWorldRecordText" Text="-" FontWeight="SemiBold" Foreground="#2B1605" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                  </Grid>
+                  <WrapPanel Grid.Row="1" Margin="0,0,0,8">
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SavedStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SavedTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SavedClearsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                  </WrapPanel>
+                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,8">
+                    <TextBlock x:Name="CoursePreviewInfo"
+                               Text="The course preview will appear below."
+                               FontSize="12"
+                               Classes="muted"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                    <Button x:Name="OverworldPreviewButton"
+                            Grid.Column="1"
+                            Content="Overworld"
+                            Click="OverworldPreviewButton_OnClick" />
+                    <Button x:Name="UnderworldPreviewButton"
+                            Grid.Column="2"
+                            Content="Underworld"
+                            Click="UnderworldPreviewButton_OnClick" />
+                    <Button x:Name="HiddenBlocksPreviewButton"
+                            Grid.Column="3"
+                            Content="Reveal Hidden ? Blocks"
+                            Click="HiddenBlocksPreviewButton_OnClick" />
+                  </Grid>
+                  <ScrollViewer x:Name="CoursePreviewScrollViewer"
+                                Grid.Row="3"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto">
+                    <controls:CoursePreviewControl x:Name="CoursePreviewCanvas" />
+                  </ScrollViewer>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem x:Name="SettingsTab" Header="Settings">
+        <Border Classes="panel" Margin="0,12,0,0">
+          <StackPanel Spacing="12">
+            <TextBlock x:Name="SettingsTitle" Text="Settings" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock x:Name="LanguageLabel" Text="Language" FontWeight="SemiBold" />
+            <ComboBox x:Name="LanguageComboBox" Width="220" SelectionChanged="LanguageComboBox_OnSelectionChanged">
+              <ComboBoxItem Content="English" Tag="en" />
+              <ComboBoxItem Content="Deutsch" Tag="de" />
+            </ComboBox>
+            <CheckBox x:Name="UseCemuCheckBox" Content="Use Cemu Folder" />
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox x:Name="CemuPathTextBox" Watermark="Cemu folder path" />
+              <Button x:Name="SelectCemuFolderButton" Grid.Column="1" Content="Select Folder" Click="SelectCemuFolderButton_OnClick" />
+            </Grid>
+            <ComboBox x:Name="ProfileComboBox" Width="240" />
+            <CheckBox x:Name="HideViewerInfoCheckBox"
+                      Content="Hide Viewer Info"
+                      Checked="HideViewerInfoCheckBox_OnChanged"
+                      Unchecked="HideViewerInfoCheckBox_OnChanged" />
+            <CheckBox x:Name="UseProxyCheckBox" Content="Use Proxy for Downloads" />
+            <Button x:Name="OpenProxyFileButton" Content="Open Proxy File" Click="OpenProxyFileButton_OnClick" HorizontalAlignment="Left" />
+            <TextBlock x:Name="ApiEndpointLabel" Text="API Endpoint" FontWeight="SemiBold" />
+            <TextBox x:Name="ApiLinkTextBox" />
+            <WrapPanel>
+              <Button x:Name="SaveSettingsButton" Content="Save Settings" Click="SaveSettingsButton_OnClick" />
+              <Button x:Name="ResetSettingsButton" Content="Reset Settings" Click="ResetSettingsButton_OnClick" />
+              <Button x:Name="RefreshAllDownloadedDataButton"
+                      Content="Refresh All Downloaded Course Data"
+                      Click="RefreshAllDownloadedDataButton_OnClick" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+      </TabItem>
+    </TabControl>
+    <Border x:Name="ProfilePage"
+            Grid.Row="1"
+            Classes="panel"
+            Margin="16,0,16,16"
+            IsVisible="False">
+      <Grid RowDefinitions="Auto,*" RowSpacing="12">
+        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="16">
+          <Button x:Name="BackFromProfileButton"
+                  Content="Back"
+                  Click="BackFromProfileButton_OnClick"
+                  VerticalAlignment="Top" />
+          <Border Grid.Column="1"
+                  Width="96"
+                  Height="96"
+                  Background="#E9D58A"
+                  BorderBrush="#8F4F17"
+                  BorderThickness="2"
+                  CornerRadius="6"
+                  ClipToBounds="True">
+            <Image x:Name="ProfileHeaderMiiImage" Stretch="UniformToFill" />
+          </Border>
+          <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+            <TextBlock x:Name="ProfileTitle" Text="User Profile" Classes="sectionTitle" />
+            <TextBlock x:Name="ProfileUserNameText" Text="-" FontSize="28" FontWeight="Bold" Foreground="#2B1605" TextWrapping="Wrap" />
+            <WrapPanel>
+              <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
+                <TextBlock x:Name="ProfileTotalLevelsText" Text="Levels: 0" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
+                <TextBlock x:Name="ProfileTotalStarsText" Text="Stars: 0" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
+                <TextBlock x:Name="ProfileTotalAttemptsText" Text="Attempts: 0" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
+                <TextBlock x:Name="ProfileTotalClearsText" Text="Clears: 0" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
+                <TextBlock x:Name="ProfileAverageClearRateText" Text="Clear Rate: n/a" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+            </WrapPanel>
+            <TextBlock x:Name="ProfileSummaryText"
+                       Text="Loading profile..."
+                       Classes="muted"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="12">
+          <ListBox x:Name="ProfileLevelsListBox"
+                   SelectionChanged="ProfileLevelsListBox_OnSelectionChanged">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9" Margin="0,5">
+                  <Border Width="72"
+                          Height="42"
+                          Background="#E9D58A"
+                          BorderBrush="#8F4F17"
+                          BorderThickness="1"
+                          CornerRadius="4"
+                          ClipToBounds="True"
+                          Cursor="Hand"
+                          PointerPressed="ProfileThumbnail_OnPointerPressed"
+                          IsVisible="{Binding HasThumbnail}">
+                    <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                  </Border>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#241301" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasCreatorMiiImage}">
+                        <Border Width="28"
+                                Height="28"
+                                Background="#E9D58A"
+                                BorderBrush="#8F4F17"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                ClipToBounds="True">
+                          <Image Source="{Binding CreatorMiiImage}" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Text="Creator" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWorldRecordMiiImage}">
+                        <Border Width="28"
+                                Height="28"
+                                Background="#E9D58A"
+                                BorderBrush="#8F4F17"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                ClipToBounds="True">
+                          <Image Source="{Binding WorldRecordMiiImage}" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock Text="WR" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </StackPanel>
+                    <WrapPanel>
+                      <Border Classes="statChip">
+                        <TextBlock FontSize="12" Foreground="#2B1605">
+                          <Run Text="#" />
+                          <Run Text="{Binding DisplayCode}" />
+                        </TextBlock>
+                      </Border>
+                      <Border Classes="statChip">
+                        <TextBlock FontSize="12" Foreground="#2B1605">
+                          <Run Text="✓ " />
+                          <Run Text="{Binding ClearRateText}" />
+                        </TextBlock>
+                      </Border>
+                      <Border Classes="statChip">
+                        <TextBlock FontSize="12" Foreground="#2B1605">
+                          <Run Text="▶ " />
+                          <Run Text="{Binding TotalAttemptsText}" />
+                        </TextBlock>
+                      </Border>
+                      <Border Classes="statChip">
+                        <TextBlock FontSize="12" Foreground="#2B1605">
+                          <Run Text="★ " />
+                          <Run Text="{Binding StarsText}" />
+                        </TextBlock>
+                      </Border>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding SearchResultStatus}" FontSize="12" Foreground="#1A7A3A" />
+                  </StackPanel>
+                  <Button Grid.Column="2"
+                          Content="{Binding DownloadButtonText}"
+                          IsEnabled="{Binding CanDownload}"
+                          Click="DownloadLevelButton_OnClick" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <Border Grid.Column="1" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="10" Background="#FFF8D6">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Spacing="8">
+                <TextBlock x:Name="ProfileSelectedLevelTitle" Text="No level selected" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
+                <StackPanel x:Name="ProfileSelectedDetailsPanel" Spacing="8" IsVisible="False">
+                <StackPanel Spacing="8">
+                  <Grid x:Name="ProfileSelectedCreatorRow" ColumnDefinitions="64,*" ColumnSpacing="10" IsVisible="False">
+                    <Border Width="46"
+                            Height="46"
+                            Background="#E9D58A"
+                            BorderBrush="#8F4F17"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            ClipToBounds="True"
+                            Cursor="Hand"
+                            PointerPressed="ProfileSelectedCreatorMii_OnPointerPressed">
+                      <Image x:Name="ProfileSelectedCreatorMiiImage" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="ProfileSelectedCreatorHeader" Text="Creator" FontSize="11" Classes="muted" />
+                      <TextBlock x:Name="ProfileSelectedCreatorNameText" Text="-" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid x:Name="ProfileSelectedWorldRecordRow" ColumnDefinitions="64,*" ColumnSpacing="10" IsVisible="False">
+                    <Border Width="46"
+                            Height="46"
+                            Background="#E9D58A"
+                            BorderBrush="#8F4F17"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            ClipToBounds="True"
+                            Cursor="Hand"
+                            PointerPressed="ProfileSelectedWorldRecordMii_OnPointerPressed">
+                      <Image x:Name="ProfileSelectedWorldRecordMiiImage" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                      <TextBlock x:Name="ProfileSelectedWorldRecordHeader" Text="World Record" FontSize="11" Classes="muted" />
+                      <TextBlock x:Name="ProfileSelectedWorldRecordText" Text="-" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+                <TextBlock x:Name="ProfileSelectedLevelDetails" TextWrapping="Wrap" Foreground="#2B1605" />
+                <WrapPanel>
+                  <Border Classes="statChip">
+                    <TextBlock x:Name="ProfileSelectedStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="statChip">
+                    <TextBlock x:Name="ProfileSelectedTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="statChip">
+                    <TextBlock x:Name="ProfileSelectedClearsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="statChip">
+                    <TextBlock x:Name="ProfileSelectedClearRateText" Foreground="#2B1605" FontWeight="SemiBold" />
+                  </Border>
+                </WrapPanel>
+                <Border x:Name="ProfileSelectedPreviewPanel"
+                        Height="160"
+                        BorderBrush="#A86725"
+                        BorderThickness="1.5"
+                        CornerRadius="5"
+                        Padding="6"
+                        Background="#FFF1AE"
+                        Cursor="Hand"
+                        PointerPressed="ProfileSelectedPreviewPanel_OnPointerPressed"
+                        IsVisible="False">
+                  <Viewbox Stretch="Uniform">
+                    <controls:CoursePreviewControl x:Name="ProfileSelectedPreviewCanvas" />
+                  </Viewbox>
+                </Border>
+                </StackPanel>
+              </StackPanel>
+            </ScrollViewer>
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
+    <Border x:Name="LevelViewerPage"
+            Grid.Row="1"
+            Classes="panel"
+            Margin="16,0,16,16"
+            IsVisible="False">
+      <Grid RowDefinitions="Auto,*" RowSpacing="10">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+          <Button x:Name="BackFromViewerButton"
+                  Grid.Column="0"
+                  Content="Back"
+                  Click="BackFromViewerButton_OnClick" />
+          <StackPanel Grid.Column="1">
+            <TextBlock x:Name="LevelViewerTitle"
+                       Text="Level Viewer"
+                       Classes="sectionTitle"
+                       TextWrapping="Wrap" />
+            <TextBlock x:Name="LevelViewerInfo"
+                       Text="The course preview will appear below."
+                       FontSize="12"
+                       Classes="muted"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+          <Button x:Name="LevelViewerOverworldButton"
+                  Grid.Column="2"
+                  Content="Overworld"
+                  Click="LevelViewerOverworldButton_OnClick" />
+          <Button x:Name="LevelViewerUnderworldButton"
+                  Grid.Column="3"
+                  Content="Underworld"
+                  Click="LevelViewerUnderworldButton_OnClick" />
+          <Button x:Name="LevelViewerHiddenBlocksButton"
+                  Grid.Column="4"
+                  Content="Reveal Hidden ? Blocks"
+                  Click="LevelViewerHiddenBlocksButton_OnClick" />
+        </Grid>
+        <ScrollViewer x:Name="LevelViewerScrollViewer"
+                      Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+          <controls:CoursePreviewControl x:Name="LevelViewerCanvas" />
+        </ScrollViewer>
+      </Grid>
+    </Border>
+    </Grid>
+  </Grid>
+</Window>

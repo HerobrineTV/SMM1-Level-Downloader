@@ -1,4 +1,38 @@
 const { ipcRenderer } = window; // Use provided ipcRenderer in Electron apps
+if (!window.api) {
+    const bridgeProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const bridgeSocket = new WebSocket(`${bridgeProtocol}//${window.location.host}/bridge`);
+    const bridgeCallbacks = {};
+    const pendingMessages = [];
+
+    bridgeSocket.addEventListener("open", () => {
+        while (pendingMessages.length > 0) {
+            bridgeSocket.send(JSON.stringify(pendingMessages.shift()));
+        }
+    });
+
+    bridgeSocket.addEventListener("message", event => {
+        const message = JSON.parse(event.data);
+        const callback = bridgeCallbacks[message.channel];
+        if (callback) {
+            callback(message.data);
+        }
+    });
+
+    window.api = {
+        send: (channel, data) => {
+            const message = { channel, data };
+            if (bridgeSocket.readyState === WebSocket.OPEN) {
+                bridgeSocket.send(JSON.stringify(message));
+            } else {
+                pendingMessages.push(message);
+            }
+        },
+        receive: (channel, func) => {
+            bridgeCallbacks[channel] = func;
+        }
+    };
+}
 const settingsFile = ('../SMMDownloader/Data/data.json');
 const downloadCache = ('../SMMDownloader/Data/downloaded.json');
 const backupCache = ('../SMMDownloader/Data/backupped.json');

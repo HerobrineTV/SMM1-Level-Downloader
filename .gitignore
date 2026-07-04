@@ -403,3 +403,4 @@ SMMDownloader/Data/logs/*
 !SMMDownloader/Data/logs/example
 SMMDownloader/Data/DownloadCache/
 SMMDownloader/Data/BackupCache/
+/SMMDownloader/Data/LevelPacks/
