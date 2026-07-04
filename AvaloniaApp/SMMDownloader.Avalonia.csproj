@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="..\SMMDownloader\Data\Icon.png" Link="Assets\Icon.png" />
+    <AvaloniaResource Include="Assets\Icon.png" />
     <AvaloniaResource Include="Assets\CourseViewer\**\*.png" />
   </ItemGroup>
 

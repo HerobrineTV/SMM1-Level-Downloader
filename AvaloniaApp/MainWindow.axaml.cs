@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -22,6 +23,7 @@ public sealed partial class MainWindow : Window
 
     private readonly ProjectPaths _paths = new();
     private readonly JsonStore _store;
+    private readonly DataMigrationService _dataMigrationService;
     private readonly LevelApiClient _apiClient = new();
     private readonly LevelDownloadService _downloadService;
     private readonly SmmCourseParser _courseParser = new();
@@ -50,17 +52,37 @@ public sealed partial class MainWindow : Window
     private bool? _isApiOnline;
     private string? _availableUpdateVersion;
     private string? _availableUpdateUrl;
+    private bool _startupInitialized;
 
     public MainWindow()
     {
         InitializeComponent();
 
         _store = new JsonStore(_paths);
+        _dataMigrationService = new DataMigrationService(_paths);
         _downloadService = new LevelDownloadService(_paths, _store);
         SearchResultsListBox.ItemsSource = _searchResults;
         ProfileLevelsListBox.ItemsSource = _profileLevels;
         SavedLevelsTreeView.ItemsSource = _savedNodes;
+    }
 
+    protected override async void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+
+        if (_startupInitialized)
+        {
+            return;
+        }
+
+        _startupInitialized = true;
+        await RunStartupMigrationAsync();
+        _store.EnsureInitialized();
+        InitializeDataBackedUi();
+    }
+
+    private void InitializeDataBackedUi()
+    {
         LoadSettingsIntoUi();
         ApplyLanguage();
         ResetSearchSelectedLevelDetails();
@@ -68,6 +90,80 @@ public sealed partial class MainWindow : Window
         LoadSavedLevels();
         _ = RunApiStatusLoopAsync(_lifetimeCts.Token);
         _ = CheckForUpdatesAsync(_lifetimeCts.Token);
+    }
+
+    private async Task RunStartupMigrationAsync()
+    {
+        if (!_dataMigrationService.NeedsLegacyDataMigration())
+        {
+            return;
+        }
+
+        await ShowLegacyDataMigrationPromptAsync();
+
+        try
+        {
+            SetBusy("Moving legacy data...");
+            await _dataMigrationService.MigrateLegacyDataAsync(_lifetimeCts.Token);
+            SetStatus($"Data moved to {_paths.DataDirectory}.");
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Legacy data migration failed: {ex.Message}");
+        }
+    }
+
+    private Task ShowLegacyDataMigrationPromptAsync()
+    {
+        var dialog = new Window
+        {
+            Title = "Data Migration",
+            Width = 460,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            Background = Brushes.Transparent,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#FFF1AE")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#7B4A20")),
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(18),
+                Child = new StackPanel
+                {
+                    Spacing = 16,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = "Old Data Path Detected! Migrating the Data now!",
+                            TextWrapping = TextWrapping.Wrap,
+                            Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
+                        },
+                        new Button
+                        {
+                            Content = "OK",
+                            HorizontalAlignment = HorizontalAlignment.Right,
+                            MinWidth = 90,
+                            Padding = new Thickness(13, 8),
+                            Background = new SolidColorBrush(Color.Parse("#F9C74F")),
+                            Foreground = new SolidColorBrush(Color.Parse("#2B1605")),
+                            BorderBrush = new SolidColorBrush(Color.Parse("#8F4F17")),
+                            BorderThickness = new Thickness(2),
+                            CornerRadius = new CornerRadius(5)
+                        }
+                    }
+                }
+            }
+        };
+
+        if (dialog.Content is Border { Child: StackPanel panel } && panel.Children[^1] is Button okButton)
+        {
+            okButton.Click += (_, _) => dialog.Close();
+        }
+
+        return dialog.ShowDialog(this);
     }
 
     protected override void OnClosed(EventArgs e)

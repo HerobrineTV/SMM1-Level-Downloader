@@ -11,6 +11,23 @@ public sealed class JsonStore(ProjectPaths paths)
         WriteIndented = true
     };
 
+    public void EnsureInitialized()
+    {
+        Directory.CreateDirectory(paths.DataDirectory);
+        Directory.CreateDirectory(paths.DownloadCacheDirectory);
+        Directory.CreateDirectory(paths.LevelPacksDirectory);
+        Directory.CreateDirectory(paths.BackuppedDirectory);
+        Directory.CreateDirectory(paths.OfficialCoursesDirectory);
+        Directory.CreateDirectory(Path.Combine(paths.OfficialCoursesDirectory, "OriginalFiles"));
+        Directory.CreateDirectory(Path.Combine(paths.OfficialCoursesDirectory, "CourseFiles"));
+
+        EnsureJsonFile(paths.SettingsFile, JsonSerializer.Serialize(new AppSettings(), JsonOptions));
+        EnsureJsonFile(paths.DownloadedFile, "{}");
+        EnsureJsonFile(paths.BackuppedFile, "{}");
+        EnsureJsonFile(paths.LevelPacksFile, "{}");
+        EnsureTextFile(paths.ProxyFile, "");
+    }
+
     public AppSettings LoadSettings()
     {
         if (!File.Exists(paths.SettingsFile))
@@ -68,5 +85,25 @@ public sealed class JsonStore(ProjectPaths paths)
         }
 
         return JsonSerializer.Deserialize<Dictionary<string, T>>(text, JsonOptions) ?? [];
+    }
+
+    private static void EnsureJsonFile(string path, string defaultContent)
+    {
+        if (File.Exists(path) && !string.IsNullOrWhiteSpace(File.ReadAllText(path)))
+        {
+            return;
+        }
+
+        File.WriteAllText(path, defaultContent);
+    }
+
+    private static void EnsureTextFile(string path, string defaultContent)
+    {
+        if (File.Exists(path))
+        {
+            return;
+        }
+
+        File.WriteAllText(path, defaultContent);
     }
 }
