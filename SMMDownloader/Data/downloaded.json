@@ -880,5 +880,23 @@
     "world_record_best_time_player_mii_data": "QlBGQwAAAAEAAAAAAAAAAAAAAAAAAQAAAwAAQIiH\u002B6WgZGAQ077gWGhsQ2pUPwAASBdUAHkAbABlAHIAAAAAAAAAAAAAAG4vAAAhAQJoRBgzNEYUgRIVaA0AACkAUkhQAAB5AGwAZQByAAAAAAAAAAAAAAAAANEvAAAAAAAAAAAAAAAAAAAAAAAAAAE=",
     "stars": 17,
     "pack": null
+  },
+  "46722844": {
+    "url": "https://d2sno3mhmk1ekx.cloudfront.net/10.WUP_AMAJ_datastore/ds/1/data/00046722844-00001?Expires=1625730231\u0026Signature=mVP-5kqb~521mI~WOF25WrhK5JG4If~NbJbhHCOvjCiCJR9H-6M~kaDBGC5H0kCtabzFGnK4zbIGFGVmBbEpe2uYGCGllllk8sxlPSGy6J1nUT7n4KVwWrBnu~1yCwnp~gn12PL-O7UgRspuZRe94eLO06ifnUlkMCwZHA0KcCVmuovtsjN4ebo2AkwTvFBu6wqs3~9~dh7yOaseKH86zGy~u0i95ZHtCiQrF3RQH79Mb3pqxNcBv4zMU9wYdoJGjnpkzprt3KWlH6mtUXeCfh3ZvA1NDWfvN1zE-RMKKD92r0JFbmECuv4bRWICpuAZt0-YA7eSxCS6FfF8~-nfqg__\u0026Key-Pair-Id=APKAJUYKVK3BE6ZPNZBQ",
+    "name": "Run!",
+    "creator": "thornado23",
+    "creator_mii_data": "QlBGQwAAAAEAAAAAAAAAAAAAAAAAAQAAAwAAQELiOYSABBCw1J3PJDJb5difmAAA7gpUAGgAZQBvAGQAbwByAGUAAAAAAE4TAgAhB1JpQxjgNEYUgRLWaA0AACkAUkhQVABoAGUAbwBkAG8AcgBlAAAAAAAAAKykAAAAAAAAAAAAAAAAAAAAAAAAAAE=",
+    "levelid": 46722844,
+    "creatorid": 1773037249,
+    "clears": 6,
+    "failures": 62,
+    "total_attempts": 68,
+    "clearrate": 0.08823529411764706,
+    "uploadTime": "2016-12-04T13:54:53.000Z",
+    "world_record_ms": 24505,
+    "world_record_holder_nnid": "yuki23412",
+    "world_record_best_time_player_mii_data": "QlBGQwAAAAEAAAAAAAAAAAAAAAAAAQAAAwAAQJhF\u002BoXgJMCg1bp4tAsfQaPJXgAAhQOGME0wAACLMPwwkzAAAEQwAAAAAEBAAAAMAQRoQxggNEYUgRIXaA0AACkAUkhQAAAAAAAAAAAAAAAAAAAAAAAAAAAAADMlAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "stars": 1,
+    "pack": null
   }
 }

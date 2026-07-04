@@ -311,62 +311,68 @@
                       </Border>
                       <StackPanel Grid.Column="1">
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#241301" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasCreatorMiiImage}">
-                            <Border Width="28"
-                                    Height="28"
-                                    Background="#E9D58A"
-                                    BorderBrush="#8F4F17"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    ClipToBounds="True"
-                                    Cursor="Hand"
-                                    PointerPressed="CreatorMii_OnPointerPressed">
-                              <Image Source="{Binding CreatorMiiImage}" Stretch="UniformToFill" />
-                            </Border>
-                            <TextBlock Text="Creator" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10" Margin="0,3,0,0">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasCreatorMiiImage}">
+                              <Border Width="28"
+                                      Height="28"
+                                      Background="#E9D58A"
+                                      BorderBrush="#8F4F17"
+                                      BorderThickness="1"
+                                      CornerRadius="4"
+                                      ClipToBounds="True"
+                                      Cursor="Hand"
+                                      PointerPressed="CreatorMii_OnPointerPressed">
+                                <Image Source="{Binding CreatorMiiImage}" Stretch="UniformToFill" />
+                              </Border>
+                              <TextBlock Text="Creator" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWorldRecordMiiImage}">
+                              <Border Width="28"
+                                      Height="28"
+                                      Background="#E9D58A"
+                                      BorderBrush="#8F4F17"
+                                      BorderThickness="1"
+                                      CornerRadius="4"
+                                      ClipToBounds="True"
+                                      Cursor="Hand"
+                                      PointerPressed="WorldRecordMii_OnPointerPressed">
+                                <Image Source="{Binding WorldRecordMiiImage}" Stretch="UniformToFill" />
+                              </Border>
+                              <TextBlock Text="WR" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                            </StackPanel>
                           </StackPanel>
-                          <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWorldRecordMiiImage}">
-                            <Border Width="28"
-                                    Height="28"
-                                    Background="#E9D58A"
-                                    BorderBrush="#8F4F17"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    ClipToBounds="True"
-                                    Cursor="Hand"
-                                    PointerPressed="WorldRecordMii_OnPointerPressed">
-                              <Image Source="{Binding WorldRecordMiiImage}" Stretch="UniformToFill" />
-                            </Border>
-                            <TextBlock Text="WR" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                          <StackPanel Grid.Column="1" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                              <Border Classes="statChip">
+                                <TextBlock FontSize="12" Foreground="#2B1605">
+                                  <Run Text="#" />
+                                  <Run Text="{Binding DisplayCode}" />
+                                </TextBlock>
+                              </Border>
+                              <Border Classes="statChip">
+                                <TextBlock FontSize="12" Foreground="#2B1605">
+                                  <Run Text="✓ " />
+                                  <Run Text="{Binding ClearRateText}" />
+                                </TextBlock>
+                              </Border>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                              <Border Classes="statChip">
+                                <TextBlock FontSize="12" Foreground="#2B1605">
+                                  <Run Text="▶ " />
+                                  <Run Text="{Binding TotalAttemptsText}" />
+                                </TextBlock>
+                              </Border>
+                              <Border Classes="statChip">
+                                <TextBlock FontSize="12" Foreground="#2B1605">
+                                  <Run Text="★ " />
+                                  <Run Text="{Binding StarsText}" />
+                                </TextBlock>
+                              </Border>
+                            </StackPanel>
                           </StackPanel>
-                        </StackPanel>
-                        <WrapPanel>
-                          <Border Classes="statChip">
-                            <TextBlock FontSize="12" Foreground="#2B1605">
-                              <Run Text="#" />
-                              <Run Text="{Binding DisplayCode}" />
-                            </TextBlock>
-                          </Border>
-                          <Border Classes="statChip">
-                            <TextBlock FontSize="12" Foreground="#2B1605">
-                              <Run Text="✓ " />
-                              <Run Text="{Binding ClearRateText}" />
-                            </TextBlock>
-                          </Border>
-                          <Border Classes="statChip">
-                            <TextBlock FontSize="12" Foreground="#2B1605">
-                              <Run Text="▶ " />
-                              <Run Text="{Binding TotalAttemptsText}" />
-                            </TextBlock>
-                          </Border>
-                          <Border Classes="statChip">
-                            <TextBlock FontSize="12" Foreground="#2B1605">
-                              <Run Text="★ " />
-                              <Run Text="{Binding StarsText}" />
-                            </TextBlock>
-                          </Border>
-                        </WrapPanel>
+                        </Grid>
                         <TextBlock Text="{Binding SearchResultStatus}" FontSize="12" Foreground="#1A7A3A" />
                       </StackPanel>
                       <Button Grid.Column="2"
@@ -720,58 +726,64 @@
                   </Border>
                   <StackPanel Grid.Column="1">
                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#241301" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasCreatorMiiImage}">
-                        <Border Width="28"
-                                Height="28"
-                                Background="#E9D58A"
-                                BorderBrush="#8F4F17"
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                ClipToBounds="True">
-                          <Image Source="{Binding CreatorMiiImage}" Stretch="UniformToFill" />
-                        </Border>
-                        <TextBlock Text="Creator" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                    <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10" Margin="0,3,0,0">
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasCreatorMiiImage}">
+                          <Border Width="28"
+                                  Height="28"
+                                  Background="#E9D58A"
+                                  BorderBrush="#8F4F17"
+                                  BorderThickness="1"
+                                  CornerRadius="4"
+                                  ClipToBounds="True">
+                            <Image Source="{Binding CreatorMiiImage}" Stretch="UniformToFill" />
+                          </Border>
+                          <TextBlock Text="Creator" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWorldRecordMiiImage}">
+                          <Border Width="28"
+                                  Height="28"
+                                  Background="#E9D58A"
+                                  BorderBrush="#8F4F17"
+                                  BorderThickness="1"
+                                  CornerRadius="4"
+                                  ClipToBounds="True">
+                            <Image Source="{Binding WorldRecordMiiImage}" Stretch="UniformToFill" />
+                          </Border>
+                          <TextBlock Text="WR" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                        </StackPanel>
                       </StackPanel>
-                      <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWorldRecordMiiImage}">
-                        <Border Width="28"
-                                Height="28"
-                                Background="#E9D58A"
-                                BorderBrush="#8F4F17"
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                ClipToBounds="True">
-                          <Image Source="{Binding WorldRecordMiiImage}" Stretch="UniformToFill" />
-                        </Border>
-                        <TextBlock Text="WR" FontSize="10" Classes="muted" VerticalAlignment="Center" />
+                      <StackPanel Grid.Column="1" Spacing="4">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="#" />
+                              <Run Text="{Binding DisplayCode}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="✓ " />
+                              <Run Text="{Binding ClearRateText}" />
+                            </TextBlock>
+                          </Border>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="▶ " />
+                              <Run Text="{Binding TotalAttemptsText}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="★ " />
+                              <Run Text="{Binding StarsText}" />
+                            </TextBlock>
+                          </Border>
+                        </StackPanel>
                       </StackPanel>
-                    </StackPanel>
-                    <WrapPanel>
-                      <Border Classes="statChip">
-                        <TextBlock FontSize="12" Foreground="#2B1605">
-                          <Run Text="#" />
-                          <Run Text="{Binding DisplayCode}" />
-                        </TextBlock>
-                      </Border>
-                      <Border Classes="statChip">
-                        <TextBlock FontSize="12" Foreground="#2B1605">
-                          <Run Text="✓ " />
-                          <Run Text="{Binding ClearRateText}" />
-                        </TextBlock>
-                      </Border>
-                      <Border Classes="statChip">
-                        <TextBlock FontSize="12" Foreground="#2B1605">
-                          <Run Text="▶ " />
-                          <Run Text="{Binding TotalAttemptsText}" />
-                        </TextBlock>
-                      </Border>
-                      <Border Classes="statChip">
-                        <TextBlock FontSize="12" Foreground="#2B1605">
-                          <Run Text="★ " />
-                          <Run Text="{Binding StarsText}" />
-                        </TextBlock>
-                      </Border>
-                    </WrapPanel>
+                    </Grid>
                     <TextBlock Text="{Binding SearchResultStatus}" FontSize="12" Foreground="#1A7A3A" />
                   </StackPanel>
                   <Button Grid.Column="2"
