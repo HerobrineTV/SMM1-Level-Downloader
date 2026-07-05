@@ -45,6 +45,8 @@ public sealed partial class MainWindow : Window
     private bool _hasMoreSearchPages;
     private string _currentProfileUserName = "";
     private LevelInfo? _selectedPreviewLevel;
+    private SavedLevelNode? _selectedSavedNode;
+    private SavedLevelNode? _selectedPackNode;
     private string _selectedPreviewFile = "course_data.cdt";
     private LevelInfo? _largeViewerLevel;
     private string _largeViewerFile = "course_data.cdt";
@@ -53,6 +55,7 @@ public sealed partial class MainWindow : Window
     private string? _availableUpdateVersion;
     private string? _availableUpdateUrl;
     private bool _startupInitialized;
+    private bool _isApplyingPackNameSuggestion;
 
     public MainWindow()
     {
@@ -85,6 +88,7 @@ public sealed partial class MainWindow : Window
     {
         LoadSettingsIntoUi();
         ApplyLanguage();
+        RefreshPackNameSuggestions();
         ResetSearchSelectedLevelDetails();
         ResetProfileSelectedLevelDetails();
         LoadSavedLevels();
@@ -164,6 +168,73 @@ public sealed partial class MainWindow : Window
         }
 
         return dialog.ShowDialog(this);
+    }
+
+    private async Task<bool> ShowConfirmDialogAsync(string title, string message, string confirmText, string cancelText)
+    {
+        var confirmButton = new Button
+        {
+            Content = confirmText,
+            MinWidth = 90,
+            Padding = new Thickness(13, 8),
+            Background = new SolidColorBrush(Color.Parse("#F9C74F")),
+            Foreground = new SolidColorBrush(Color.Parse("#2B1605")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#8F4F17")),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(5)
+        };
+        var cancelButton = new Button
+        {
+            Content = cancelText,
+            MinWidth = 90,
+            Padding = new Thickness(13, 8),
+            Background = new SolidColorBrush(Color.Parse("#FFF8D6")),
+            Foreground = new SolidColorBrush(Color.Parse("#2B1605")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#8F4F17")),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(5)
+        };
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 500,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            Background = Brushes.Transparent,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#FFF1AE")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#7B4A20")),
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(18),
+                Child = new StackPanel
+                {
+                    Spacing = 16,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = message,
+                            TextWrapping = TextWrapping.Wrap,
+                            Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
+                        },
+                        new StackPanel
+                        {
+                            Orientation = Orientation.Horizontal,
+                            HorizontalAlignment = HorizontalAlignment.Right,
+                            Spacing = 8,
+                            Children = { cancelButton, confirmButton }
+                        }
+                    }
+                }
+            }
+        };
+
+        cancelButton.Click += (_, _) => dialog.Close(false);
+        confirmButton.Click += (_, _) => dialog.Close(true);
+        return await dialog.ShowDialog<bool>(this);
     }
 
     protected override void OnClosed(EventArgs e)
@@ -518,6 +589,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        ShowProfileSelectedLevelContainer();
         ProfileSelectedDetailsPanel.IsVisible = true;
         ProfileSelectedLevelTitle.Text = $"{level.Name} | {level.DisplayCode}";
         ProfileSelectedCreatorNameText.Text = FormatName(level.Creator);
@@ -545,6 +617,8 @@ public sealed partial class MainWindow : Window
 
     private void ResetProfileSelectedLevelDetails()
     {
+        CollapseProfileSelectedLevelContainer();
+        ProfileSelectedLevelContainer.IsVisible = false;
         ProfileSelectedLevelTitle.Text = T("NoLevelSelected");
         ProfileSelectedDetailsPanel.IsVisible = false;
         ProfileSelectedLevelDetails.Text = "";
@@ -555,6 +629,8 @@ public sealed partial class MainWindow : Window
 
     private void ResetSearchSelectedLevelDetails()
     {
+        CollapseSearchSelectedLevelContainer();
+        SearchSelectedLevelContainer.IsVisible = false;
         SelectedCourseTitle.IsVisible = false;
         SelectedCourseDetailsPanel.IsVisible = false;
         SelectedDownloadStatusPanel.IsVisible = false;
@@ -567,10 +643,94 @@ public sealed partial class MainWindow : Window
     private void ResetSavedSelectedLevelDetails()
     {
         _selectedPreviewLevel = null;
+        SetSelectedSavedNode(null);
+        SetSavedStatsHidden(false);
+        CollapseSavedSelectedLevelContainer();
+        SavedSelectedLevelContainer.IsVisible = false;
         RefreshSavedMetadataButton.IsVisible = false;
+        OpenSelectedLevelFolderButton.IsVisible = false;
+        RemoveSelectedPackButton.IsVisible = false;
         SavedLevelTitle.Text = T("SelectSavedCourse");
         SavedLevelDetailsPanel.IsVisible = false;
         CoursePreviewCanvas.Course = null;
+    }
+
+    private void SetSelectedSavedNode(SavedLevelNode? node)
+    {
+        if (_selectedSavedNode == node)
+        {
+            return;
+        }
+
+        if (_selectedSavedNode != null)
+        {
+            _selectedSavedNode.IsSelected = false;
+        }
+
+        _selectedSavedNode = node;
+        if (_selectedSavedNode != null)
+        {
+            _selectedSavedNode.IsSelected = true;
+        }
+    }
+
+    private void SetSavedStatsHidden(bool hidden)
+    {
+        foreach (var node in EnumerateSavedNodes(_savedNodes))
+        {
+            node.StatsHidden = hidden;
+        }
+    }
+
+    private static IEnumerable<SavedLevelNode> EnumerateSavedNodes(IEnumerable<SavedLevelNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            yield return node;
+            foreach (var child in EnumerateSavedNodes(node.Children))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private void ShowSearchSelectedLevelContainer()
+    {
+        SearchResultsLayout.ColumnDefinitions = new ColumnDefinitions("2*,*");
+        SearchResultsLayout.ColumnSpacing = 12;
+        SearchSelectedLevelContainer.IsVisible = true;
+    }
+
+    private void CollapseSearchSelectedLevelContainer()
+    {
+        SearchResultsLayout.ColumnDefinitions = new ColumnDefinitions("*,0");
+        SearchResultsLayout.ColumnSpacing = 0;
+    }
+
+    private void ShowSavedSelectedLevelContainer()
+    {
+        SavedLevelsLayout.ColumnDefinitions = new ColumnDefinitions("360,*");
+        SavedLevelsLayout.ColumnSpacing = 12;
+        SavedSelectedLevelContainer.IsVisible = true;
+    }
+
+    private void CollapseSavedSelectedLevelContainer()
+    {
+        SavedLevelsLayout.ColumnDefinitions = new ColumnDefinitions("*,0");
+        SavedLevelsLayout.ColumnSpacing = 0;
+    }
+
+    private void ShowProfileSelectedLevelContainer()
+    {
+        ProfileLevelsLayout.ColumnDefinitions = new ColumnDefinitions("2*,*");
+        ProfileLevelsLayout.ColumnSpacing = 12;
+        ProfileSelectedLevelContainer.IsVisible = true;
+    }
+
+    private void CollapseProfileSelectedLevelContainer()
+    {
+        ProfileLevelsLayout.ColumnDefinitions = new ColumnDefinitions("*,0");
+        ProfileLevelsLayout.ColumnSpacing = 0;
     }
 
     private void UpdateProfileStats()
@@ -639,6 +799,7 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        ShowSearchSelectedLevelContainer();
         SelectedCourseTitle.IsVisible = true;
         SelectedCourseDetailsPanel.IsVisible = true;
         SelectedDownloadStatusPanel.IsVisible = true;
@@ -656,16 +817,62 @@ public sealed partial class MainWindow : Window
 
     private void SavedLevelsTreeView_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (SavedLevelsTreeView.SelectedItem is SavedLevelNode { Level: { } level })
+        if (SavedLevelsTreeView.SelectedItem is SavedLevelNode { Level: { } level } node)
         {
+            SetSavedStatsHidden(true);
+            SetSelectedSavedNode(node);
+            _selectedPackNode = null;
             _selectedPreviewLevel = level;
             _selectedPreviewFile = "course_data.cdt";
             SetStatus($"{level.Name} selected.");
             RefreshSavedMetadataButton.IsVisible = CanRefreshSavedMetadata();
+            OpenSelectedLevelFolderButton.IsVisible = true;
+            RemoveSelectedPackButton.IsVisible = false;
+            ShowSavedSelectedLevelContainer();
             SavedLevelDetailsPanel.IsVisible = true;
             ShowSavedLevelDetails(level);
             _ = LoadSavedLevelMiiImagesAsync(level);
             LoadCoursePreview(level, _selectedPreviewFile);
+            return;
+        }
+
+        ResetSavedSelectedLevelDetails();
+    }
+
+    private void SavedLevelNode_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if ((e.Source as Control)?.FindAncestorOfType<Button>() != null)
+        {
+            return;
+        }
+
+        if ((sender as Control)?.DataContext is not SavedLevelNode node)
+        {
+            return;
+        }
+
+        if (node is { IsFolder: true })
+        {
+            SavedLevelsTreeView.SelectedItem = null;
+            ResetSavedSelectedLevelDetails();
+            _selectedPackNode = node;
+            RemoveSelectedPackButton.IsVisible = false;
+
+            var treeViewItem = (sender as Control)?.FindAncestorOfType<TreeViewItem>();
+            if (treeViewItem != null)
+            {
+                treeViewItem.IsExpanded = !treeViewItem.IsExpanded;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (node.Level != null && IsSameSavedLevel(node.Level, _selectedPreviewLevel))
+        {
+            SavedLevelsTreeView.SelectedItem = null;
+            ResetSavedSelectedLevelDetails();
+            e.Handled = true;
         }
     }
 
@@ -719,8 +926,24 @@ public sealed partial class MainWindow : Window
         DesktopIntegration.OpenPath(GetSelectedSavedRoot());
     }
 
+    private void OpenSelectedLevelFolderButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedPreviewLevel == null)
+        {
+            return;
+        }
+
+        DesktopIntegration.OpenPath(ResolveCourseFolder(_selectedPreviewLevel));
+    }
+
     private async void DeleteSavedButton_OnClick(object? sender, RoutedEventArgs e)
     {
+        if (_selectedPackNode is { PackName: { } packName, PackFolder: { } packFolder })
+        {
+            await RemovePackFolderAsync(packName, packFolder);
+            return;
+        }
+
         if (SavedLevelsTreeView.SelectedItem is not SavedLevelNode { Level: { } level })
         {
             return;
@@ -731,6 +954,50 @@ public sealed partial class MainWindow : Window
             _downloadService.Delete(level);
             LoadSavedLevels();
             SetStatus($"Deleted {level.LevelId}.");
+            return Task.CompletedTask;
+        });
+    }
+
+    private async void RemoveSelectedPackButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedPackNode is not { PackName: { } packName, PackFolder: { } packFolder })
+        {
+            return;
+        }
+
+        await RemovePackFolderAsync(packName, packFolder);
+    }
+
+    private async void DeletePackButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not SavedLevelNode { PackName: { } packName, PackFolder: { } packFolder })
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var confirmed = await ShowConfirmDialogAsync(
+            T("RemovePackTitle"),
+            string.Format(CultureInfo.InvariantCulture, T("RemovePackWarning"), packName),
+            T("Delete"),
+            T("Cancel"));
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await RemovePackFolderAsync(packName, packFolder);
+    }
+
+    private async Task RemovePackFolderAsync(string packName, string packFolder)
+    {
+        await RunSafeAsync(_ =>
+        {
+            _downloadService.RemovePackFolder(packName, packFolder);
+            _selectedPackNode = null;
+            RefreshPackNameSuggestions();
+            LoadSavedLevels();
+            SetStatus($"Removed level pack '{packName}' and moved its courses back.");
             return Task.CompletedTask;
         });
     }
@@ -920,20 +1187,56 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void CreatePackButton_OnClick(object? sender, RoutedEventArgs e)
+    private void RefreshPackNameSuggestions()
     {
-        var packName = PackNameTextBox.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(packName))
+        PackNameTextBox.ItemsSource = _store.LoadLevelPacks()
+            .Keys
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private void PackNameTextBox_OnTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        if (_isApplyingPackNameSuggestion)
         {
-            SetStatus("Enter a level pack name.");
             return;
         }
 
-        var packs = _store.LoadLevelPacks();
-        packs[packName] = SanitizeFolderName(packName);
-        Directory.CreateDirectory(Path.Combine(_paths.LevelPacksDirectory, packs[packName]));
-        _store.SaveLevelPacks(packs);
-        SetStatus($"Level pack '{packName}' is ready.");
+        var text = PackNameTextBox.Text?.Trim() ?? "";
+        var hasMatch = !string.IsNullOrWhiteSpace(text) &&
+                       _store.LoadLevelPacks().Keys.Any(name =>
+                           name.Contains(text, StringComparison.OrdinalIgnoreCase));
+        PackNameTextBox.IsDropDownOpen = hasMatch;
+    }
+
+    private async void PackNameTextBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        var packName = e.AddedItems.OfType<string>().FirstOrDefault() ??
+                       PackNameTextBox.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(packName))
+        {
+            return;
+        }
+
+        _isApplyingPackNameSuggestion = true;
+        try
+        {
+            ApplyPackNameSuggestion(packName);
+            await Dispatcher.UIThread.InvokeAsync(() => ApplyPackNameSuggestion(packName), DispatcherPriority.Loaded);
+            await Task.Delay(50);
+            ApplyPackNameSuggestion(packName);
+        }
+        finally
+        {
+            _isApplyingPackNameSuggestion = false;
+        }
+    }
+
+    private void ApplyPackNameSuggestion(string packName)
+    {
+        PackNameTextBox.Text = packName;
+        PackNameTextBox.IsDropDownOpen = false;
+        PackNameTextBox.SelectedItem = null;
     }
 
     private async Task DownloadLevelAsync(LevelInfo level)
@@ -952,6 +1255,7 @@ public sealed partial class MainWindow : Window
         }
 
         using var cts = new CancellationTokenSource();
+        string? packFolder = null;
         try
         {
             SaveSettingsFromUi();
@@ -969,7 +1273,7 @@ public sealed partial class MainWindow : Window
                 ApplyDownloadStateToSearchResults(level.LevelId);
             });
 
-            var packFolder = GetPackFolderIfEnabled();
+            packFolder = GetPackFolderIfEnabled();
             await _downloadService.DownloadAsync(level, packFolder, progress, cts.Token);
             DownloadProgressBar.Value = 100;
             state.ProgressText = "100% - Download complete.";
@@ -979,6 +1283,16 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            _downloadService.CleanupFailedDownload(level, packFolder);
+            state.IsDownloaded = false;
+            state.IsDownloading = false;
+            state.ProgressText = "";
+            level.IsDownloaded = false;
+            level.IsDownloading = false;
+            level.DownloadProgressText = "";
+            level.Folder = "";
+            ApplyDownloadStateToSearchResults(level.LevelId);
+            LoadSavedLevels();
             state.ProgressText = ex.Message;
             SetStatus(ex.Message);
             DownloadStatusText.Text = ex.Message;
@@ -1044,7 +1358,6 @@ public sealed partial class MainWindow : Window
         SearchExactCheckBox.Content = T("Exact");
         DownloadToPackCheckBox.Content = T("SaveInLevelPack");
         PackNameTextBox.Watermark = T("LevelPackName");
-        CreatePackButton.Content = T("CreatePack");
         DownloadAllButton.Content = T("DownloadAllResults");
         SelectedCourseTitle.Text = T("SelectedCourse");
         SelectedLevelTitle.Text = T("NoCourseSelected");
@@ -1061,8 +1374,7 @@ public sealed partial class MainWindow : Window
         {
             item.Content = item.Tag?.ToString() switch
             {
-                "downloaded" => T("DownloadedInCache"),
-                "packs" => T("LevelPacks"),
+                "downloaded" => T("SavedCourses"),
                 "official" => T("OfficialTestingCourses"),
                 "cemu" => T("CemuProfileCourses"),
                 "backupped" => T("BackuppedCourses"),
@@ -1073,8 +1385,10 @@ public sealed partial class MainWindow : Window
         SavedSearchTextBox.Watermark = T("FilterSavedCourses");
         RefreshSavedButton.Content = T("Refresh");
         ToolTip.SetTip(RefreshSavedMetadataButton, T("RefreshData"));
+        ToolTip.SetTip(OpenSelectedLevelFolderButton, T("OpenLevelFolder"));
         OpenSavedFolderButton.Content = T("OpenFolder");
         DeleteSavedButton.Content = T("DeleteSelected");
+        RemoveSelectedPackButton.Content = T("RemoveCoursePackFolder");
         ResetOfficialButton.Content = T("ResetOfficialCourses");
         SavedLevelTitle.Text = T("SelectSavedCourse");
         CoursePreviewInfo.Text = T("CoursePreviewHint");
@@ -1154,13 +1468,14 @@ public sealed partial class MainWindow : Window
         var source = GetSavedSource();
         _allSavedLevels = source switch
         {
-            "packs" => LoadLevelsFromLevelPacks().SelectMany(node => node.Children.Select(child => child.Level).OfType<LevelInfo>()).ToList(),
             "official" => LoadLevelsFromFolders(Path.Combine(_paths.OfficialCoursesDirectory, "CourseFiles")),
             "cemu" => LoadLevelsFromFolders(GetCemuProfilePath()),
             "backupped" => JsonStore.ToLevelList(LoadLevelFile(_paths.BackuppedFile)),
             _ => JsonStore.ToLevelList(_store.LoadDownloaded())
         };
-        _allSavedNodes = source == "packs" ? LoadLevelsFromLevelPacks() : _allSavedLevels.Select(ToLevelNode).ToList();
+        _allSavedNodes = source == "downloaded"
+            ? LoadDownloadedSavedCourseNodes()
+            : _allSavedLevels.Select(ToLevelNode).ToList();
 
         ResetSavedSelectedLevelDetails();
         ApplySavedFilter();
@@ -1370,7 +1685,7 @@ public sealed partial class MainWindow : Window
 
     private bool CanRefreshSavedMetadata()
     {
-        return GetSavedSource() is "downloaded" or "packs" or "backupped";
+        return GetSavedSource() is "downloaded" or "backupped";
     }
 
     private static string FindLevelKey(Dictionary<string, LevelInfo> levels, LevelInfo level)
@@ -1422,7 +1737,8 @@ public sealed partial class MainWindow : Window
     private IReadOnlyList<SavedLevelNode> LoadLevelsFromLevelPacks()
     {
         var packs = _store.LoadLevelPacks();
-        var downloadedByFolder = _store.LoadDownloaded()
+        var downloadedLevels = _store.LoadDownloaded();
+        var downloadedByFolder = downloadedLevels
             .Values
             .Where(level => !string.IsNullOrWhiteSpace(level.Folder))
             .ToDictionary(level => Path.GetFullPath(level.Folder), StringComparer.OrdinalIgnoreCase);
@@ -1438,6 +1754,10 @@ public sealed partial class MainWindow : Window
                     DisplayName = packName,
                     Summary = "0 courses",
                     ShortInfo = "0 courses",
+                    IsFolder = true,
+                    RowMargin = new Thickness(-18, 5, 0, 5),
+                    PackName = packName,
+                    PackFolder = packFolder,
                     Children = children
                 });
                 continue;
@@ -1446,11 +1766,12 @@ public sealed partial class MainWindow : Window
             foreach (var directory in Directory.EnumerateDirectories(root).OrderBy(Path.GetFileName))
             {
                 var fullPath = Path.GetFullPath(directory);
+                var levelId = TryReadLevelIdFromFolder(directory);
                 if (!downloadedByFolder.TryGetValue(fullPath, out var level))
                 {
-                    level = new LevelInfo
+                    level = FindDownloadedPackLevel(downloadedLevels, levelId, packName) ?? new LevelInfo
                     {
-                        LevelId = TryReadLevelIdFromFolder(directory),
+                        LevelId = levelId,
                         Name = GetDisplayNameFromCourseFolder(directory),
                         Creator = "Local",
                         Pack = packName,
@@ -1468,11 +1789,43 @@ public sealed partial class MainWindow : Window
                 DisplayName = packName,
                 Summary = $"{children.Count} course(s)",
                 ShortInfo = $"{children.Count} course(s)",
+                IsFolder = true,
+                RowMargin = new Thickness(-18, 5, 0, 5),
+                PackName = packName,
+                PackFolder = packFolder,
                 Children = children
             });
         }
 
         return nodes.OrderBy(node => node.DisplayName).ToList();
+    }
+
+    private static LevelInfo? FindDownloadedPackLevel(
+        Dictionary<string, LevelInfo> downloadedLevels,
+        long levelId,
+        string packName)
+    {
+        if (downloadedLevels.TryGetValue($"{levelId}_{packName}", out var exact))
+        {
+            return exact;
+        }
+
+        return downloadedLevels.Values.FirstOrDefault(level =>
+            level.LevelId == levelId &&
+            string.Equals(level.Pack, packName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private IReadOnlyList<SavedLevelNode> LoadDownloadedSavedCourseNodes()
+    {
+        var standaloneLevels = JsonStore.ToLevelList(_store.LoadDownloaded())
+            .Where(level => string.IsNullOrWhiteSpace(level.Pack))
+            .Select(ToLevelNode);
+
+        return standaloneLevels
+            .Concat(LoadLevelsFromLevelPacks())
+            .OrderBy(node => node.IsFolder ? 0 : 1)
+            .ThenBy(node => node.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private void LoadCoursePreview(LevelInfo level, string courseFileName)
@@ -1657,6 +2010,8 @@ public sealed partial class MainWindow : Window
 
     private void ShowSavedLevelDetails(LevelInfo level)
     {
+        ShowSavedSelectedLevelContainer();
+        SavedLevelDetailsPanel.IsVisible = true;
         SavedLevelTitle.Text = $"{level.Name} | {level.DisplayCode} ({level.LevelId})";
         SavedLevelCreatorText.Text = string.IsNullOrWhiteSpace(level.Creator) ? "Local" : level.Creator;
         SavedLevelClearRateText.Text = $"{level.ClearRate * 100:0.##}% ({level.Clears}/{level.TotalAttempts})";
@@ -1727,6 +2082,10 @@ public sealed partial class MainWindow : Window
                     DisplayName = node.DisplayName,
                     Summary = $"{children.Count} course(s)",
                     ShortInfo = $"{children.Count} course(s)",
+                    IsFolder = node.IsFolder,
+                    StatsHidden = node.StatsHidden,
+                    PackName = node.PackName,
+                    PackFolder = node.PackFolder,
                     Children = children
                 };
             }
@@ -1749,10 +2108,30 @@ public sealed partial class MainWindow : Window
         {
             DisplayName = string.IsNullOrWhiteSpace(level.Name) ? level.LevelId.ToString() : level.Name,
             Summary = level.Summary,
-            ShortInfo = $"{level.DisplayCode} ({level.LevelId})",
+            ShortInfo = BuildSavedLevelShortInfo(level),
             Thumbnail = _thumbnailLoader.LoadCourseThumbnail(folder),
+            RowMargin = string.IsNullOrWhiteSpace(level.Pack)
+                ? new Thickness(-28, 5, 0, 5)
+                : new Thickness(0, 5, 0, 5),
             Level = level
         };
+    }
+
+    private string BuildSavedLevelShortInfo(LevelInfo level)
+    {
+        var creator = string.IsNullOrWhiteSpace(level.Creator) ? "Creator: n/a" : $"Creator: {level.Creator}";
+        var worldRecord = level.WorldRecordMs > 0
+            ? $"WR: {FormatTime(level.WorldRecordMs)}"
+            : "WR: n/a";
+        return $"{creator} | {worldRecord}";
+    }
+
+    private static bool IsSameSavedLevel(LevelInfo? first, LevelInfo? second)
+    {
+        return first != null &&
+               second != null &&
+               first.LevelId == second.LevelId &&
+               string.Equals(first.Pack ?? "", second.Pack ?? "", StringComparison.OrdinalIgnoreCase);
     }
 
     private static long TryReadLevelIdFromFolder(string directory)
@@ -1815,6 +2194,7 @@ public sealed partial class MainWindow : Window
             folder = SanitizeFolderName(packName);
             packs[packName] = folder;
             _store.SaveLevelPacks(packs);
+            RefreshPackNameSuggestions();
         }
 
         Directory.CreateDirectory(Path.Combine(_paths.LevelPacksDirectory, folder));
@@ -2017,7 +2397,6 @@ public sealed partial class MainWindow : Window
         ["Exact"] = "Exact",
         ["SaveInLevelPack"] = "Save in Level Pack",
         ["LevelPackName"] = "Level Pack Name",
-        ["CreatePack"] = "Create Pack",
         ["DownloadAllResults"] = "Download All Results",
         ["SelectedCourse"] = "Selected Course",
         ["SelectedLevel"] = "Selected Level",
@@ -2028,6 +2407,7 @@ public sealed partial class MainWindow : Window
         ["UserProfile"] = "User Profile",
         ["LoadProfile"] = "Load Profile",
         ["ProfileSearchHint"] = "Search a creator to list their levels.",
+        ["SavedCourses"] = "Saved Courses",
         ["DownloadedInCache"] = "Downloaded in Cache",
         ["LevelPacks"] = "Level Packs",
         ["OfficialTestingCourses"] = "Official Testing Courses",
@@ -2036,8 +2416,14 @@ public sealed partial class MainWindow : Window
         ["FilterSavedCourses"] = "Filter saved courses",
         ["Refresh"] = "Refresh",
         ["RefreshData"] = "Refresh Data",
+        ["OpenLevelFolder"] = "Open Level Folder",
         ["OpenFolder"] = "Open Folder",
         ["DeleteSelected"] = "Delete Selected",
+        ["Delete"] = "Delete",
+        ["Cancel"] = "Cancel",
+        ["RemoveCoursePackFolder"] = "Remove Course Pack Folder",
+        ["RemovePackTitle"] = "Delete Level Pack",
+        ["RemovePackWarning"] = "Delete the level pack '{0}'?\n\nAll courses from this level pack will continue to exist without a level pack and will be moved back to the main saved courses folder if they are not already there.",
         ["ResetOfficialCourses"] = "Reset Official Courses",
         ["SelectSavedCourse"] = "Select a saved course",
         ["CoursePreviewHint"] = "The course preview will appear below.",
@@ -2083,7 +2469,6 @@ public sealed partial class MainWindow : Window
         ["Exact"] = "Exakt",
         ["SaveInLevelPack"] = "In Level-Pack speichern",
         ["LevelPackName"] = "Level-Pack-Name",
-        ["CreatePack"] = "Pack erstellen",
         ["DownloadAllResults"] = "Alle Ergebnisse laden",
         ["SelectedCourse"] = "Ausgewaehltes Level",
         ["SelectedLevel"] = "Ausgewaehltes Level",
@@ -2094,6 +2479,7 @@ public sealed partial class MainWindow : Window
         ["UserProfile"] = "Nutzerprofil",
         ["LoadProfile"] = "Profil laden",
         ["ProfileSearchHint"] = "Suche einen Ersteller, um dessen Level aufzulisten.",
+        ["SavedCourses"] = "Gespeicherte Level",
         ["DownloadedInCache"] = "Im Cache geladen",
         ["LevelPacks"] = "Level-Packs",
         ["OfficialTestingCourses"] = "Offizielle Test-Level",
@@ -2102,8 +2488,14 @@ public sealed partial class MainWindow : Window
         ["FilterSavedCourses"] = "Gespeicherte Level filtern",
         ["Refresh"] = "Aktualisieren",
         ["RefreshData"] = "Daten aktualisieren",
+        ["OpenLevelFolder"] = "Level-Ordner oeffnen",
         ["OpenFolder"] = "Ordner oeffnen",
         ["DeleteSelected"] = "Auswahl loeschen",
+        ["Delete"] = "Loeschen",
+        ["Cancel"] = "Abbrechen",
+        ["RemoveCoursePackFolder"] = "Level-Pack-Ordner entfernen",
+        ["RemovePackTitle"] = "Level-Pack loeschen",
+        ["RemovePackWarning"] = "Level-Pack '{0}' loeschen?\n\nAlle Level aus diesem Level-Pack bleiben weiterhin ohne Level-Pack erhalten und werden in den normalen gespeicherten Level-Ordner verschoben, falls sie dort noch nicht vorhanden sind.",
         ["ResetOfficialCourses"] = "Offizielle Level zuruecksetzen",
         ["SelectSavedCourse"] = "Gespeichertes Level auswaehlen",
         ["CoursePreviewHint"] = "Die Level-Vorschau erscheint darunter.",

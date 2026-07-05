@@ -28,32 +28,40 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
             throw new InvalidOperationException("Level folder already exists.");
         }
 
-        Directory.CreateDirectory(targetRoot);
-        status.Report("Fetching Wayback Machine URL...");
-        var archiveUrl = await FetchArchiveUrlWithRetriesAsync(level.Url, cancellationToken);
-        if (archiveUrl == null)
-        {
-            throw new InvalidOperationException("No archived version found on Wayback Machine.");
-        }
-
         var packedFile = Path.Combine(targetRoot, GetPackedFileName(level));
-        status.Report("Downloading packed course file...");
-        await DownloadFileAsync(archiveUrl, packedFile, cancellationToken);
-
-        await Task.Run(() =>
+        try
         {
-            status.Report("Splitting course file...");
-            SplitAshFile(packedFile, targetDirectory);
+            Directory.CreateDirectory(targetRoot);
+            status.Report("Fetching Wayback Machine URL...");
+            var archiveUrl = await FetchArchiveUrlWithRetriesAsync(level.Url, cancellationToken);
+            if (archiveUrl == null)
+            {
+                throw new InvalidOperationException("No archived version found on Wayback Machine.");
+            }
 
-            status.Report("Preparing course files...");
-            PrepareCourseParts(targetDirectory, status, cancellationToken);
-        }, cancellationToken);
+            status.Report("Downloading packed course file...");
+            await DownloadFileAsync(archiveUrl, packedFile, cancellationToken);
 
-        File.Delete(packedFile);
-        level.Pack = ResolvePackName(packFolder);
-        level.Folder = targetDirectory;
-        AddDownloadedLevel(level, packFolder);
-        status.Report("Download complete.");
+            await Task.Run(() =>
+            {
+                status.Report("Splitting course file...");
+                SplitAshFile(packedFile, targetDirectory);
+
+                status.Report("Preparing course files...");
+                PrepareCourseParts(targetDirectory, status, cancellationToken);
+            }, cancellationToken);
+
+            File.Delete(packedFile);
+            level.Pack = ResolvePackName(packFolder);
+            level.Folder = targetDirectory;
+            AddDownloadedLevel(level, packFolder);
+            status.Report("Download complete.");
+        }
+        catch
+        {
+            CleanupFailedDownload(level, packFolder, packedFile, targetDirectory);
+            throw;
+        }
     }
 
     public void Delete(LevelInfo level)
@@ -73,6 +81,114 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
             downloaded.Remove($"{level.LevelId}_{level.Pack}");
         }
 
+        store.SaveDownloaded(downloaded);
+    }
+
+    public void CleanupFailedDownload(LevelInfo level, string? packFolder)
+    {
+        var targetRoot = string.IsNullOrWhiteSpace(packFolder)
+            ? paths.DownloadCacheDirectory
+            : Path.Combine(paths.LevelPacksDirectory, packFolder);
+        var targetDirectory = string.IsNullOrWhiteSpace(packFolder)
+            ? Path.Combine(targetRoot, level.LevelId.ToString())
+            : Path.Combine(targetRoot, GetCourseFolderName(level));
+        var packedFile = Path.Combine(targetRoot, GetPackedFileName(level));
+        CleanupFailedDownload(level, packFolder, packedFile, targetDirectory);
+    }
+
+    private void CleanupFailedDownload(LevelInfo level, string? packFolder, string packedFile, string targetDirectory)
+    {
+        if (File.Exists(packedFile))
+        {
+            File.Delete(packedFile);
+        }
+
+        if (Directory.Exists(targetDirectory))
+        {
+            Directory.Delete(targetDirectory, true);
+        }
+
+        var downloaded = store.LoadDownloaded();
+        downloaded.Remove(level.LevelId.ToString());
+        var packName = ResolvePackName(packFolder);
+        if (!string.IsNullOrWhiteSpace(packName))
+        {
+            downloaded.Remove($"{level.LevelId}_{packName}");
+        }
+
+        foreach (var key in downloaded
+                     .Where(item => item.Value.LevelId == level.LevelId &&
+                                    (string.IsNullOrWhiteSpace(packName) ||
+                                     string.Equals(item.Value.Pack, packName, StringComparison.OrdinalIgnoreCase)))
+                     .Select(item => item.Key)
+                     .ToList())
+        {
+            downloaded.Remove(key);
+        }
+
+        store.SaveDownloaded(downloaded);
+        level.Pack = null;
+        level.Folder = "";
+    }
+
+    public void RemovePackFolder(string packName, string packFolder)
+    {
+        var packRoot = Path.Combine(paths.LevelPacksDirectory, packFolder);
+        var downloaded = store.LoadDownloaded();
+
+        if (Directory.Exists(packRoot))
+        {
+            foreach (var courseDirectory in Directory.EnumerateDirectories(packRoot).ToList())
+            {
+                var levelId = TryReadLevelIdFromFolder(courseDirectory);
+                if (levelId <= 0)
+                {
+                    continue;
+                }
+
+                var targetDirectory = Path.Combine(paths.DownloadCacheDirectory, levelId.ToString());
+                if (!Directory.Exists(targetDirectory))
+                {
+                    Directory.CreateDirectory(paths.DownloadCacheDirectory);
+                    Directory.Move(courseDirectory, targetDirectory);
+                }
+
+                var packKey = $"{levelId}_{packName}";
+                downloaded.TryGetValue(packKey, out var level);
+                if (level == null)
+                {
+                    level = downloaded.Values.FirstOrDefault(item =>
+                        item.LevelId == levelId &&
+                        string.Equals(item.Pack, packName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (level != null)
+                {
+                    downloaded.Remove(packKey);
+                    foreach (var duplicateKey in downloaded
+                                 .Where(item => item.Value.LevelId == levelId &&
+                                                string.Equals(item.Value.Pack, packName, StringComparison.OrdinalIgnoreCase))
+                                 .Select(item => item.Key)
+                                 .ToList())
+                    {
+                        downloaded.Remove(duplicateKey);
+                    }
+
+                    level.Pack = null;
+                    level.Folder = targetDirectory;
+                    downloaded[levelId.ToString()] = level;
+                }
+            }
+
+            if (Directory.Exists(packRoot))
+            {
+                Directory.Delete(packRoot, true);
+            }
+        }
+
+        var packs = store.LoadLevelPacks();
+        packs.Remove(packName);
+        store.SaveLevelPacks(packs);
         store.SaveDownloaded(downloaded);
     }
 
@@ -231,6 +347,18 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
         return Directory.Exists(namedFolder)
             ? namedFolder
             : Path.Combine(packRoot, level.LevelId.ToString());
+    }
+
+    private static long TryReadLevelIdFromFolder(string directory)
+    {
+        var name = Path.GetFileName(directory) ?? "";
+        if (long.TryParse(name, out var directId))
+        {
+            return directId;
+        }
+
+        var suffix = name.Split('_').LastOrDefault();
+        return long.TryParse(suffix, out var suffixId) ? suffixId : 0;
     }
 
     private string? ResolvePackName(string? packFolder)

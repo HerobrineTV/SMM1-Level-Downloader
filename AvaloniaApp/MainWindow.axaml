@@ -282,14 +282,19 @@
               </WrapPanel>
               <WrapPanel>
                 <CheckBox x:Name="DownloadToPackCheckBox" Content="Save in Level Pack" />
-                <TextBox x:Name="PackNameTextBox" Width="220" Watermark="Level Pack Name" />
-                <Button x:Name="CreatePackButton" Content="Create Pack" Click="CreatePackButton_OnClick" />
+                <AutoCompleteBox x:Name="PackNameTextBox"
+                                 Width="220"
+                                 Watermark="Level Pack Name"
+                                 FilterMode="Contains"
+                                 MinimumPrefixLength="0"
+                                 TextChanged="PackNameTextBox_OnTextChanged"
+                                 SelectionChanged="PackNameTextBox_OnSelectionChanged" />
                 <Button x:Name="DownloadAllButton" Content="Download All Results" Click="DownloadAllButton_OnClick" />
               </WrapPanel>
             </StackPanel>
           </Border>
 
-          <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="12" Margin="0,12,0,0">
+          <Grid x:Name="SearchResultsLayout" Grid.Row="1" ColumnDefinitions="*,0" ColumnSpacing="12" Margin="0,12,0,0">
             <Border Classes="panel">
               <ListBox x:Name="SearchResultsListBox"
                        SelectionChanged="SearchResultsListBox_OnSelectionChanged"
@@ -384,7 +389,7 @@
                 </ListBox.ItemTemplate>
               </ListBox>
             </Border>
-            <Border Classes="panel" Grid.Column="1">
+            <Border x:Name="SearchSelectedLevelContainer" Classes="panel" Grid.Column="1" IsVisible="False">
               <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="8">
                   <TextBlock x:Name="SelectedCourseTitle" Text="Selected Course" Classes="sectionTitle" />
@@ -473,8 +478,7 @@
         <Grid RowDefinitions="Auto,*" Margin="0,12,0,0">
           <WrapPanel Grid.Row="0" Margin="0,0,0,12">
             <ComboBox x:Name="SavedSourceComboBox" Width="230" SelectionChanged="SavedSourceComboBox_OnSelectionChanged">
-              <ComboBoxItem Content="Downloaded in Cache" Tag="downloaded" IsSelected="True" />
-              <ComboBoxItem Content="Level Packs" Tag="packs" />
+              <ComboBoxItem Content="Saved Courses" Tag="downloaded" IsSelected="True" />
               <ComboBoxItem Content="Official Testing Courses" Tag="official" />
               <ComboBoxItem Content="Cemu Profile Courses" Tag="cemu" />
               <ComboBoxItem Content="Backupped Courses" Tag="backupped" />
@@ -483,14 +487,15 @@
             <Button x:Name="RefreshSavedButton" Content="Refresh" Click="RefreshSavedButton_OnClick" />
             <Button x:Name="OpenSavedFolderButton" Content="Open Folder" Click="OpenSavedFolderButton_OnClick" />
             <Button x:Name="DeleteSavedButton" Content="Delete Selected" Click="DeleteSavedButton_OnClick" />
+            <Button x:Name="RemoveSelectedPackButton" Content="Remove Course Pack Folder" IsVisible="False" Click="RemoveSelectedPackButton_OnClick" />
             <Button x:Name="ResetOfficialButton" Content="Reset Official Courses" Click="ResetOfficialButton_OnClick" />
           </WrapPanel>
-          <Grid Grid.Row="1" ColumnDefinitions="360,*" ColumnSpacing="12">
+          <Grid x:Name="SavedLevelsLayout" Grid.Row="1" ColumnDefinitions="*,0" ColumnSpacing="12">
             <Border Classes="panel">
               <TreeView x:Name="SavedLevelsTreeView" SelectionChanged="SavedLevelsTreeView_OnSelectionChanged">
                 <TreeView.DataTemplates>
                   <TreeDataTemplate DataType="models:SavedLevelNode" ItemsSource="{Binding Children}">
-                    <Grid ColumnDefinitions="72,*" ColumnSpacing="9" Margin="0,5">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="{Binding RowMargin}" PointerPressed="SavedLevelNode_OnPointerPressed">
                       <Border Width="72"
                               Height="42"
                               Background="#E9D58A"
@@ -501,34 +506,115 @@
                               IsVisible="{Binding HasThumbnail}">
                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                       </Border>
+                      <Border Width="42"
+                              Height="32"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Background="#F9C74F"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              IsVisible="{Binding IsFolder}">
+                        <Path Width="25"
+                              Height="18"
+                              Stretch="Uniform"
+                              Fill="#D99022"
+                              Stroke="#8F4F17"
+                              StrokeThickness="1.4"
+                              Data="M2 6 L8 6 L10 8 L22 8 L22 19 L2 19 Z" />
+                      </Border>
                       <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="#241301" />
                         <TextBlock Text="{Binding ShortInfo}" FontSize="12" Classes="muted" />
                       </StackPanel>
+                      <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding ShowStats}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="#" />
+                              <Run Text="{Binding CodeText}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="✓ " />
+                              <Run Text="{Binding ClearRateText}" />
+                            </TextBlock>
+                          </Border>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="▶ " />
+                              <Run Text="{Binding AttemptsText}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="★ " />
+                              <Run Text="{Binding StarsText}" />
+                            </TextBlock>
+                          </Border>
+                        </StackPanel>
+                      </StackPanel>
+                      <Button Grid.Column="2"
+                              Width="26"
+                              Height="26"
+                              Padding="0"
+                              HorizontalAlignment="Right"
+                              VerticalAlignment="Top"
+                              IsVisible="{Binding IsFolder}"
+                              ToolTip.Tip="Delete Pack"
+                              Click="DeletePackButton_OnClick">
+                        <Path Width="13"
+                              Height="15"
+                              Stretch="Uniform"
+                              Data="M6 2 L14 2 M8 2 L8 4 M12 2 L12 4 M4 5 L16 5 M6 5 L7 17 L13 17 L14 5 M9 8 L9 14 M11 8 L11 14"
+                              Stroke="#2B1605"
+                              StrokeThickness="1.7"
+                              StrokeLineCap="Round" />
+                      </Button>
                     </Grid>
                   </TreeDataTemplate>
                 </TreeView.DataTemplates>
               </TreeView>
             </Border>
-            <Border Classes="panel" Grid.Column="1">
+            <Border x:Name="SavedSelectedLevelContainer" Classes="panel" Grid.Column="1" IsVisible="False">
               <Grid>
-                <Button x:Name="RefreshSavedMetadataButton"
-                        Width="30"
-                        Height="30"
-                        Padding="0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        IsVisible="False"
-                        ToolTip.Tip="Refresh Data"
-                        Click="RefreshSavedMetadataButton_OnClick">
-                  <Path Width="15"
-                        Height="15"
-                        Stretch="Uniform"
-                        Data="M21 2 L21 8 L15 8 M3 12 A9 9 0 0 1 18 5.3 L21 8 M3 22 L3 16 L9 16 M21 12 A9 9 0 0 1 6 18.7 L3 16"
-                        Stroke="#2B1605"
-                        StrokeThickness="2"
-                        StrokeLineCap="Round" />
-                </Button>
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Spacing="4">
+                  <Button x:Name="OpenSelectedLevelFolderButton"
+                          Width="30"
+                          Height="30"
+                          Padding="0"
+                          ToolTip.Tip="Open Level Folder"
+                          Click="OpenSelectedLevelFolderButton_OnClick">
+                    <Path Width="16"
+                          Height="14"
+                          Stretch="Uniform"
+                          Data="M3 6 L8 6 L10 8 L21 8 L21 19 L3 19 Z M3 6 L3 4 L9 4 L11 6"
+                          Fill="#D99022"
+                          Stroke="#2B1605"
+                          StrokeThickness="1.8" />
+                  </Button>
+                  <Button x:Name="RefreshSavedMetadataButton"
+                          Width="30"
+                          Height="30"
+                          Padding="0"
+                          IsVisible="False"
+                          ToolTip.Tip="Refresh Data"
+                          Click="RefreshSavedMetadataButton_OnClick">
+                    <Path Width="15"
+                          Height="15"
+                          Stretch="Uniform"
+                          Data="M21 2 L21 8 L15 8 M3 12 A9 9 0 0 1 18 5.3 L21 8 M3 22 L3 16 L9 16 M21 12 A9 9 0 0 1 6 18.7 L3 16"
+                          Stroke="#2B1605"
+                          StrokeThickness="2"
+                          StrokeLineCap="Round" />
+                  </Button>
+                </StackPanel>
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="0,0,0,0">
                   <TextBlock x:Name="SavedLevelTitle"
                              Grid.Row="0"
@@ -706,7 +792,7 @@
           </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="12">
+        <Grid x:Name="ProfileLevelsLayout" Grid.Row="1" ColumnDefinitions="*,0" ColumnSpacing="12">
           <ListBox x:Name="ProfileLevelsListBox"
                    SelectionChanged="ProfileLevelsListBox_OnSelectionChanged">
             <ListBox.ItemTemplate>
@@ -794,7 +880,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-          <Border Grid.Column="1" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="10" Background="#FFF8D6">
+          <Border x:Name="ProfileSelectedLevelContainer" Grid.Column="1" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="10" Background="#FFF8D6" IsVisible="False">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
               <StackPanel Spacing="8">
                 <TextBlock x:Name="ProfileSelectedLevelTitle" Text="No level selected" TextWrapping="Wrap" Foreground="#2B1605" FontWeight="SemiBold" />
