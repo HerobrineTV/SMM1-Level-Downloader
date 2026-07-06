@@ -5,7 +5,8 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 ![Version](https://img.shields.io/github/v/release/HerobrineTV/SMM1-Level-Downloader)
 ![Contributors](https://img.shields.io/github/contributors/HerobrineTV/SMM1-Level-Downloader)
 
-![img.png](img.png)
+<img width="1177" height="789" alt="grafik" src="https://github.com/user-attachments/assets/cd2c1e91-e9e9-4da3-83a6-20e7968f05b2" />
+
 
 # Features:
 - Download every existing SMM1 Level from the Archive
@@ -17,9 +18,9 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 - Import Levels from other Archives as long as they are saved the same Way!
 - Search by the Official Level IDs through the Database, but make sure u disabled all other searches (except fast search) else it wont work
 
-![img_1.png](img_1.png)
+<img width="1180" height="787" alt="grafik" src="https://github.com/user-attachments/assets/4716d0cc-d9e4-4a3c-a9dd-2e15f7a56915" />
 
-![img_2.png](img_2.png)
+<img width="1179" height="789" alt="grafik" src="https://github.com/user-attachments/assets/442c0f02-96ea-4d3c-99b6-c5dc41c49ba5" />
 
 # Statistics
 ![Total Searches](https://img.shields.io/badge/dynamic/json?label=Total%20Searches&query=%24.TotalLevelSearches&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalLevelSearches)
