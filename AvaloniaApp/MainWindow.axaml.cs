@@ -120,10 +120,18 @@ public sealed partial class MainWindow : Window
 
     private async Task QueueStartupDownloadedDataRefreshAsync(CancellationToken cancellationToken)
     {
+        var today = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (string.Equals(_settings.LastFullRefresh, today, StringComparison.Ordinal))
+        {
+            return;
+        }
+
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             await RefreshAllDownloadedDataAsync(cancellationToken, isStartupRefresh: true);
+            _settings.LastFullRefresh = today;
+            _store.SaveSettings(_settings);
         }
         catch (OperationCanceledException)
         {

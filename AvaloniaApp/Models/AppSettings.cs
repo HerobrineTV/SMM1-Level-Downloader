@@ -40,6 +40,9 @@ public sealed class AppSettings
     [JsonPropertyName("firstStartRegistered")]
     public bool FirstStartRegistered { get; set; }
 
+    [JsonPropertyName("lastFullRefresh")]
+    public string LastFullRefresh { get; set; } = "";
+
     [JsonPropertyName("searchParams")]
     public SearchParams SearchParams { get; set; } = new();
 }
