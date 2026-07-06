@@ -85,7 +85,7 @@ public sealed class LevelApiClient
     {
         return RegisterAnalyticsEventAsync($"{AnalyticsApi}/firststart", cancellationToken);
     }
-
+//
     public Task RegisterLevelDownloadAsync(AppSettings settings, long levelId, CancellationToken cancellationToken)
     {
         return RegisterAnalyticsEventAsync($"{AnalyticsApi}/countdownload/{levelId}", cancellationToken);
