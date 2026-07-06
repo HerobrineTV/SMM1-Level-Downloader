@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text.Json;
 using SMMDownloader.Avalonia.Models;
 
@@ -294,6 +295,11 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
 
         var data = File.ReadAllBytes(inputFile);
         var starts = FindAshParts(data).ToList();
+        if (starts.Count == 0)
+        {
+            throw new InvalidDataException("No ASH course parts found in downloaded file.");
+        }
+
         for (var i = 0; i < starts.Count && i < PartBaseNames.Length; i++)
         {
             var start = starts[i];
@@ -315,9 +321,22 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
 
             var output = Path.Combine(targetDirectory, OutputNames[i]);
             status.Report($"Decompressing {OutputNames[i]}...");
-            AshExtractor.ExtractFile(source, output);
+            try
+            {
+                AshExtractor.ExtractFile(source, output);
+            }
+            catch (InvalidDataException) when (IsOptionalThumbnailPart(i))
+            {
+                status.Report($"Skipping damaged optional thumbnail {OutputNames[i]}.");
+            }
+
             File.Delete(source);
         }
+    }
+
+    private static bool IsOptionalThumbnailPart(int partIndex)
+    {
+        return partIndex is 0 or 3;
     }
 
     private void AddDownloadedLevel(LevelInfo level, string? packFolder)
@@ -409,8 +428,28 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
         {
             if (data.AsSpan(i, AshHeader.Length).SequenceEqual(AshHeader))
             {
-                yield return i;
+                if (IsPlausibleAshStart(data, i))
+                {
+                    yield return i;
+                }
             }
         }
+    }
+
+    private static bool IsPlausibleAshStart(byte[] data, int start)
+    {
+        if (start < 0 || start + 0x10 > data.Length)
+        {
+            return false;
+        }
+
+        var decompressedSize = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(start + 4, 4)) & 0x00FFFFFFu;
+        if (decompressedSize == 0)
+        {
+            return false;
+        }
+
+        var secondStreamOffset = BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(start + 8, 4));
+        return secondStreamOffset >= 0x10 && start + secondStreamOffset + 4 <= data.Length;
     }
 }

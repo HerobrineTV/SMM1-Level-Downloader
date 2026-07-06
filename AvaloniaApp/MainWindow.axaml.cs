@@ -646,6 +646,7 @@ public sealed partial class MainWindow : Window
     {
         ProfileTotalLevelsText.Text = "Levels: 0";
         ProfileTotalStarsText.Text = "Stars: 0";
+        ProfileTotalDownloadsText.Text = "Downloads: 0";
         ProfileTotalAttemptsText.Text = "Attempts: 0";
         ProfileTotalClearsText.Text = "Clears: 0";
         ProfileAverageClearRateText.Text = "Clear Rate: n/a";
@@ -782,6 +783,7 @@ public sealed partial class MainWindow : Window
 
         ProfileTotalLevelsText.Text = $"Levels: {levels.Count}";
         ProfileTotalStarsText.Text = $"Stars: {levels.Sum(level => level.Stars)}";
+        ProfileTotalDownloadsText.Text = $"Downloads: {levels.Sum(level => level.Downloads)}";
         ProfileTotalAttemptsText.Text = $"Attempts: {totalAttempts}";
         ProfileTotalClearsText.Text = $"Clears: {totalClears}";
         ProfileAverageClearRateText.Text = $"Clear Rate: {clearRate}";
@@ -2046,7 +2048,7 @@ public sealed partial class MainWindow : Window
         MainTabs.IsVisible = false;
         ProfilePage.IsVisible = false;
         LevelViewerPage.IsVisible = true;
-        LevelViewerTitle.Text = $"{level.Name} | {level.DisplayCode}";
+        LevelViewerTitle.Text = $"{level.Name} | {level.DisplayCode} | DL {level.DownloadsText}";
         LevelViewerCanvas.ShowHiddenBlocks = false;
         LevelViewerHiddenBlocksButton.Content = T("RevealHiddenBlocks");
         LoadLargeLevelViewer(level, _largeViewerFile);
@@ -2197,7 +2199,7 @@ public sealed partial class MainWindow : Window
         var worldRecord = level.WorldRecordMs > 0
             ? $"WR: {FormatTime(level.WorldRecordMs)}"
             : "WR: n/a";
-        return $"{creator} | Downloads: {level.DownloadsText} | {worldRecord}";
+        return $"{creator} | {worldRecord}";
     }
 
     private static bool IsSameSavedLevel(LevelInfo? first, LevelInfo? second)

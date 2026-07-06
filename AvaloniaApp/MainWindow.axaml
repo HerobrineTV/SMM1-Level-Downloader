@@ -794,6 +794,9 @@
                 <TextBlock x:Name="ProfileTotalStarsText" Text="Stars: 0" Foreground="#2B1605" FontWeight="SemiBold" />
               </Border>
               <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
+                <TextBlock x:Name="ProfileTotalDownloadsText" Text="Downloads: 0" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
                 <TextBlock x:Name="ProfileTotalAttemptsText" Text="Attempts: 0" Foreground="#2B1605" FontWeight="SemiBold" />
               </Border>
               <Border Background="#FFF8D6" BorderBrush="#A86725" BorderThickness="1.5" CornerRadius="5" Padding="9,5" Margin="0,0,8,8">
@@ -883,6 +886,12 @@
                             <TextBlock FontSize="12" Foreground="#2B1605">
                               <Run Text="★ " />
                               <Run Text="{Binding StarsText}" />
+                            </TextBlock>
+                          </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="DL " />
+                              <Run Text="{Binding DownloadsText}" />
                             </TextBlock>
                           </Border>
                         </StackPanel>

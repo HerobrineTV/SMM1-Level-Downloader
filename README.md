@@ -5,7 +5,7 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 ![Version](https://img.shields.io/github/v/release/HerobrineTV/SMM1-Level-Downloader)
 ![Contributors](https://img.shields.io/github/contributors/HerobrineTV/SMM1-Level-Downloader)
 
-![Screenshot 2024-04-08 153652](https://github.com/HerobrineTV/SMM1-Level-Downloader/assets/70803896/d31ae25c-182e-429e-a553-c74e6e5c4195)
+![img.png](img.png)
 
 # Features:
 - Download every existing SMM1 Level from the Archive
@@ -16,7 +16,10 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 - Delete Levels (Currently Downloads only please, else it could break stuff!!!)
 - Import Levels from other Archives as long as they are saved the same Way!
 - Search by the Official Level IDs through the Database, but make sure u disabled all other searches (except fast search) else it wont work
-![Screenshot 2024-04-09 114944](https://github.com/HerobrineTV/SMM1-Level-Downloader/assets/70803896/181c109d-5397-47c3-8390-dd3732f6f348)
+
+![img_1.png](img_1.png)
+
+![img_2.png](img_2.png)
 
 # Statistics
 ![Total Searches](https://img.shields.io/badge/dynamic/json?label=Total%20Searches&query=%24.TotalLevelSearches&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalLevelSearches)
@@ -26,11 +29,6 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 # Planned Features
 - Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
 - Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
-- REWORK OF UI
-  
-# Decompilation
-To Decompile the Levels I used ASH Extractor which is already In this Repository
-http://wiibrew.org/wiki/ASH_Extractor
 
 # Usage / Download
 Just unzip the release archive and start the SMM1 Level Downloader executable.
@@ -50,9 +48,8 @@ Now u can Press the "Open Folder" Button and u will see all your Saved Levels.
 
 Just copy the inside of the folders in your desired Mario Maker 1 Savefile in one of the course files.
 
-# Where do the Official Testing Levels Come from?
-The Testing Levels come from 2 Archives which tell theyre Official Testing Levels, but If thats true we will never know.
-You will probably notice, that I didnt add all of them cuz theyre alot. So feel free to download New ones and add them to:
+# How to get the Testing Levels?
+Feel free to download New ones and add them to:
 "SMMDownloader\Data\OfficialCourses\OriginalFiles"
 And next time u press "Reset Official Courses", it will get loaded if it is a valid File (or if its a broken one it could crash xD)
 - https://archive.org/details/smm1-game-dev
@@ -60,11 +57,15 @@ And next time u press "Reset Official Courses", it will get loaded if it is a va
 
 # Can I add more Levels if I only got the File without Definition?
 Yes you can, just put it in this Folder: "SMMDownloader\Data\OfficialCourses\OriginalFiles"
-And next time u press "Reset Official Courses", it will get loaded if it is a valid File (or if its a broken one it could crash xD)
 
 # Important Note
 U have to create the course Files ingame and not by creating a Folder, else they wont show up!
 All Copyright of the Used Images goes to Nintendo
+
+# Credits
+- [HerobrineTV](https://github.com/HerobrineTV) - Creator of the App
+- [Snoozbuster](https://github.com/snoozbuster) - Course Viewer for the Curse Display
+- [LeoMauro](https://github.com/leomaurodesenv) - Course Viewer for the Curse Display
 
 ### Repo Views:
 ![Visitor Count](https://profile-counter.glitch.me/HerobrineTV_SMM1/count.svg)
