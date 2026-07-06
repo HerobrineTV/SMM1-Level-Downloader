@@ -37,6 +37,9 @@ public sealed class AppSettings
     [JsonPropertyName("hideViewerInfo")]
     public bool HideViewerInfo { get; set; }
 
+    [JsonPropertyName("firstStartRegistered")]
+    public bool FirstStartRegistered { get; set; }
+
     [JsonPropertyName("searchParams")]
     public SearchParams SearchParams { get; set; } = new();
 }

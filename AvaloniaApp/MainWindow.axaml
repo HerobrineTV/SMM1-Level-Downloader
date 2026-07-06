@@ -375,6 +375,12 @@
                                   <Run Text="{Binding StarsText}" />
                                 </TextBlock>
                               </Border>
+                              <Border Classes="statChip">
+                                <TextBlock FontSize="12" Foreground="#2B1605">
+                                  <Run Text="DL " />
+                                  <Run Text="{Binding DownloadsText}" />
+                                </TextBlock>
+                              </Border>
                             </StackPanel>
                           </StackPanel>
                         </Grid>
@@ -437,6 +443,9 @@
                   <WrapPanel>
                     <Border Classes="statChip">
                       <TextBlock x:Name="SelectedStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SelectedDownloadsText" Foreground="#2B1605" FontWeight="SemiBold" />
                     </Border>
                     <Border Classes="statChip">
                       <TextBlock x:Name="SelectedTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />
@@ -555,6 +564,12 @@
                               <Run Text="{Binding StarsText}" />
                             </TextBlock>
                           </Border>
+                          <Border Classes="statChip">
+                            <TextBlock FontSize="12" Foreground="#2B1605">
+                              <Run Text="DL " />
+                              <Run Text="{Binding DownloadsText}" />
+                            </TextBlock>
+                          </Border>
                         </StackPanel>
                       </StackPanel>
                       <Button Grid.Column="2"
@@ -668,6 +683,9 @@
                   <WrapPanel Grid.Row="1" Margin="0,0,0,8">
                     <Border Classes="statChip">
                       <TextBlock x:Name="SavedStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                    </Border>
+                    <Border Classes="statChip">
+                      <TextBlock x:Name="SavedDownloadsText" Foreground="#2B1605" FontWeight="SemiBold" />
                     </Border>
                     <Border Classes="statChip">
                       <TextBlock x:Name="SavedTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />
@@ -925,6 +943,9 @@
                 <WrapPanel>
                   <Border Classes="statChip">
                     <TextBlock x:Name="ProfileSelectedStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="statChip">
+                    <TextBlock x:Name="ProfileSelectedDownloadsText" Foreground="#2B1605" FontWeight="SemiBold" />
                   </Border>
                   <Border Classes="statChip">
                     <TextBlock x:Name="ProfileSelectedTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />

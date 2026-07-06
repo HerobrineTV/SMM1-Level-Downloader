@@ -281,11 +281,6 @@ FakesAssemblies/
 # GhostDoc plugin setting file
 *.GhostDoc.xml
 
-# Node.js Tools for Visual Studio
-.ntvs_analysis.dat
-node_modules/*
-!node_modules/smm-course-viewer
-
 # Visual Studio 6 build log
 *.plg
 

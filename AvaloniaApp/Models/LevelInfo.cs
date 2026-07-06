@@ -71,6 +71,10 @@ public sealed class LevelInfo : INotifyPropertyChanged
     [JsonConverter(typeof(FlexibleIntConverter))]
     public int Stars { get; set; }
 
+    [JsonPropertyName("downloads")]
+    [JsonConverter(typeof(FlexibleIntConverter))]
+    public int Downloads { get; set; }
+
     [JsonPropertyName("pack")]
     public string? Pack { get; set; }
 
@@ -193,13 +197,16 @@ public sealed class LevelInfo : INotifyPropertyChanged
     public string StarsText => Stars.ToString("N0", CultureInfo.InvariantCulture);
 
     [JsonIgnore]
+    public string DownloadsText => Downloads.ToString("N0", CultureInfo.InvariantCulture);
+
+    [JsonIgnore]
     public string Summary
     {
         get
         {
             var clearRate = (ClearRate * 100).ToString("0.##", CultureInfo.InvariantCulture);
             var pack = string.IsNullOrWhiteSpace(Pack) ? "" : $" | Pack: {Pack}";
-            return $"{DisplayCode} ({LevelId}) | {Creator} | {clearRate}% ({Clears}/{TotalAttempts}) | Stars: {Stars}{pack}";
+            return $"{DisplayCode} ({LevelId}) | {Creator} | {clearRate}% ({Clears}/{TotalAttempts}) | Stars: {Stars} | Downloads: {DownloadsText}{pack}";
         }
     }
 

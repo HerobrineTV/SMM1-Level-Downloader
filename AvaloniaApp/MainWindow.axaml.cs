@@ -56,6 +56,7 @@ public sealed partial class MainWindow : Window
     private string? _availableUpdateUrl;
     private bool _startupInitialized;
     private bool _isApplyingPackNameSuggestion;
+    private bool _isRefreshingAllDownloadedData;
 
     public MainWindow()
     {
@@ -94,6 +95,43 @@ public sealed partial class MainWindow : Window
         LoadSavedLevels();
         _ = RunApiStatusLoopAsync(_lifetimeCts.Token);
         _ = CheckForUpdatesAsync(_lifetimeCts.Token);
+        _ = RegisterFirstStartIfNeededAsync(_lifetimeCts.Token);
+        _ = QueueStartupDownloadedDataRefreshAsync(_lifetimeCts.Token);
+    }
+
+    private async Task RegisterFirstStartIfNeededAsync(CancellationToken cancellationToken)
+    {
+        if (_settings.FirstStartRegistered)
+        {
+            return;
+        }
+
+        try
+        {
+            await _apiClient.RegisterFirstStartAsync(_settings, cancellationToken);
+            _settings.FirstStartRegistered = true;
+            _store.SaveSettings(_settings);
+        }
+        catch
+        {
+            // Analytics must not block startup. A failed registration is retried on the next start.
+        }
+    }
+
+    private async Task QueueStartupDownloadedDataRefreshAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+            await RefreshAllDownloadedDataAsync(cancellationToken, isStartupRefresh: true);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Startup metadata refresh failed: {ex.Message}");
+        }
     }
 
     private async Task RunStartupMigrationAsync()
@@ -751,6 +789,7 @@ public sealed partial class MainWindow : Window
 
     private void SetSelectedStats(LevelInfo level)
     {
+        SelectedDownloadsText.Text = $"DL Downloads: {level.DownloadsText}";
         SelectedStarsText.Text = $"★ Stars: {level.StarsText}";
         SelectedTotalRunsText.Text = $"▶ Total Runs: {level.TotalAttemptsText}";
         SelectedClearsText.Text = $"✓ Clears: {level.ClearsText}";
@@ -759,6 +798,7 @@ public sealed partial class MainWindow : Window
 
     private void SetProfileSelectedStats(LevelInfo level)
     {
+        ProfileSelectedDownloadsText.Text = $"DL Downloads: {level.DownloadsText}";
         ProfileSelectedStarsText.Text = $"★ Stars: {level.StarsText}";
         ProfileSelectedTotalRunsText.Text = $"▶ Total Runs: {level.TotalAttemptsText}";
         ProfileSelectedClearsText.Text = $"✓ Clears: {level.ClearsText}";
@@ -767,6 +807,7 @@ public sealed partial class MainWindow : Window
 
     private void SetSavedStats(LevelInfo level)
     {
+        SavedDownloadsText.Text = $"DL Downloads: {level.DownloadsText}";
         SavedStarsText.Text = $"★ Stars: {level.StarsText}";
         SavedTotalRunsText.Text = $"▶ Total Runs: {level.TotalAttemptsText}";
         SavedClearsText.Text = $"✓ Clears: {level.ClearsText}";
@@ -1046,55 +1087,74 @@ public sealed partial class MainWindow : Window
 
     private async void RefreshAllDownloadedDataButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        await RunSafeAsync(async token =>
+        await RunSafeAsync(token => RefreshAllDownloadedDataAsync(token, isStartupRefresh: false));
+    }
+
+    private async Task RefreshAllDownloadedDataAsync(CancellationToken token, bool isStartupRefresh)
+    {
+        if (_isRefreshingAllDownloadedData)
         {
-            SaveSettingsFromUi();
-            var downloaded = _store.LoadDownloaded();
-            var entries = downloaded.ToList();
-            if (entries.Count == 0)
+            if (!isStartupRefresh)
+            {
+                SetStatus("Downloaded metadata refresh is already running.");
+            }
+
+            return;
+        }
+
+        SaveSettingsFromUi();
+        var downloaded = _store.LoadDownloaded();
+        var entries = downloaded.ToList();
+        if (entries.Count == 0)
+        {
+            if (!isStartupRefresh)
             {
                 SetStatus("No downloaded courses to refresh.");
-                return;
             }
 
-            RefreshAllDownloadedDataButton.IsEnabled = false;
-            try
+            return;
+        }
+
+        _isRefreshingAllDownloadedData = true;
+        RefreshAllDownloadedDataButton.IsEnabled = false;
+        try
+        {
+            var refreshed = 0;
+            var failed = 0;
+            var prefix = isStartupRefresh ? "Startup refresh" : "Refreshing";
+            for (var i = 0; i < entries.Count; i++)
             {
-                var refreshed = 0;
-                var failed = 0;
-                for (var i = 0; i < entries.Count; i++)
+                token.ThrowIfCancellationRequested();
+                var (key, oldLevel) = entries[i];
+                SetStatus($"{prefix} {i + 1}/{entries.Count}: {oldLevel.LevelId}...");
+
+                var fresh = await FetchLevelWithQueueRetryAsync(oldLevel.LevelId, token);
+                if (fresh == null)
                 {
-                    token.ThrowIfCancellationRequested();
-                    var (key, oldLevel) = entries[i];
-                    SetStatus($"Refreshing {i + 1}/{entries.Count}: {oldLevel.LevelId}...");
-
-                    var fresh = await FetchLevelWithQueueRetryAsync(oldLevel.LevelId, token);
-                    if (fresh == null)
-                    {
-                        failed++;
-                        continue;
-                    }
-
-                    fresh.Folder = oldLevel.Folder;
-                    fresh.Pack = oldLevel.Pack;
-                    downloaded[key] = fresh;
-                    _store.SaveDownloaded(downloaded);
-                    refreshed++;
-
-                    if (i + 1 < entries.Count)
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(900), token);
-                    }
+                    failed++;
+                    continue;
                 }
 
-                LoadSavedLevels();
-                SetStatus($"Downloaded metadata refresh complete: {refreshed} refreshed, {failed} failed.");
+                fresh.Folder = oldLevel.Folder;
+                fresh.Pack = oldLevel.Pack;
+                downloaded[key] = fresh;
+                _store.SaveDownloaded(downloaded);
+                refreshed++;
+
+                if (i + 1 < entries.Count)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(900), token);
+                }
             }
-            finally
-            {
-                RefreshAllDownloadedDataButton.IsEnabled = true;
-            }
-        });
+
+            LoadSavedLevels();
+            SetStatus($"Downloaded metadata refresh complete: {refreshed} refreshed, {failed} failed.");
+        }
+        finally
+        {
+            _isRefreshingAllDownloadedData = false;
+            RefreshAllDownloadedDataButton.IsEnabled = true;
+        }
     }
 
     private async Task<LevelInfo?> FetchLevelWithQueueRetryAsync(long levelId, CancellationToken token)
@@ -1259,6 +1319,7 @@ public sealed partial class MainWindow : Window
         try
         {
             SaveSettingsFromUi();
+            await RegisterLevelDownloadAsync(level.LevelId, cts.Token);
             DownloadProgressBar.Value = 0;
             state.IsDownloaded = false;
             state.IsDownloading = true;
@@ -1301,6 +1362,19 @@ public sealed partial class MainWindow : Window
         {
             state.IsDownloading = false;
             ApplyDownloadStateToSearchResults(level.LevelId);
+        }
+    }
+
+    private async Task RegisterLevelDownloadAsync(long levelId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _apiClient.RegisterLevelDownloadAsync(_settings, levelId, cancellationToken)
+                .WaitAsync(TimeSpan.FromSeconds(3), cancellationToken);
+        }
+        catch
+        {
+            // Analytics must not block or fail the actual level download.
         }
     }
 
@@ -2123,7 +2197,7 @@ public sealed partial class MainWindow : Window
         var worldRecord = level.WorldRecordMs > 0
             ? $"WR: {FormatTime(level.WorldRecordMs)}"
             : "WR: n/a";
-        return $"{creator} | {worldRecord}";
+        return $"{creator} | Downloads: {level.DownloadsText} | {worldRecord}";
     }
 
     private static bool IsSameSavedLevel(LevelInfo? first, LevelInfo? second)

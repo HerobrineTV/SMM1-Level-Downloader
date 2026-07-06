@@ -62,6 +62,7 @@ public sealed class SavedLevelNode : INotifyPropertyChanged
     public string ClearRateText => Level?.ClearRateText ?? "";
     public string AttemptsText => Level?.TotalAttemptsText ?? "";
     public string StarsText => Level?.StarsText ?? "";
+    public string DownloadsText => Level?.DownloadsText ?? "";
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

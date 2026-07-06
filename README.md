@@ -18,6 +18,11 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 - Search by the Official Level IDs through the Database, but make sure u disabled all other searches (except fast search) else it wont work
 ![Screenshot 2024-04-09 114944](https://github.com/HerobrineTV/SMM1-Level-Downloader/assets/70803896/181c109d-5397-47c3-8390-dd3732f6f348)
 
+# Statistics
+![Total Searches](https://img.shields.io/badge/dynamic/json?label=Total%20Searches&query=%24.TotalLevelSearches&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalLevelSearches)
+![Total Installations](https://img.shields.io/badge/dynamic/json?label=Total%20Installations&query=%24.DownloadsSMM1Downloader&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FDownloadsSMM1Downloader)
+![Total Level Downloads](https://img.shields.io/badge/dynamic/json?label=Total%20Level%20Downloads&query=%24.TotalDownloads&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalDownloads)
+
 # Planned Features
 - Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
 - Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
@@ -28,15 +33,10 @@ To Decompile the Levels I used ASH Extractor which is already In this Repository
 http://wiibrew.org/wiki/ASH_Extractor
 
 # Usage / Download
-Just unzip the "SMM1Downloader.zip" from the releases Tab and start the "SMM1Downloader.exe"
-All should work from then.
+Just unzip the release archive and start the SMM1 Level Downloader executable.
 
 # How does this work?
-I packed my ElectronJS Application into a .exe format by using electron-packager, just run unzip the .zip File from the Releases
-https://github.com/HerobrineTV/SMM1-Level-Downloader/releases/
-The Zip u need is called: "smm1-level-downloader-win32-x64.zip" and is being found there.
-
-It gathers the Archive.org download link for the Searched Level from my Database.
+The app gathers the Archive.org download link for the searched level from my database.
 
 Then it is downloading it from Archive.org
 (Information here: https://archive.org/details/super_mario_maker_courses_202105)

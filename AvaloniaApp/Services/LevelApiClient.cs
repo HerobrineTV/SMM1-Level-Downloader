@@ -6,6 +6,7 @@ namespace SMMDownloader.Avalonia.Services;
 
 public sealed class LevelApiClient
 {
+    private const string AnalyticsApi = "https://api.bobac-analytics.com/smm1";
     private readonly HttpClient _httpClient = new();
 
     public async Task<IReadOnlyList<LevelInfo>> SearchAsync(
@@ -78,5 +79,21 @@ public sealed class LevelApiClient
         var api = settings.ApiLink.TrimEnd('/');
         var url = $"{api}/searchRandomLevels/{random}";
         return await _httpClient.GetFromJsonAsync<List<LevelInfo>>(url, cancellationToken) ?? [];
+    }
+
+    public Task RegisterFirstStartAsync(AppSettings settings, CancellationToken cancellationToken)
+    {
+        return RegisterAnalyticsEventAsync($"{AnalyticsApi}/firststart", cancellationToken);
+    }
+
+    public Task RegisterLevelDownloadAsync(AppSettings settings, long levelId, CancellationToken cancellationToken)
+    {
+        return RegisterAnalyticsEventAsync($"{AnalyticsApi}/countdownload/{levelId}", cancellationToken);
+    }
+
+    private async Task RegisterAnalyticsEventAsync(string url, CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
+        response.EnsureSuccessStatusCode();
     }
 }
