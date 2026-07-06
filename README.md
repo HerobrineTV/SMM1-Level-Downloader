@@ -23,6 +23,9 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 <img width="1179" height="789" alt="grafik" src="https://github.com/user-attachments/assets/442c0f02-96ea-4d3c-99b6-c5dc41c49ba5" />
 
 # Statistics
+Now I added some Statistics the Total Searches are tracked since my very First Release.
+But the Total Installations and Downloads are newly tracked.
+
 ![Total Searches](https://img.shields.io/badge/dynamic/json?label=Total%20Searches&query=%24.TotalLevelSearches&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalLevelSearches)
 ![Total Installations](https://img.shields.io/badge/dynamic/json?label=Total%20Installations&query=%24.DownloadsSMM1Downloader&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FDownloadsSMM1Downloader)
 ![Total Level Downloads](https://img.shields.io/badge/dynamic/json?label=Total%20Level%20Downloads&query=%24.TotalDownloads&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalDownloads)
