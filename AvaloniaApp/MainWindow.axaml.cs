@@ -20,6 +20,7 @@ public sealed partial class MainWindow : Window
     private const string ApiPingUrl = "https://api.bobac-analytics.com/smm1/ping";
     private const string GithubLatestReleaseUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases/latest";
     private const string CurrentReleaseTag = "V1.0.0";
+    private const string LevelBackupsFolderName = "LevelBackups";
 
     private readonly ProjectPaths _paths = new();
     private readonly JsonStore _store;
@@ -27,6 +28,7 @@ public sealed partial class MainWindow : Window
     private readonly LevelApiClient _apiClient = new();
     private readonly LevelDownloadService _downloadService;
     private readonly SmmCourseParser _courseParser = new();
+    private readonly CemuSaveService _cemuSaveService;
     private readonly ThumbnailLoader _thumbnailLoader = new();
     private readonly MiiImageLoader _miiImageLoader = new();
     private readonly HttpClient _statusHttpClient = new();
@@ -34,6 +36,9 @@ public sealed partial class MainWindow : Window
     private readonly ObservableCollection<LevelInfo> _searchResults = [];
     private readonly ObservableCollection<LevelInfo> _profileLevels = [];
     private readonly ObservableCollection<SavedLevelNode> _savedNodes = [];
+    private readonly ObservableCollection<SavedLevelNode> _cemuNodes = [];
+    private readonly ObservableCollection<LevelInfo> _cemuReplaceResults = [];
+    private readonly ObservableCollection<NotificationEntry> _notifications = [];
     private readonly Dictionary<long, DownloadState> _downloadStates = [];
     private IReadOnlyList<LevelInfo> _allSavedLevels = [];
     private IReadOnlyList<SavedLevelNode> _allSavedNodes = [];
@@ -47,16 +52,22 @@ public sealed partial class MainWindow : Window
     private LevelInfo? _selectedPreviewLevel;
     private SavedLevelNode? _selectedSavedNode;
     private SavedLevelNode? _selectedPackNode;
+    private SavedLevelNode? _selectedCemuNode;
+    private LevelInfo? _selectedCemuReplacementLevel;
     private string _selectedPreviewFile = "course_data.cdt";
+    private string _selectedCemuPreviewFile = "course_data.cdt";
     private LevelInfo? _largeViewerLevel;
     private string _largeViewerFile = "course_data.cdt";
     private bool _returnToProfilePageFromViewer;
+    private bool _returnToCemuLevelPageFromProfile;
     private bool? _isApiOnline;
     private string? _availableUpdateVersion;
     private string? _availableUpdateUrl;
     private bool _startupInitialized;
     private bool _isApplyingPackNameSuggestion;
     private bool _isRefreshingAllDownloadedData;
+    private bool _isLoadingCemuProfiles;
+    private int _notificationSequence;
 
     public MainWindow()
     {
@@ -65,9 +76,13 @@ public sealed partial class MainWindow : Window
         _store = new JsonStore(_paths);
         _dataMigrationService = new DataMigrationService(_paths);
         _downloadService = new LevelDownloadService(_paths, _store);
+        _cemuSaveService = new CemuSaveService(_paths, _courseParser);
         SearchResultsListBox.ItemsSource = _searchResults;
         ProfileLevelsListBox.ItemsSource = _profileLevels;
         SavedLevelsTreeView.ItemsSource = _savedNodes;
+        CemuLevelsItemsControl.ItemsSource = _cemuNodes;
+        CemuReplaceResultsListBox.ItemsSource = _cemuReplaceResults;
+        NotificationHistoryListBox.ItemsSource = _notifications;
     }
 
     protected override async void OnOpened(EventArgs e)
@@ -93,6 +108,7 @@ public sealed partial class MainWindow : Window
         ResetSearchSelectedLevelDetails();
         ResetProfileSelectedLevelDetails();
         LoadSavedLevels();
+        RefreshCemuLevels();
         _ = RunApiStatusLoopAsync(_lifetimeCts.Token);
         _ = CheckForUpdatesAsync(_lifetimeCts.Token);
         _ = RegisterFirstStartIfNeededAsync(_lifetimeCts.Token);
@@ -413,7 +429,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async Task OpenProfileAsync(string? userName, IImage? miiImage)
+    private async Task OpenProfileAsync(string? userName, IImage? miiImage, bool returnToCemuLevelPage = false)
     {
         userName = userName?.Trim();
         if (string.IsNullOrWhiteSpace(userName))
@@ -424,7 +440,11 @@ public sealed partial class MainWindow : Window
         await RunSafeAsync(async token =>
         {
             SetBusy($"Loading profile for {userName}...");
+            _returnToCemuLevelPageFromProfile = returnToCemuLevelPage ||
+                                                (_returnToCemuLevelPageFromProfile && ProfilePage.IsVisible);
             MainTabs.IsVisible = false;
+            CemuLevelPage.IsVisible = false;
+            LevelViewerPage.IsVisible = false;
             ProfilePage.IsVisible = true;
             _currentProfileUserName = userName;
             ProfileUserNameText.Text = userName;
@@ -540,6 +560,24 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void CemuCreatorMii_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_selectedCemuNode?.Level is { } level)
+        {
+            await OpenProfileAsync(level.Creator, level.CreatorMiiImage, returnToCemuLevelPage: true);
+            e.Handled = true;
+        }
+    }
+
+    private async void CemuWorldRecordMii_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (_selectedCemuNode?.Level is { } level)
+        {
+            await OpenProfileAsync(level.WorldRecordHolderNnid, level.WorldRecordMiiImage, returnToCemuLevelPage: true);
+            e.Handled = true;
+        }
+    }
+
     private void SearchThumbnail_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if ((sender as Control)?.DataContext is LevelInfo level)
@@ -581,7 +619,22 @@ public sealed partial class MainWindow : Window
     private void BackFromProfileButton_OnClick(object? sender, RoutedEventArgs e)
     {
         ProfilePage.IsVisible = false;
+        if (_returnToCemuLevelPageFromProfile)
+        {
+            CemuLevelPage.IsVisible = true;
+            _returnToCemuLevelPageFromProfile = false;
+        }
+        else
+        {
+            MainTabs.IsVisible = true;
+        }
+    }
+
+    private void BackFromCemuLevelButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        CemuLevelPage.IsVisible = false;
         MainTabs.IsVisible = true;
+        MainTabs.SelectedItem = CemuTab;
     }
 
     private void BackFromViewerButton_OnClick(object? sender, RoutedEventArgs e)
@@ -597,17 +650,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void LevelViewerOverworldButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (_largeViewerLevel == null)
-        {
-            return;
-        }
-
-        _largeViewerFile = "course_data.cdt";
-        LoadLargeLevelViewer(_largeViewerLevel, _largeViewerFile);
-    }
-
     private void LevelViewerUnderworldButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_largeViewerLevel == null)
@@ -615,7 +657,17 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        _largeViewerFile = "course_data_sub.cdt";
+        if (!HasUnderworld(_largeViewerLevel, ResolveDownloadedCourseFolder))
+        {
+            LevelViewerUnderworldButton.IsVisible = false;
+            _largeViewerFile = "course_data.cdt";
+            LoadLargeLevelViewer(_largeViewerLevel, _largeViewerFile);
+            return;
+        }
+
+        _largeViewerFile = _largeViewerFile == "course_data_sub.cdt"
+            ? "course_data.cdt"
+            : "course_data_sub.cdt";
         LoadLargeLevelViewer(_largeViewerLevel, _largeViewerFile);
     }
 
@@ -623,6 +675,35 @@ public sealed partial class MainWindow : Window
     {
         LevelViewerCanvas.ShowHiddenBlocks = !LevelViewerCanvas.ShowHiddenBlocks;
         LevelViewerHiddenBlocksButton.Content = LevelViewerCanvas.ShowHiddenBlocks
+            ? T("HideHiddenBlocks")
+            : T("RevealHiddenBlocks");
+    }
+
+    private void CemuPageUnderworldButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedCemuNode?.Level == null)
+        {
+            return;
+        }
+
+        if (!HasUnderworld(_selectedCemuNode.Level, selected => selected.Folder))
+        {
+            CemuPageUnderworldButton.IsVisible = false;
+            _selectedCemuPreviewFile = "course_data.cdt";
+            LoadCemuPagePreview(_selectedCemuNode.Level, _selectedCemuPreviewFile);
+            return;
+        }
+
+        _selectedCemuPreviewFile = _selectedCemuPreviewFile == "course_data_sub.cdt"
+            ? "course_data.cdt"
+            : "course_data_sub.cdt";
+        LoadCemuPagePreview(_selectedCemuNode.Level, _selectedCemuPreviewFile);
+    }
+
+    private void CemuPageHiddenBlocksButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        CemuPagePreviewCanvas.ShowHiddenBlocks = !CemuPagePreviewCanvas.ShowHiddenBlocks;
+        CemuPageHiddenBlocksButton.Content = CemuPagePreviewCanvas.ShowHiddenBlocks
             ? T("HideHiddenBlocks")
             : T("RevealHiddenBlocks");
     }
@@ -700,6 +781,7 @@ public sealed partial class MainWindow : Window
         SavedLevelTitle.Text = T("SelectSavedCourse");
         SavedLevelDetailsPanel.IsVisible = false;
         CoursePreviewCanvas.Course = null;
+        UnderworldPreviewButton.IsVisible = true;
     }
 
     private void SetSelectedSavedNode(SavedLevelNode? node)
@@ -823,6 +905,47 @@ public sealed partial class MainWindow : Window
         SavedClearsText.Text = $"✓ Clears: {level.ClearsText}";
     }
 
+    private void UpdateSavedPreviewAreaButtons(LevelInfo level)
+    {
+        var hasUnderworld = HasUnderworld(level, ResolveCourseFolder);
+        UnderworldPreviewButton.IsVisible = hasUnderworld;
+        if (!hasUnderworld && _selectedPreviewFile == "course_data_sub.cdt")
+        {
+            _selectedPreviewFile = "course_data.cdt";
+        }
+
+        UnderworldPreviewButton.Content = GetAreaSwitchText(_selectedPreviewFile);
+    }
+
+    private void UpdateLargeViewerAreaButtons(LevelInfo level)
+    {
+        var hasUnderworld = HasUnderworld(level, ResolveDownloadedCourseFolder);
+        LevelViewerUnderworldButton.IsVisible = hasUnderworld;
+        if (!hasUnderworld && _largeViewerFile == "course_data_sub.cdt")
+        {
+            _largeViewerFile = "course_data.cdt";
+        }
+
+        LevelViewerUnderworldButton.Content = GetAreaSwitchText(_largeViewerFile);
+    }
+
+    private void UpdateCemuPageAreaButtons(LevelInfo level)
+    {
+        var hasUnderworld = HasUnderworld(level, selected => selected.Folder);
+        CemuPageUnderworldButton.IsVisible = hasUnderworld;
+        if (!hasUnderworld && _selectedCemuPreviewFile == "course_data_sub.cdt")
+        {
+            _selectedCemuPreviewFile = "course_data.cdt";
+        }
+
+        CemuPageUnderworldButton.Content = GetAreaSwitchText(_selectedCemuPreviewFile);
+    }
+
+    private string GetAreaSwitchText(string currentCourseFileName)
+    {
+        return currentCourseFileName == "course_data_sub.cdt" ? T("Overworld") : T("Underworld");
+    }
+
     private async void DownloadLevelButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if ((sender as Control)?.DataContext is LevelInfo level)
@@ -875,6 +998,7 @@ public sealed partial class MainWindow : Window
             _selectedPackNode = null;
             _selectedPreviewLevel = level;
             _selectedPreviewFile = "course_data.cdt";
+            UpdateSavedPreviewAreaButtons(level);
             SetStatus($"{level.Name} selected.");
             RefreshSavedMetadataButton.IsVisible = CanRefreshSavedMetadata();
             OpenSelectedLevelFolderButton.IsVisible = true;
@@ -927,17 +1051,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OverworldPreviewButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (_selectedPreviewLevel == null)
-        {
-            return;
-        }
-
-        _selectedPreviewFile = "course_data.cdt";
-        LoadCoursePreview(_selectedPreviewLevel, _selectedPreviewFile);
-    }
-
     private void UnderworldPreviewButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_selectedPreviewLevel == null)
@@ -945,7 +1058,17 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        _selectedPreviewFile = "course_data_sub.cdt";
+        if (!HasUnderworld(_selectedPreviewLevel, ResolveCourseFolder))
+        {
+            UnderworldPreviewButton.IsVisible = false;
+            _selectedPreviewFile = "course_data.cdt";
+            LoadCoursePreview(_selectedPreviewLevel, _selectedPreviewFile);
+            return;
+        }
+
+        _selectedPreviewFile = _selectedPreviewFile == "course_data_sub.cdt"
+            ? "course_data.cdt"
+            : "course_data_sub.cdt";
         LoadCoursePreview(_selectedPreviewLevel, _selectedPreviewFile);
     }
 
@@ -970,6 +1093,114 @@ public sealed partial class MainWindow : Window
     private void SavedSourceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         LoadSavedLevels();
+    }
+
+    private void ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoadingCemuProfiles)
+        {
+            return;
+        }
+
+        SaveSettingsFromUi();
+        RefreshCemuLevels();
+        if (GetSavedSource() == "cemu")
+        {
+            LoadSavedLevels();
+        }
+    }
+
+    private void RefreshCemuButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        SaveSettingsFromUi();
+        RefreshCemuLevels();
+    }
+
+    private void CemuLevelsScrollViewer_OnSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        UpdateCemuCardWidth();
+    }
+
+    private void OpenCemuFolderButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenPath(GetCemuProfilePath());
+    }
+
+    private void OpenSettingsForCemuButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        MainTabs.SelectedItem = SettingsTab;
+    }
+
+    private void CemuLevelCard_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is SavedLevelNode { Level: { } level } node)
+        {
+            _selectedCemuNode = node;
+            _selectedCemuReplacementLevel = null;
+            CemuReplaceResultsListBox.SelectedItem = null;
+            CemuReplaceSearchTextBox.Text = "";
+            OpenCemuLevelPage(level);
+            LoadCemuReplaceResults("");
+            e.Handled = true;
+        }
+    }
+
+    private void CemuReplaceSearchTextBox_OnTextChanged(object? sender, TextChangedEventArgs e)
+    {
+        LoadCemuReplaceResults(CemuReplaceSearchTextBox.Text?.Trim() ?? "");
+    }
+
+    private void CemuReplaceResultsListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        _selectedCemuReplacementLevel = CemuReplaceResultsListBox.SelectedItem as LevelInfo;
+        UpdateReplaceCemuLevelButtonState();
+    }
+
+    private async void ReplaceCemuLevelButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedCemuNode?.Level is not { } cemuLevel || _selectedCemuReplacementLevel == null)
+        {
+            return;
+        }
+
+        var replacementFolder = ResolveDownloadedCourseFolder(_selectedCemuReplacementLevel);
+        if (replacementFolder == null)
+        {
+            SetStatus("Selected replacement level is no longer available.");
+            return;
+        }
+
+        var confirmed = await ShowConfirmDialogAsync(
+            T("ReplaceCemuLevelTitle"),
+            string.Format(CultureInfo.InvariantCulture, T("ReplaceCemuLevelWarning"), cemuLevel.Name, _selectedCemuReplacementLevel.Name),
+            T("Replace"),
+            T("Cancel"));
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await RunSafeAsync(_ =>
+        {
+            var cemuFolder = cemuLevel.Folder;
+            var backupFolder = _cemuSaveService.BackupAndReplace(cemuLevel, _selectedCemuReplacementLevel, replacementFolder);
+            _thumbnailLoader.InvalidateCourseThumbnail(cemuFolder);
+            _thumbnailLoader.InvalidateCourseThumbnail(backupFolder);
+            RefreshCemuLevels();
+            LoadSavedLevels();
+            var refreshedNode = _cemuNodes.FirstOrDefault(node =>
+                node.Level != null &&
+                string.Equals(node.Level.Folder, cemuFolder, StringComparison.OrdinalIgnoreCase));
+            if (refreshedNode?.Level != null)
+            {
+                _selectedCemuNode = refreshedNode;
+                OpenCemuLevelPage(refreshedNode.Level);
+                LoadCemuReplaceResults(CemuReplaceSearchTextBox.Text?.Trim() ?? "");
+            }
+
+            SetStatus($"Replaced CEMU level. Backup: {backupFolder}");
+            return Task.CompletedTask;
+        });
     }
 
     private void OpenSavedFolderButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1195,7 +1426,10 @@ public sealed partial class MainWindow : Window
         }
 
         CemuPathTextBox.Text = path;
+        SaveSettingsFromUi();
+        _store.SaveSettings(_settings);
         LoadProfiles(path);
+        RefreshCemuLevels();
     }
 
     private void SaveSettingsButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1203,6 +1437,7 @@ public sealed partial class MainWindow : Window
         SaveSettingsFromUi();
         _store.SaveSettings(_settings);
         ApplyLanguage();
+        RefreshCemuLevels();
         SetStatus(T("SettingsSaved"));
     }
 
@@ -1212,6 +1447,7 @@ public sealed partial class MainWindow : Window
         LoadSettingsIntoUi();
         _store.SaveSettings(_settings);
         ApplyLanguage();
+        RefreshCemuLevels();
         SetStatus(T("SettingsReset"));
     }
 
@@ -1257,10 +1493,38 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void NotificationButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        NotificationToast.IsVisible = false;
+        NotificationHistoryPanel.IsVisible = !NotificationHistoryPanel.IsVisible;
+    }
+
+    private void CloseNotificationHistoryButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        NotificationHistoryPanel.IsVisible = false;
+    }
+
+    private void ClearNotificationHistoryButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        _notifications.Clear();
+        NotificationToast.IsVisible = false;
+        UpdateNotificationButtonText();
+    }
+
+    private void DeleteNotificationButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is NotificationEntry notification)
+        {
+            _notifications.Remove(notification);
+            UpdateNotificationButtonText();
+        }
+    }
+
     private void RefreshPackNameSuggestions()
     {
         PackNameTextBox.ItemsSource = _store.LoadLevelPacks()
             .Keys
+            .Where(name => !string.Equals(name, LevelBackupsFolderName, StringComparison.OrdinalIgnoreCase))
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -1391,6 +1655,14 @@ public sealed partial class MainWindow : Window
     private void LoadSettingsIntoUi()
     {
         _settings = _store.LoadSettings();
+        var cemuDirectory = _cemuSaveService.ResolveCemuDirectory(_settings.CemuDirPath);
+        if (!string.IsNullOrWhiteSpace(cemuDirectory) &&
+            !string.Equals(cemuDirectory, _settings.CemuDirPath, StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.CemuDirPath = cemuDirectory;
+            _store.SaveSettings(_settings);
+        }
+
         SearchTextBox.Text = _settings.LastSearchPhrase;
         SearchLevelNameCheckBox.IsChecked = _settings.SearchParams.LevelName;
         SearchLevelIdCheckBox.IsChecked = _settings.SearchParams.LevelID;
@@ -1403,6 +1675,7 @@ public sealed partial class MainWindow : Window
         UseProxyCheckBox.IsChecked = _settings.UseProxy;
         ApiLinkTextBox.Text = _settings.ApiLink;
         SelectComboBoxItemByTag(LanguageComboBox, _settings.Language);
+        CemuPathTextBox.Text = _settings.CemuDirPath;
         LoadProfiles(_settings.CemuDirPath);
     }
 
@@ -1427,8 +1700,14 @@ public sealed partial class MainWindow : Window
 
     private void ApplyLanguage()
     {
+        VersionText.Text = $"{T("Version")}: {CurrentReleaseTag}";
+        UpdateNotificationButtonText();
+        NotificationHistoryTitle.Text = T("Notifications");
+        ClearNotificationHistoryButton.Content = T("Clear");
+        CloseNotificationHistoryButton.Content = T("Close");
         DownloadTab.Header = T("DownloadTab");
         SavedCoursesTab.Header = T("SavedCoursesTab");
+        CemuTab.Header = T("CemuTab");
         SettingsTab.Header = T("SettingsTab");
 
         SearchCoursesTitle.Text = T("SearchCourses");
@@ -1448,6 +1727,7 @@ public sealed partial class MainWindow : Window
         SelectedCreatorHeader.Text = T("Creator");
         SelectedWorldRecordHeader.Text = T("WorldRecord");
         BackFromProfileButton.Content = T("Back");
+        BackFromCemuLevelButton.Content = T("Back");
         BackFromViewerButton.Content = T("Back");
         ProfileTitle.Text = T("UserProfile");
         ProfileSelectedLevelTitle.Text = T("NoLevelSelected");
@@ -1476,19 +1756,38 @@ public sealed partial class MainWindow : Window
         ResetOfficialButton.Content = T("ResetOfficialCourses");
         SavedLevelTitle.Text = T("SelectSavedCourse");
         CoursePreviewInfo.Text = T("CoursePreviewHint");
-        OverworldPreviewButton.Content = T("Overworld");
-        UnderworldPreviewButton.Content = T("Underworld");
+        UnderworldPreviewButton.Content = GetAreaSwitchText(_selectedPreviewFile);
         HiddenBlocksPreviewButton.Content = CoursePreviewCanvas.ShowHiddenBlocks
             ? T("HideHiddenBlocks")
             : T("RevealHiddenBlocks");
-        LevelViewerOverworldButton.Content = T("Overworld");
-        LevelViewerUnderworldButton.Content = T("Underworld");
+        LevelViewerUnderworldButton.Content = GetAreaSwitchText(_largeViewerFile);
+        LevelViewerUnderworldButton.IsVisible = _largeViewerLevel == null ||
+                                                HasUnderworld(_largeViewerLevel, ResolveDownloadedCourseFolder);
         LevelViewerHiddenBlocksButton.Content = LevelViewerCanvas.ShowHiddenBlocks
             ? T("HideHiddenBlocks")
             : T("RevealHiddenBlocks");
         SavedCreatorHeader.Text = T("Creator");
         SavedClearRateHeader.Text = T("ClearRate");
         SavedWorldRecordHeader.Text = T("WorldRecord");
+        CemuStatusText.Text = _cemuNodes.Count > 0 ? T("CemuSaveFound") : T("CemuSaveNotFound");
+        RefreshCemuButton.Content = T("Refresh");
+        OpenCemuFolderButton.Content = T("OpenFolder");
+        CemuEmptyTitle.Text = T("CemuSaveNotFound");
+        CemuEmptyMessage.Text = T("CemuSetupInstructions");
+        OpenSettingsForCemuButton.Content = T("OpenSettings");
+        CemuPageCreatorHeader.Text = T("Creator");
+        CemuPageClearRateHeader.Text = T("ClearRate");
+        CemuPageWorldRecordHeader.Text = T("WorldRecord");
+        CemuPagePreviewInfo.Text = T("CoursePreviewHint");
+        CemuPageUnderworldButton.Content = GetAreaSwitchText(_selectedCemuPreviewFile);
+        CemuPageUnderworldButton.IsVisible = _selectedCemuNode?.Level == null ||
+                                             HasUnderworld(_selectedCemuNode.Level, selected => selected.Folder);
+        CemuPageHiddenBlocksButton.Content = CemuPagePreviewCanvas.ShowHiddenBlocks
+            ? T("HideHiddenBlocks")
+            : T("RevealHiddenBlocks");
+        CemuReplaceTitle.Text = T("ReplaceWithDownloadedLevel");
+        CemuReplaceSearchTextBox.Watermark = T("SearchDownloadedLevels");
+        ReplaceCemuLevelButton.Content = T("Replace");
 
         SettingsTitle.Text = T("Settings");
         LanguageLabel.Text = T("Language");
@@ -1523,27 +1822,27 @@ public sealed partial class MainWindow : Window
 
     private void LoadProfiles(string? cemuPath)
     {
-        ProfileComboBox.Items.Clear();
-        if (string.IsNullOrWhiteSpace(cemuPath))
+        _isLoadingCemuProfiles = true;
+        try
         {
-            return;
-        }
-
-        var userRoot = Path.Combine(cemuPath, "mlc01", "usr", "save", "00050000", "1018dd00", "user");
-        if (!Directory.Exists(userRoot))
-        {
-            return;
-        }
-
-        foreach (var directory in Directory.EnumerateDirectories(userRoot)
-                     .Select(Path.GetFileName)
-                     .Where(name => !string.IsNullOrWhiteSpace(name) && name != "common"))
-        {
-            ProfileComboBox.Items.Add(directory);
-            if (directory == _settings.SelectedProfile)
+            ProfileComboBox.Items.Clear();
+            foreach (var directory in _cemuSaveService.LoadProfiles(cemuPath))
             {
-                ProfileComboBox.SelectedItem = directory;
+                ProfileComboBox.Items.Add(directory);
+                if (directory == _settings.SelectedProfile)
+                {
+                    ProfileComboBox.SelectedItem = directory;
+                }
             }
+
+            if (ProfileComboBox.SelectedItem == null)
+            {
+                ProfileComboBox.SelectedItem = ProfileComboBox.Items.OfType<string>().FirstOrDefault();
+            }
+        }
+        finally
+        {
+            _isLoadingCemuProfiles = false;
         }
     }
 
@@ -1564,6 +1863,149 @@ public sealed partial class MainWindow : Window
         ResetSavedSelectedLevelDetails();
         ApplySavedFilter();
         SetStatus($"Loaded {_allSavedLevels.Count} saved course(s).");
+    }
+
+    private void RefreshCemuLevels()
+    {
+        var cemuDirectory = _cemuSaveService.ResolveCemuDirectory(_settings.CemuDirPath);
+        if (!string.IsNullOrWhiteSpace(cemuDirectory))
+        {
+            _settings.CemuDirPath = cemuDirectory;
+            CemuPathTextBox.Text = cemuDirectory;
+            LoadProfiles(cemuDirectory);
+        }
+
+        var profilePath = GetCemuProfilePath();
+        var levels = _cemuSaveService.LoadLevels(profilePath)
+            .Select(EnrichCemuLevelWithSavedMetadata)
+            .ToList();
+        _cemuNodes.Clear();
+        foreach (var level in levels)
+        {
+            _cemuNodes.Add(ToCemuNode(level));
+        }
+
+        UpdateCemuTabEmptyState(cemuDirectory);
+        ResetCemuSelectedLevelDetails();
+        Dispatcher.UIThread.Post(UpdateCemuCardWidth, DispatcherPriority.Background);
+        SetStatus(_cemuNodes.Count == 0 ? T("CemuSaveNotFound") : $"Loaded {_cemuNodes.Count} CEMU level(s).");
+    }
+
+    private void UpdateCemuTabEmptyState(string? resolvedCemuDirectory)
+    {
+        var hasLevels = _cemuNodes.Count > 0;
+        CemuLevelsPanel.IsVisible = hasLevels;
+        CemuEmptyPanel.IsVisible = !hasLevels;
+        OpenCemuFolderButton.IsEnabled = !string.IsNullOrWhiteSpace(GetCemuProfilePath()) &&
+                                         Directory.Exists(GetCemuProfilePath());
+        CemuStatusText.Text = hasLevels ? T("CemuSaveFound") : T("CemuSaveNotFound");
+
+        if (hasLevels)
+        {
+            return;
+        }
+
+        CemuEmptyTitle.Text = T("CemuSaveNotFound");
+        CemuEmptyMessage.Text = T("CemuSetupInstructions");
+        var configuredPath = CemuPathTextBox.Text?.Trim() ?? _settings.CemuDirPath;
+        var pathText = string.IsNullOrWhiteSpace(configuredPath)
+            ? T("CemuCurrentPathNotSet")
+            : string.Format(CultureInfo.InvariantCulture, T("CemuCurrentPath"), configuredPath);
+        if (!string.IsNullOrWhiteSpace(resolvedCemuDirectory) &&
+            !string.Equals(resolvedCemuDirectory, configuredPath, StringComparison.OrdinalIgnoreCase))
+        {
+            pathText = string.Format(CultureInfo.InvariantCulture, T("CemuDetectedPath"), resolvedCemuDirectory);
+        }
+
+        CemuEmptyPathText.Text = pathText;
+        OpenSettingsForCemuButton.Content = T("OpenSettings");
+    }
+
+    private SavedLevelNode ToCemuNode(LevelInfo level)
+    {
+        return new SavedLevelNode
+        {
+            DisplayName = string.IsNullOrWhiteSpace(level.Name) ? Path.GetFileName(level.Folder) ?? "CEMU Level" : level.Name,
+            Summary = level.Folder,
+            ShortInfo = Path.GetFileName(level.Folder) ?? level.Folder,
+            Thumbnail = _thumbnailLoader.LoadCourseThumbnail(level.Folder),
+            RowMargin = new Thickness(0, 5, 0, 5),
+            Level = level
+        };
+    }
+
+    private void UpdateCemuCardWidth()
+    {
+        var wrapPanel = CemuLevelsItemsControl.GetVisualDescendants().OfType<WrapPanel>().FirstOrDefault();
+        if (wrapPanel == null)
+        {
+            return;
+        }
+
+        var availableWidth = Math.Max(174, CemuLevelsScrollViewer.Viewport.Width - 8);
+        if (double.IsNaN(availableWidth) || availableWidth <= 0)
+        {
+            availableWidth = Math.Max(174, CemuLevelsScrollViewer.Bounds.Width - 8);
+        }
+
+        const double minCardWidth = 174;
+        const double horizontalGap = 12;
+        var columns = Math.Max(1, (int)Math.Floor((availableWidth + horizontalGap) / (minCardWidth + horizontalGap)));
+        var cardWidth = Math.Max(minCardWidth, Math.Floor((availableWidth - (columns * horizontalGap)) / columns));
+        wrapPanel.ItemWidth = cardWidth;
+    }
+
+    private LevelInfo EnrichCemuLevelWithSavedMetadata(LevelInfo cemuLevel)
+    {
+        var cemuFolder = cemuLevel.Folder;
+        var savedLevel = FindSavedMetadataForCemuLevel(cemuLevel);
+        if (savedLevel == null)
+        {
+            return cemuLevel;
+        }
+
+        return new LevelInfo
+        {
+            Url = savedLevel.Url,
+            Name = string.IsNullOrWhiteSpace(savedLevel.Name) ? cemuLevel.Name : savedLevel.Name,
+            Creator = savedLevel.Creator,
+            CreatorMiiData = savedLevel.CreatorMiiData,
+            LevelId = savedLevel.LevelId,
+            CreatorId = savedLevel.CreatorId,
+            Clears = savedLevel.Clears,
+            Failures = savedLevel.Failures,
+            TotalAttempts = savedLevel.TotalAttempts,
+            ClearRate = savedLevel.ClearRate,
+            UploadTime = savedLevel.UploadTime,
+            WorldRecordMs = savedLevel.WorldRecordMs,
+            WorldRecordHolderNnid = savedLevel.WorldRecordHolderNnid,
+            WorldRecordBestTimePlayerMiiData = savedLevel.WorldRecordBestTimePlayerMiiData,
+            Stars = savedLevel.Stars,
+            Downloads = savedLevel.Downloads,
+            Pack = savedLevel.Pack,
+            Folder = cemuFolder,
+            Thumbnail = _thumbnailLoader.LoadCourseThumbnail(cemuFolder)
+        };
+    }
+
+    private LevelInfo? FindSavedMetadataForCemuLevel(LevelInfo cemuLevel)
+    {
+        var savedLevels = JsonStore.ToLevelList(_store.LoadDownloaded())
+            .Concat(JsonStore.ToLevelList(LoadLevelFile(_paths.BackuppedFile)))
+            .ToList();
+
+        if (cemuLevel.LevelId > 0)
+        {
+            var idMatch = savedLevels.FirstOrDefault(level => level.LevelId == cemuLevel.LevelId);
+            if (idMatch != null)
+            {
+                return idMatch;
+            }
+        }
+
+        return savedLevels.FirstOrDefault(level =>
+            !string.IsNullOrWhiteSpace(level.Name) &&
+            string.Equals(level.Name, cemuLevel.Name, StringComparison.OrdinalIgnoreCase));
     }
 
     private void AddSearchResult(LevelInfo level)
@@ -1906,10 +2348,58 @@ public sealed partial class MainWindow : Window
             .Select(ToLevelNode);
 
         return standaloneLevels
+            .Concat(LoadLevelBackupsNode())
             .Concat(LoadLevelsFromLevelPacks())
             .OrderBy(node => node.IsFolder ? 0 : 1)
             .ThenBy(node => node.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private IReadOnlyList<SavedLevelNode> LoadLevelBackupsNode()
+    {
+        var root = Path.Combine(_paths.BackuppedDirectory, LevelBackupsFolderName);
+        var children = new ObservableCollection<SavedLevelNode>();
+        if (Directory.Exists(root))
+        {
+            foreach (var directory in Directory.EnumerateDirectories(root).OrderBy(Path.GetFileName))
+            {
+                var level = new LevelInfo
+                {
+                    LevelId = TryReadLevelIdFromFolder(directory),
+                    Name = GetDisplayNameFromCourseFolder(directory),
+                    Creator = "Backup",
+                    Folder = directory
+                };
+                children.Add(new SavedLevelNode
+                {
+                    DisplayName = level.Name,
+                    Summary = level.Summary,
+                    ShortInfo = BuildSavedLevelShortInfo(level),
+                    Thumbnail = _thumbnailLoader.LoadCourseThumbnail(directory),
+                    RowMargin = new Thickness(0, 5, 0, 5),
+                    Level = level
+                });
+            }
+        }
+
+        if (children.Count == 0)
+        {
+            return [];
+        }
+
+        return
+        [
+            new SavedLevelNode
+            {
+                DisplayName = LevelBackupsFolderName,
+                Summary = $"{children.Count} backup(s)",
+                ShortInfo = $"{children.Count} backup(s)",
+                IsFolder = true,
+                IsProtectedFolder = true,
+                RowMargin = new Thickness(-18, 5, 0, 5),
+                Children = children
+            }
+        ];
     }
 
     private void LoadCoursePreview(LevelInfo level, string courseFileName)
@@ -1929,6 +2419,7 @@ public sealed partial class MainWindow : Window
             CoursePreviewCanvas.Course = preview;
             var areaName = courseFileName == "course_data_sub.cdt" ? "Underworld" : "Overworld";
             CoursePreviewInfo.Text = $"{areaName} - {preview.Summary}";
+            UnderworldPreviewButton.Content = GetAreaSwitchText(courseFileName);
             ScrollCoursePreviewToBottomLeft();
         }
         catch (Exception ex)
@@ -2012,6 +2503,31 @@ public sealed partial class MainWindow : Window
         return null;
     }
 
+    private bool HasUnderworld(LevelInfo level, Func<LevelInfo, string?> resolveFolder)
+    {
+        var folder = resolveFolder(level);
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return false;
+        }
+
+        var underworldFile = Path.Combine(folder, "course_data_sub.cdt");
+        if (!File.Exists(underworldFile))
+        {
+            return false;
+        }
+
+        try
+        {
+            var preview = _courseParser.Read(underworldFile);
+            return preview.ObjectCount > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private void ShowInlineCoursePreview(LevelInfo level, CoursePreviewControl previewControl, Control panel)
     {
         var folder = ResolveDownloadedCourseFolder(level);
@@ -2059,6 +2575,7 @@ public sealed partial class MainWindow : Window
         LevelViewerTitle.Text = $"{level.Name} | {level.DisplayCode} | DL {level.DownloadsText}";
         LevelViewerCanvas.ShowHiddenBlocks = false;
         LevelViewerHiddenBlocksButton.Content = T("RevealHiddenBlocks");
+        UpdateLargeViewerAreaButtons(level);
         LoadLargeLevelViewer(level, _largeViewerFile);
     }
 
@@ -2079,6 +2596,7 @@ public sealed partial class MainWindow : Window
             LevelViewerCanvas.Course = preview;
             var areaName = courseFileName == "course_data_sub.cdt" ? T("Underworld") : T("Overworld");
             LevelViewerInfo.Text = $"{areaName} - {preview.Summary}";
+            LevelViewerUnderworldButton.Content = GetAreaSwitchText(courseFileName);
             Dispatcher.UIThread.Post(() =>
             {
                 var maxY = Math.Max(0, LevelViewerScrollViewer.Extent.Height - LevelViewerScrollViewer.Viewport.Height);
@@ -2107,6 +2625,171 @@ public sealed partial class MainWindow : Window
         CreatorMiiBorder.IsVisible = false;
         WorldRecordMiiImage.Source = null;
         WorldRecordMiiBorder.IsVisible = false;
+    }
+
+    private void ResetCemuSelectedLevelDetails()
+    {
+        _selectedCemuNode = null;
+        _selectedCemuReplacementLevel = null;
+        CemuLevelPage.IsVisible = false;
+        CemuPagePreviewCanvas.Course = null;
+        CemuReplaceResultsListBox.SelectedItem = null;
+        _cemuReplaceResults.Clear();
+        UpdateReplaceCemuLevelButtonState();
+    }
+
+    private void OpenCemuLevelPage(LevelInfo level)
+    {
+        MainTabs.IsVisible = false;
+        CemuLevelPage.IsVisible = true;
+        CemuPageTitle.Text = level.LevelId > 0 ? $"{level.Name} | {level.DisplayCode}" : level.Name;
+        CemuPageCreatorText.Text = string.IsNullOrWhiteSpace(level.Creator) ? "CEMU" : level.Creator;
+        CemuPageClearRateText.Text = level.TotalAttempts > 0
+            ? $"{level.ClearRate * 100:0.##}% ({level.Clears}/{level.TotalAttempts})"
+            : "n/a";
+        CemuPageWorldRecordText.Text = level.WorldRecordMs > 0
+            ? $"{FormatTime(level.WorldRecordMs)} by {FormatName(level.WorldRecordHolderNnid)}"
+            : "n/a";
+        CemuPageStarsText.Text = $"★ Stars: {level.StarsText}";
+        CemuPageDownloadsText.Text = $"DL Downloads: {level.DownloadsText}";
+        CemuPageTotalRunsText.Text = $"▶ Total Runs: {level.TotalAttemptsText}";
+        CemuPageClearsText.Text = $"✓ Clears: {level.ClearsText}";
+        CemuPageFolderText.Text = Path.GetFileName(level.Folder) ?? level.Folder;
+        CemuLevelHeaderThumbnail.Source = _thumbnailLoader.LoadCourseThumbnail(level.Folder);
+        CemuCreatorMiiImage.Source = null;
+        CemuCreatorMiiBorder.IsVisible = false;
+        CemuWorldRecordMiiImage.Source = null;
+        CemuWorldRecordMiiBorder.IsVisible = false;
+        _ = LoadCemuLevelMiiImagesAsync(level);
+
+        CemuPagePreviewCanvas.ShowHiddenBlocks = false;
+        CemuPageHiddenBlocksButton.Content = T("RevealHiddenBlocks");
+        _selectedCemuPreviewFile = "course_data.cdt";
+        UpdateCemuPageAreaButtons(level);
+        LoadCemuPagePreview(level, _selectedCemuPreviewFile);
+        UpdateReplaceCemuLevelButtonState();
+    }
+
+    private async Task LoadCemuLevelMiiImagesAsync(LevelInfo level)
+    {
+        var creator = await _miiImageLoader.LoadAsync(level.CreatorMiiData, CancellationToken.None);
+        if (_selectedCemuNode?.Level != level)
+        {
+            return;
+        }
+
+        level.CreatorMiiImage = creator;
+        CemuCreatorMiiImage.Source = creator;
+        CemuCreatorMiiBorder.IsVisible = creator != null;
+
+        var worldRecord = await _miiImageLoader.LoadAsync(level.WorldRecordBestTimePlayerMiiData, CancellationToken.None);
+        if (_selectedCemuNode?.Level != level)
+        {
+            return;
+        }
+
+        level.WorldRecordMiiImage = worldRecord;
+        CemuWorldRecordMiiImage.Source = worldRecord;
+        CemuWorldRecordMiiBorder.IsVisible = worldRecord != null;
+    }
+
+    private void LoadCemuPagePreview(LevelInfo level, string courseFileName)
+    {
+        try
+        {
+            var courseData = Path.Combine(level.Folder, courseFileName);
+            if (!File.Exists(courseData))
+            {
+                CemuPagePreviewCanvas.Course = null;
+                CemuPagePreviewInfo.Text = $"No {courseFileName} found for this entry.";
+                return;
+            }
+
+            var preview = _courseParser.Read(courseData);
+            CemuPagePreviewCanvas.Course = preview;
+            var areaName = courseFileName == "course_data_sub.cdt" ? T("Underworld") : T("Overworld");
+            CemuPagePreviewInfo.Text = $"{areaName} - {preview.Summary}";
+            CemuPageUnderworldButton.Content = GetAreaSwitchText(courseFileName);
+            Dispatcher.UIThread.Post(() =>
+            {
+                var maxY = Math.Max(0, CemuPagePreviewScrollViewer.Extent.Height - CemuPagePreviewScrollViewer.Viewport.Height);
+                CemuPagePreviewScrollViewer.Offset = new Vector(0, maxY);
+            }, DispatcherPriority.Background);
+        }
+        catch (Exception ex)
+        {
+            CemuPagePreviewCanvas.Course = null;
+            CemuPagePreviewInfo.Text = $"Preview could not be loaded: {ex.Message}";
+        }
+    }
+
+    private void LoadCemuReplaceResults(string filter)
+    {
+        var levels = JsonStore.ToLevelList(_store.LoadDownloaded())
+            .Where(level => string.IsNullOrWhiteSpace(level.Pack))
+            .Concat(LoadLevelPackReplacementLevels())
+            .Where(level => MatchesFilter(level, filter))
+            .OrderBy(level => level.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        _cemuReplaceResults.Clear();
+        foreach (var level in levels)
+        {
+            LoadDownloadedThumbnail(level);
+            _cemuReplaceResults.Add(level);
+        }
+    }
+
+    private IEnumerable<LevelInfo> LoadLevelPackReplacementLevels()
+    {
+        var packs = _store.LoadLevelPacks();
+        foreach (var level in _store.LoadDownloaded().Values.Where(level => !string.IsNullOrWhiteSpace(level.Pack)))
+        {
+            level.Folder = ResolveCourseFolder(level);
+            if (Directory.Exists(level.Folder))
+            {
+                yield return level;
+            }
+        }
+
+        foreach (var (packName, packFolder) in packs)
+        {
+            var packRoot = Path.Combine(_paths.LevelPacksDirectory, packFolder);
+            if (!Directory.Exists(packRoot))
+            {
+                continue;
+            }
+
+            foreach (var directory in Directory.EnumerateDirectories(packRoot))
+            {
+                if (!File.Exists(Path.Combine(directory, "course_data.cdt")))
+                {
+                    continue;
+                }
+
+                var levelId = TryReadLevelIdFromFolder(directory);
+                if (_store.LoadDownloaded().Values.Any(level =>
+                        level.LevelId == levelId &&
+                        string.Equals(level.Pack, packName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                yield return new LevelInfo
+                {
+                    LevelId = levelId,
+                    Name = GetDisplayNameFromCourseFolder(directory),
+                    Creator = "Local",
+                    Pack = packName,
+                    Folder = directory
+                };
+            }
+        }
+    }
+
+    private void UpdateReplaceCemuLevelButtonState()
+    {
+        ReplaceCemuLevelButton.IsEnabled = _selectedCemuNode?.Level != null && _selectedCemuReplacementLevel != null;
     }
 
     private async Task LoadSavedLevelMiiImagesAsync(LevelInfo level)
@@ -2167,6 +2850,7 @@ public sealed partial class MainWindow : Window
                     Summary = $"{children.Count} course(s)",
                     ShortInfo = $"{children.Count} course(s)",
                     IsFolder = node.IsFolder,
+                    IsProtectedFolder = node.IsProtectedFolder,
                     StatsHidden = node.StatsHidden,
                     PackName = node.PackName,
                     PackFolder = node.PackFolder,
@@ -2259,9 +2943,7 @@ public sealed partial class MainWindow : Window
     private string GetCemuProfilePath()
     {
         var profile = ProfileComboBox.SelectedItem?.ToString() ?? _settings.SelectedProfile;
-        return string.IsNullOrWhiteSpace(_settings.CemuDirPath) || string.IsNullOrWhiteSpace(profile)
-            ? ""
-            : Path.Combine(_settings.CemuDirPath, "mlc01", "usr", "save", "00050000", "1018dd00", "user", profile);
+        return _cemuSaveService.GetProfilePath(_settings.CemuDirPath, profile);
     }
 
     private string? GetPackFolderIfEnabled()
@@ -2272,6 +2954,11 @@ public sealed partial class MainWindow : Window
         }
 
         var packName = string.IsNullOrWhiteSpace(PackNameTextBox.Text) ? "Default Pack" : PackNameTextBox.Text.Trim();
+        if (string.Equals(packName, LevelBackupsFolderName, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"{LevelBackupsFolderName} is reserved for CEMU backups.");
+        }
+
         var packs = _store.LoadLevelPacks();
         if (!packs.TryGetValue(packName, out var folder))
         {
@@ -2308,7 +2995,49 @@ public sealed partial class MainWindow : Window
 
     private void SetStatus(string message)
     {
-        StatusText.Text = message;
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => SetStatus(message));
+            return;
+        }
+
+        var timestamp = DateTime.Now.ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+        _notifications.Insert(0, new NotificationEntry
+        {
+            Timestamp = timestamp,
+            Message = message
+        });
+        NotificationToastText.Text = message;
+        NotificationToast.IsVisible = !NotificationHistoryPanel.IsVisible;
+        UpdateNotificationButtonText();
+
+        var sequence = ++_notificationSequence;
+        _ = HideNotificationToastLaterAsync(sequence);
+    }
+
+    private async Task HideNotificationToastLaterAsync(int sequence)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(4), _lifetimeCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (sequence == _notificationSequence)
+            {
+                NotificationToast.IsVisible = false;
+            }
+        });
+    }
+
+    private void UpdateNotificationButtonText()
+    {
+        NotificationButton.Content = $"{T("Notifications")} ({_notifications.Count})";
     }
 
     private void ApplyViewerInfoVisibility()
@@ -2468,6 +3197,7 @@ public sealed partial class MainWindow : Window
     {
         ["DownloadTab"] = "Download",
         ["SavedCoursesTab"] = "Saved Courses",
+        ["CemuTab"] = "CEMU",
         ["SettingsTab"] = "Settings",
         ["Back"] = "Back",
         ["SearchCourses"] = "Search Courses",
@@ -2504,7 +3234,11 @@ public sealed partial class MainWindow : Window
         ["OpenFolder"] = "Open Folder",
         ["DeleteSelected"] = "Delete Selected",
         ["Delete"] = "Delete",
+        ["Replace"] = "Replace",
         ["Cancel"] = "Cancel",
+        ["Close"] = "Close",
+        ["Clear"] = "Clear",
+        ["Notifications"] = "Notifications",
         ["RemoveCoursePackFolder"] = "Remove Course Pack Folder",
         ["RemovePackTitle"] = "Delete Level Pack",
         ["RemovePackWarning"] = "Delete the level pack '{0}'?\n\nAll courses from this level pack will continue to exist without a level pack and will be moved back to the main saved courses folder if they are not already there.",
@@ -2516,6 +3250,18 @@ public sealed partial class MainWindow : Window
         ["RevealHiddenBlocks"] = "Reveal Hidden ? Blocks",
         ["HideHiddenBlocks"] = "Hide Hidden ? Blocks",
         ["ClearRate"] = "Clear Rate",
+        ["CemuSaveFound"] = "CEMU save found",
+        ["CemuSaveNotFound"] = "CEMU save was not found",
+        ["CemuSetupInstructions"] = "Open Settings, enable the CEMU folder option, and select the folder that contains Cemu.exe and the mlc01 directory. The save is expected below mlc01/usr/save/00050000/<Super Mario Maker title id>/user/<profile>.",
+        ["CemuCurrentPath"] = "Current Settings path: {0}",
+        ["CemuCurrentPathNotSet"] = "Current Settings path: not set",
+        ["CemuDetectedPath"] = "Detected path: {0}",
+        ["OpenSettings"] = "Open Settings",
+        ["NoCemuLevelSelected"] = "No CEMU level selected",
+        ["ReplaceWithDownloadedLevel"] = "Replace with downloaded level",
+        ["SearchDownloadedLevels"] = "Search downloaded levels",
+        ["ReplaceCemuLevelTitle"] = "Replace CEMU Level",
+        ["ReplaceCemuLevelWarning"] = "Replace '{0}' in your CEMU save with '{1}'?\n\nA backup of the current CEMU level folder will be created first.",
         ["Settings"] = "Settings",
         ["Language"] = "Language",
         ["UseCemuFolder"] = "Use Cemu Folder",
@@ -2532,6 +3278,7 @@ public sealed partial class MainWindow : Window
         ["ApiOnline"] = "API: Online",
         ["ApiOffline"] = "API: Offline",
         ["UpdateAvailable"] = "Update available",
+        ["Version"] = "Version",
         ["SettingsSaved"] = "Settings saved.",
         ["SettingsReset"] = "Settings reset."
     };
@@ -2540,6 +3287,7 @@ public sealed partial class MainWindow : Window
     {
         ["DownloadTab"] = "Download",
         ["SavedCoursesTab"] = "Gespeicherte Level",
+        ["CemuTab"] = "CEMU",
         ["SettingsTab"] = "Einstellungen",
         ["Back"] = "Zurueck",
         ["SearchCourses"] = "Level suchen",
@@ -2576,7 +3324,11 @@ public sealed partial class MainWindow : Window
         ["OpenFolder"] = "Ordner oeffnen",
         ["DeleteSelected"] = "Auswahl loeschen",
         ["Delete"] = "Loeschen",
+        ["Replace"] = "Ersetzen",
         ["Cancel"] = "Abbrechen",
+        ["Close"] = "Schliessen",
+        ["Clear"] = "Leeren",
+        ["Notifications"] = "Meldungen",
         ["RemoveCoursePackFolder"] = "Level-Pack-Ordner entfernen",
         ["RemovePackTitle"] = "Level-Pack loeschen",
         ["RemovePackWarning"] = "Level-Pack '{0}' loeschen?\n\nAlle Level aus diesem Level-Pack bleiben weiterhin ohne Level-Pack erhalten und werden in den normalen gespeicherten Level-Ordner verschoben, falls sie dort noch nicht vorhanden sind.",
@@ -2588,6 +3340,18 @@ public sealed partial class MainWindow : Window
         ["RevealHiddenBlocks"] = "Versteckte ?-Bloecke zeigen",
         ["HideHiddenBlocks"] = "Versteckte ?-Bloecke ausblenden",
         ["ClearRate"] = "Clear-Rate",
+        ["CemuSaveFound"] = "CEMU-Save gefunden",
+        ["CemuSaveNotFound"] = "CEMU-Save wurde nicht gefunden",
+        ["CemuSetupInstructions"] = "Oeffne die Einstellungen, aktiviere den CEMU-Ordner und waehle den Ordner aus, der Cemu.exe und den mlc01-Ordner enthaelt. Der Save wird unter mlc01/usr/save/00050000/<Super Mario Maker Title-ID>/user/<Profil> erwartet.",
+        ["CemuCurrentPath"] = "Aktueller Pfad in den Einstellungen: {0}",
+        ["CemuCurrentPathNotSet"] = "Aktueller Pfad in den Einstellungen: nicht gesetzt",
+        ["CemuDetectedPath"] = "Erkannter Pfad: {0}",
+        ["OpenSettings"] = "Einstellungen oeffnen",
+        ["NoCemuLevelSelected"] = "Kein CEMU-Level ausgewaehlt",
+        ["ReplaceWithDownloadedLevel"] = "Mit geladenem Level ersetzen",
+        ["SearchDownloadedLevels"] = "Geladene Level suchen",
+        ["ReplaceCemuLevelTitle"] = "CEMU-Level ersetzen",
+        ["ReplaceCemuLevelWarning"] = "'{0}' im CEMU-Save durch '{1}' ersetzen?\n\nVorher wird ein Backup des aktuellen CEMU-Level-Ordners erstellt.",
         ["Settings"] = "Einstellungen",
         ["Language"] = "Sprache",
         ["UseCemuFolder"] = "Cemu-Ordner verwenden",
@@ -2604,6 +3368,7 @@ public sealed partial class MainWindow : Window
         ["ApiOnline"] = "API: Online",
         ["ApiOffline"] = "API: Offline",
         ["UpdateAvailable"] = "Update verfuegbar",
+        ["Version"] = "Version",
         ["SettingsSaved"] = "Einstellungen gespeichert.",
         ["SettingsReset"] = "Einstellungen zurueckgesetzt."
     };

@@ -20,6 +20,17 @@ public sealed class ThumbnailLoader
         return LoadTnl(primary) ?? LoadTnl(secondary);
     }
 
+    public void InvalidateCourseThumbnail(string courseFolder)
+    {
+        if (string.IsNullOrWhiteSpace(courseFolder))
+        {
+            return;
+        }
+
+        _cache.Remove(Path.Combine(courseFolder, "thumbnail0.tnl"));
+        _cache.Remove(Path.Combine(courseFolder, "thumbnail1.tnl"));
+    }
+
     private Bitmap? LoadTnl(string path)
     {
         if (_cache.TryGetValue(path, out var cached))

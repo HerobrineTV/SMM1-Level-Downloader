@@ -18,7 +18,10 @@ public sealed class SavedLevelNode : INotifyPropertyChanged
     public string ShortInfo { get; init; } = "";
     public Bitmap? Thumbnail { get; init; }
     public bool HasThumbnail => Thumbnail != null;
+    public bool NoThumbnail => Thumbnail == null;
     public bool IsFolder { get; init; }
+    public bool IsProtectedFolder { get; init; }
+    public bool CanDeleteFolder => IsFolder && !IsProtectedFolder;
     public Thickness RowMargin { get; init; } = new(0, 5, 0, 5);
     public LevelInfo? Level { get; init; }
     public ObservableCollection<SavedLevelNode> Children { get; init; } = [];

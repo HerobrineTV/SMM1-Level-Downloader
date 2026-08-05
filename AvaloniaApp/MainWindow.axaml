@@ -210,18 +210,37 @@
               BorderBrush="#7B2018"
               BorderThickness="2"
               BoxShadow="0 4 0 0 #65180F">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
             <Border Width="34" Height="34" Background="#F9C74F" BorderBrush="#7B2018" BorderThickness="2" CornerRadius="4">
               <TextBlock Text="?" FontSize="22" FontWeight="Bold" Foreground="#2B1605" HorizontalAlignment="Center" VerticalAlignment="Center" />
             </Border>
-            <TextBlock Text="Super Mario Maker 1 Level Downloader"
-                       FontSize="22"
-                       FontWeight="Bold"
-                       Foreground="#2B1605"
-                       VerticalAlignment="Center" />
+            <StackPanel VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="Super Mario Maker 1 Level Downloader"
+                         FontSize="22"
+                         FontWeight="Bold"
+                         Foreground="#2B1605"
+                         TextTrimming="CharacterEllipsis" />
+              <TextBlock x:Name="VersionText"
+                         Text="Version"
+                         FontSize="11"
+                         Foreground="#4F2C0C"
+                         FontWeight="SemiBold" />
+            </StackPanel>
           </StackPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="8"
+                      HorizontalAlignment="Right"
+                      VerticalAlignment="Center"
+                      Margin="24,0,0,0">
+            <Button x:Name="UpdateButton"
+                    Content="Update available"
+                    IsVisible="False"
+                    Click="UpdateButton_OnClick" />
+            <Button x:Name="NotificationButton"
+                    Content="Notifications"
+                    Click="NotificationButton_OnClick" />
             <Border Background="#FFF8D6"
                     BorderBrush="#7B2018"
                     BorderThickness="2"
@@ -241,24 +260,8 @@
                            VerticalAlignment="Center" />
               </StackPanel>
             </Border>
-            <Button x:Name="UpdateButton"
-                    Content="Update available"
-                    IsVisible="False"
-                    Click="UpdateButton_OnClick" />
-            <Border Background="#FFF8D6"
-                    BorderBrush="#7B2018"
-                    BorderThickness="2"
-                    CornerRadius="5"
-                    Padding="10,5">
-              <TextBlock x:Name="StatusText"
-                         Text="Ready"
-                         Foreground="#2B1605"
-                         FontWeight="SemiBold"
-                         HorizontalAlignment="Right"
-                         VerticalAlignment="Center" />
-            </Border>
           </StackPanel>
-        </DockPanel>
+        </Grid>
       </Border>
 
     <TabControl x:Name="MainTabs" Grid.Row="1" Margin="16,0,16,16">
@@ -295,7 +298,7 @@
           </Border>
 
           <Grid x:Name="SearchResultsLayout" Grid.Row="1" ColumnDefinitions="*,0" ColumnSpacing="12" Margin="0,12,0,0">
-            <Border Classes="panel">
+            <Border x:Name="CemuLevelsPanel" Classes="panel">
               <ListBox x:Name="SearchResultsListBox"
                        SelectionChanged="SearchResultsListBox_OnSelectionChanged"
                        ScrollViewer.ScrollChanged="SearchResultsListBox_OnScrollChanged">
@@ -578,7 +581,7 @@
                               Padding="0"
                               HorizontalAlignment="Right"
                               VerticalAlignment="Top"
-                              IsVisible="{Binding IsFolder}"
+                              IsVisible="{Binding CanDeleteFolder}"
                               ToolTip.Tip="Delete Pack"
                               Click="DeletePackButton_OnClick">
                         <Path Width="13"
@@ -694,23 +697,19 @@
                       <TextBlock x:Name="SavedClearsText" Foreground="#2B1605" FontWeight="SemiBold" />
                     </Border>
                   </WrapPanel>
-                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,8">
+                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
                     <TextBlock x:Name="CoursePreviewInfo"
                                Text="The course preview will appear below."
                                FontSize="12"
                                Classes="muted"
                                TextWrapping="Wrap"
                                VerticalAlignment="Center" />
-                    <Button x:Name="OverworldPreviewButton"
-                            Grid.Column="1"
-                            Content="Overworld"
-                            Click="OverworldPreviewButton_OnClick" />
                     <Button x:Name="UnderworldPreviewButton"
-                            Grid.Column="2"
+                            Grid.Column="1"
                             Content="Underworld"
                             Click="UnderworldPreviewButton_OnClick" />
                     <Button x:Name="HiddenBlocksPreviewButton"
-                            Grid.Column="3"
+                            Grid.Column="2"
                             Content="Reveal Hidden ? Blocks"
                             Click="HiddenBlocksPreviewButton_OnClick" />
                   </Grid>
@@ -723,6 +722,113 @@
                   </Grid>
                 </Grid>
               </Grid>
+            </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem x:Name="CemuTab" Header="CEMU">
+        <Grid RowDefinitions="Auto,*" Margin="0,12,0,0">
+          <WrapPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="CemuStatusText"
+                       Text="CEMU save found"
+                       Classes="sectionTitle"
+                       Margin="0,4,16,0" />
+            <Button x:Name="RefreshCemuButton"
+                    Content="Refresh"
+                    Click="RefreshCemuButton_OnClick" />
+            <Button x:Name="OpenCemuFolderButton"
+                    Content="Open Folder"
+                    Click="OpenCemuFolderButton_OnClick" />
+          </WrapPanel>
+          <Grid Grid.Row="1">
+            <Border x:Name="CemuEmptyPanel"
+                    Classes="panel"
+                    IsVisible="False">
+              <StackPanel Spacing="12" MaxWidth="720" HorizontalAlignment="Left">
+                <TextBlock x:Name="CemuEmptyTitle"
+                           Text="CEMU save was not found"
+                           Classes="sectionTitle"
+                           TextWrapping="Wrap" />
+                <TextBlock x:Name="CemuEmptyMessage"
+                           Text="Set your CEMU folder in Settings."
+                           Foreground="#2B1605"
+                           FontSize="14"
+                           TextWrapping="Wrap" />
+                <Border Background="#FFF8D6"
+                        BorderBrush="#A86725"
+                        BorderThickness="1.5"
+                        CornerRadius="5"
+                        Padding="10">
+                  <TextBlock x:Name="CemuEmptyPathText"
+                             Text="Current path: not set"
+                             Foreground="#2B1605"
+                             FontWeight="SemiBold"
+                             TextWrapping="Wrap" />
+                </Border>
+                <WrapPanel>
+                  <Button x:Name="OpenSettingsForCemuButton"
+                          Content="Open Settings"
+                          Click="OpenSettingsForCemuButton_OnClick" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+            <Border Classes="panel">
+              <ScrollViewer x:Name="CemuLevelsScrollViewer"
+                            VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled"
+                            SizeChanged="CemuLevelsScrollViewer_OnSizeChanged">
+                <ItemsControl x:Name="CemuLevelsItemsControl">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border MinWidth="174"
+                              HorizontalAlignment="Stretch"
+                              Margin="0,0,12,12"
+                              Padding="8"
+                              Background="#FFF8D6"
+                              BorderBrush="#A86725"
+                              BorderThickness="1.5"
+                              CornerRadius="5"
+                              Cursor="Hand"
+                              PointerPressed="CemuLevelCard_OnPointerPressed">
+                        <StackPanel Spacing="7">
+                          <Border Height="96"
+                                  Background="#E9D58A"
+                                  BorderBrush="#8F4F17"
+                                  BorderThickness="1"
+                                  CornerRadius="4"
+                                  ClipToBounds="True"
+                                  IsVisible="{Binding HasThumbnail}">
+                            <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                          </Border>
+                          <Border Height="96"
+                                  Background="#E9D58A"
+                                  BorderBrush="#8F4F17"
+                                  BorderThickness="1"
+                                  CornerRadius="4"
+                                  IsVisible="{Binding NoThumbnail}">
+                            <TextBlock Text="No Preview"
+                                       Classes="muted"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                          </Border>
+                          <TextBlock Text="{Binding DisplayName}"
+                                     FontWeight="SemiBold"
+                                     Foreground="#241301"
+                                     TextWrapping="Wrap"
+                                     TextAlignment="Center"
+                                     MaxHeight="42" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
             </Border>
           </Grid>
         </Grid>
@@ -742,7 +848,7 @@
               <TextBox x:Name="CemuPathTextBox" Watermark="Cemu folder path" />
               <Button x:Name="SelectCemuFolderButton" Grid.Column="1" Content="Select Folder" Click="SelectCemuFolderButton_OnClick" />
             </Grid>
-            <ComboBox x:Name="ProfileComboBox" Width="240" />
+            <ComboBox x:Name="ProfileComboBox" Width="240" SelectionChanged="ProfileComboBox_OnSelectionChanged" />
             <CheckBox x:Name="HideViewerInfoCheckBox"
                       Content="Hide Viewer Info"
                       Checked="HideViewerInfoCheckBox_OnChanged"
@@ -987,13 +1093,180 @@
         </Grid>
       </Grid>
     </Border>
+    <Border x:Name="CemuLevelPage"
+            Grid.Row="1"
+            Classes="panel"
+            Margin="16,0,16,16"
+            IsVisible="False">
+      <Grid RowDefinitions="Auto,*" RowSpacing="12">
+        <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="16">
+          <Button x:Name="BackFromCemuLevelButton"
+                  Content="Back"
+                  Click="BackFromCemuLevelButton_OnClick"
+                  VerticalAlignment="Top" />
+          <Border Grid.Column="1"
+                  Width="160"
+                  Height="92"
+                  Background="#E9D58A"
+                  BorderBrush="#8F4F17"
+                  BorderThickness="2"
+                  CornerRadius="6"
+                  ClipToBounds="True">
+            <Image x:Name="CemuLevelHeaderThumbnail" Stretch="UniformToFill" />
+          </Border>
+          <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+            <TextBlock x:Name="CemuPageTitle"
+                       Text="CEMU Level"
+                       Classes="sectionTitle"
+                       TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" Margin="0,4,0,0">
+              <TextBlock x:Name="CemuPageCreatorHeader" Text="Creator" FontSize="11" Classes="muted" />
+              <TextBlock x:Name="CemuPageClearRateHeader" Text="Clear Rate" Grid.Column="1" FontSize="11" Classes="muted" />
+              <TextBlock x:Name="CemuPageWorldRecordHeader" Text="World Record" Grid.Column="2" FontSize="11" Classes="muted" />
+              <DockPanel Grid.Row="1" LastChildFill="True">
+                <Border x:Name="CemuCreatorMiiBorder"
+                        Width="32"
+                        Height="32"
+                        Margin="0,0,7,0"
+                        Background="#E9D58A"
+                        BorderBrush="#8F4F17"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        ClipToBounds="True"
+                        Cursor="Hand"
+                        PointerPressed="CemuCreatorMii_OnPointerPressed"
+                        IsVisible="False">
+                  <Image x:Name="CemuCreatorMiiImage" Stretch="UniformToFill" />
+                </Border>
+                <TextBlock x:Name="CemuPageCreatorText" Text="-" FontWeight="SemiBold" Foreground="#2B1605" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </DockPanel>
+              <TextBlock x:Name="CemuPageClearRateText" Grid.Row="1" Grid.Column="1" Text="-" FontWeight="SemiBold" Foreground="#2B1605" TextWrapping="Wrap" />
+              <DockPanel Grid.Row="1" Grid.Column="2" LastChildFill="True">
+                <Border x:Name="CemuWorldRecordMiiBorder"
+                        Width="32"
+                        Height="32"
+                        Margin="0,0,7,0"
+                        Background="#E9D58A"
+                        BorderBrush="#8F4F17"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        ClipToBounds="True"
+                        Cursor="Hand"
+                        PointerPressed="CemuWorldRecordMii_OnPointerPressed"
+                        IsVisible="False">
+                  <Image x:Name="CemuWorldRecordMiiImage" Stretch="UniformToFill" />
+                </Border>
+                <TextBlock x:Name="CemuPageWorldRecordText" Text="-" FontWeight="SemiBold" Foreground="#2B1605" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </DockPanel>
+            </Grid>
+            <WrapPanel>
+              <Border Classes="statChip">
+                <TextBlock x:Name="CemuPageStarsText" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Classes="statChip">
+                <TextBlock x:Name="CemuPageDownloadsText" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Classes="statChip">
+                <TextBlock x:Name="CemuPageTotalRunsText" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Classes="statChip">
+                <TextBlock x:Name="CemuPageClearsText" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+              <Border Classes="statChip">
+                <TextBlock x:Name="CemuPageFolderText" Foreground="#2B1605" FontWeight="SemiBold" />
+              </Border>
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,360" ColumnSpacing="12">
+          <Grid RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+              <TextBlock x:Name="CemuPagePreviewInfo"
+                         Text="The course preview will appear below."
+                         FontSize="12"
+                         Classes="muted"
+                         TextWrapping="Wrap"
+                         VerticalAlignment="Center" />
+              <Button x:Name="CemuPageUnderworldButton"
+                      Grid.Column="1"
+                      Content="Underworld"
+                      Click="CemuPageUnderworldButton_OnClick" />
+              <Button x:Name="CemuPageHiddenBlocksButton"
+                      Grid.Column="2"
+                      Content="Reveal Hidden ? Blocks"
+                      Click="CemuPageHiddenBlocksButton_OnClick" />
+            </Grid>
+            <ScrollViewer x:Name="CemuPagePreviewScrollViewer"
+                          Grid.Row="1"
+                          HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+              <controls:CoursePreviewControl x:Name="CemuPagePreviewCanvas" />
+            </ScrollViewer>
+          </Grid>
+          <Border Grid.Column="1"
+                  BorderBrush="#A86725"
+                  BorderThickness="1.5"
+                  CornerRadius="5"
+                  Padding="10"
+                  Background="#FFF8D6">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+              <TextBlock x:Name="CemuReplaceTitle"
+                         Text="Replace with downloaded level"
+                         FontWeight="SemiBold"
+                         Foreground="#2B1605" />
+              <TextBox x:Name="CemuReplaceSearchTextBox"
+                       Grid.Row="1"
+                       Watermark="Search downloaded levels"
+                       TextChanged="CemuReplaceSearchTextBox_OnTextChanged" />
+              <ListBox x:Name="CemuReplaceResultsListBox"
+                       Grid.Row="2"
+                       SelectionChanged="CemuReplaceResultsListBox_OnSelectionChanged">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,4">
+                      <Border Width="64"
+                              Height="38"
+                              Background="#E9D58A"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="1"
+                              CornerRadius="4"
+                              ClipToBounds="True"
+                              IsVisible="{Binding HasThumbnail}">
+                        <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+                      </Border>
+                      <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Name}"
+                                   FontWeight="SemiBold"
+                                   Foreground="#241301"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Summary}"
+                                   FontSize="11"
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Button x:Name="ReplaceCemuLevelButton"
+                      Grid.Row="3"
+                      Content="Replace"
+                      IsEnabled="False"
+                      Click="ReplaceCemuLevelButton_OnClick"
+                      HorizontalAlignment="Left" />
+            </Grid>
+          </Border>
+        </Grid>
+      </Grid>
+    </Border>
     <Border x:Name="LevelViewerPage"
             Grid.Row="1"
             Classes="panel"
             Margin="16,0,16,16"
             IsVisible="False">
       <Grid RowDefinitions="Auto,*" RowSpacing="10">
-        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
           <Button x:Name="BackFromViewerButton"
                   Grid.Column="0"
                   Content="Back"
@@ -1009,16 +1282,12 @@
                        Classes="muted"
                        TextWrapping="Wrap" />
           </StackPanel>
-          <Button x:Name="LevelViewerOverworldButton"
-                  Grid.Column="2"
-                  Content="Overworld"
-                  Click="LevelViewerOverworldButton_OnClick" />
           <Button x:Name="LevelViewerUnderworldButton"
-                  Grid.Column="3"
+                  Grid.Column="2"
                   Content="Underworld"
                   Click="LevelViewerUnderworldButton_OnClick" />
           <Button x:Name="LevelViewerHiddenBlocksButton"
-                  Grid.Column="4"
+                  Grid.Column="3"
                   Content="Reveal Hidden ? Blocks"
                   Click="LevelViewerHiddenBlocksButton_OnClick" />
         </Grid>
@@ -1031,5 +1300,82 @@
       </Grid>
     </Border>
     </Grid>
+    <Border x:Name="NotificationToast"
+            ZIndex="20"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="0,78,24,0"
+            MaxWidth="430"
+            Padding="12,9"
+            Background="#FFF8D6"
+            BorderBrush="#7B2018"
+            BorderThickness="2"
+            CornerRadius="5"
+            BoxShadow="0 4 0 0 #6E3F17"
+            IsVisible="False">
+      <TextBlock x:Name="NotificationToastText"
+                 Text="Ready"
+                 Foreground="#2B1605"
+                 FontWeight="SemiBold"
+                 TextWrapping="Wrap" />
+    </Border>
+    <Border x:Name="NotificationHistoryPanel"
+            ZIndex="21"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="0,78,24,0"
+            Width="430"
+            MaxHeight="420"
+            Padding="12"
+            Background="#FFF1AE"
+            BorderBrush="#7B4A20"
+            BorderThickness="2"
+            CornerRadius="6"
+            BoxShadow="0 4 0 0 #6E3F17"
+            IsVisible="False">
+      <Grid RowDefinitions="Auto,*" RowSpacing="8">
+        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+          <TextBlock x:Name="NotificationHistoryTitle"
+                     Text="Notifications"
+                     Classes="sectionTitle"
+                     VerticalAlignment="Center" />
+          <Button x:Name="ClearNotificationHistoryButton"
+                  Grid.Column="1"
+                  Content="Clear"
+                  Click="ClearNotificationHistoryButton_OnClick" />
+          <Button x:Name="CloseNotificationHistoryButton"
+                  Grid.Column="2"
+                  Content="Close"
+                  Click="CloseNotificationHistoryButton_OnClick" />
+        </Grid>
+        <ListBox x:Name="NotificationHistoryListBox"
+                 Grid.Row="1">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4">
+                <TextBlock Text="{Binding DisplayText}"
+                           Foreground="#2B1605"
+                           TextWrapping="Wrap"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Width="28"
+                        Height="28"
+                        Padding="0"
+                        ToolTip.Tip="Delete"
+                        Click="DeleteNotificationButton_OnClick">
+                  <Path Width="13"
+                        Height="15"
+                        Stretch="Uniform"
+                        Data="M6 2 L14 2 M8 2 L8 4 M12 2 L12 4 M4 5 L16 5 M6 5 L7 17 L13 17 L14 5 M9 8 L9 14 M11 8 L11 14"
+                        Stroke="#2B1605"
+                        StrokeThickness="1.7"
+                        StrokeLineCap="Round" />
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </Grid>
+    </Border>
   </Grid>
 </Window>
