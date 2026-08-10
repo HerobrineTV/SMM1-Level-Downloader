@@ -20,7 +20,7 @@ public sealed partial class MainWindow : Window
 {
     private const string ApiPingUrl = "https://api.bobac-analytics.com/smm1/ping";
     private const string GithubLatestReleaseUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases/latest";
-    private const string CurrentReleaseTag = "[Pre_0] V2.0.0";
+    private const string CurrentReleaseTag = "Pre_0__V2.0.0";
     private const string LevelBackupsFolderName = "LevelBackups";
 
     private readonly ProjectPaths _paths = new();
