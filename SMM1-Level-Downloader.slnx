@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/AvaloniaApp/">
+    <Project Path="AvaloniaApp/SMMDownloader.Avalonia.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,87 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SMMDownloader.Avalonia.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+    </Style>
+    <Style Selector="TextBox:pointerover">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+    </Style>
+    <Style Selector="TextBox:focus">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#8F4F17" />
+    </Style>
+    <Style Selector="AutoCompleteBox">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+    </Style>
+    <Style Selector="AutoCompleteBox:pointerover">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#A86725" />
+    </Style>
+    <Style Selector="AutoCompleteBox:focus-within">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+      <Setter Property="BorderBrush" Value="#8F4F17" />
+    </Style>
+    <Style Selector="PopupRoot">
+      <Setter Property="Background" Value="#FFF8D6" />
+    </Style>
+    <Style Selector="ComboBoxItem">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover">
+      <Setter Property="Background" Value="#FFD96A" />
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected">
+      <Setter Property="Background" Value="#F9C74F" />
+      <Setter Property="Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ComboBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#251505" />
+    </Style>
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="#FFF4BD" />
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Background" Value="#FFF8D6" />
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover">
+      <Setter Property="Background" Value="#FFD96A" />
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:selected">
+      <Setter Property="Background" Value="#F9C74F" />
+      <Setter Property="Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#241301" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="TextElement.Foreground" Value="#241301" />
+    </Style>
+  </Application.Styles>
+</Application>
