@@ -73,3 +73,23 @@ All Copyright of the Used Images goes to Nintendo
 
 ### Repo Views:
 ![Visitor Count](https://profile-counter.glitch.me/HerobrineTV_SMM1/count.svg)
+
+
+# I want to build this myself!
+Feel free to fork this repo and build it yourself!
+
+If u use Windows that is the build command I used:
+
+`dotnet publish AvaloniaApp\SMMDownloader.Avalonia.csproj -c Release -r win-x64 --self-contained true -o publish\windows-x64`
+
+For Linux:
+
+`dotnet publish AvaloniaApp\SMMDownloader.Avalonia.csproj -c Release -r linux-x64 --self-contained true -o publish\linux-x64`
+
+To run it, just search the 
+
+SMMDownloader.Avalonia.exe
+or
+SMMDownloader.Avalonia
+
+and run it on your Machine!
