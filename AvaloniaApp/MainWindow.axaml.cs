@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using SMMDownloader.Avalonia.Controls;
@@ -19,7 +20,7 @@ public sealed partial class MainWindow : Window
 {
     private const string ApiPingUrl = "https://api.bobac-analytics.com/smm1/ping";
     private const string GithubLatestReleaseUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases/latest";
-    private const string CurrentReleaseTag = "V1.0.0";
+    private const string CurrentReleaseTag = "[Pre_0] V2.0.0";
     private const string LevelBackupsFolderName = "LevelBackups";
 
     private readonly ProjectPaths _paths = new();
@@ -98,6 +99,8 @@ public sealed partial class MainWindow : Window
         await RunStartupMigrationAsync();
         _store.EnsureInitialized();
         InitializeDataBackedUi();
+        ResetPrereleaseWarningOptOutIfStableRelease();
+        await ShowPrereleaseWarningIfNeededAsync();
     }
 
     private void InitializeDataBackedUi()
@@ -109,6 +112,7 @@ public sealed partial class MainWindow : Window
         ResetProfileSelectedLevelDetails();
         LoadSavedLevels();
         RefreshCemuLevels();
+        _ = LoadCreditImagesAsync(_lifetimeCts.Token);
         _ = RunApiStatusLoopAsync(_lifetimeCts.Token);
         _ = CheckForUpdatesAsync(_lifetimeCts.Token);
         _ = RegisterFirstStartIfNeededAsync(_lifetimeCts.Token);
@@ -230,6 +234,94 @@ public sealed partial class MainWindow : Window
         }
 
         return dialog.ShowDialog(this);
+    }
+
+    private async Task ShowPrereleaseWarningIfNeededAsync()
+    {
+        if (!CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase) ||
+            _settings.HidePrereleaseWarning)
+        {
+            return;
+        }
+
+        var dontShowAgainCheckBox = new CheckBox
+        {
+            Content = T("DontShowAgain"),
+            Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
+        };
+
+        var okButton = new Button
+        {
+            Content = T("Ok"),
+            MinWidth = 90,
+            Padding = new Thickness(13, 8),
+            Background = new SolidColorBrush(Color.Parse("#F9C74F")),
+            Foreground = new SolidColorBrush(Color.Parse("#2B1605")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#8F4F17")),
+            BorderThickness = new Thickness(2),
+            CornerRadius = new CornerRadius(5),
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+
+        var dialog = new Window
+        {
+            Title = T("PrereleaseWarningTitle"),
+            Width = 520,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            Background = Brushes.Transparent,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new Border
+            {
+                Background = new SolidColorBrush(Color.Parse("#FFF8D6")),
+                BorderBrush = new SolidColorBrush(Color.Parse("#8F4F17")),
+                BorderThickness = new Thickness(2),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(18),
+                Child = new StackPanel
+                {
+                    Spacing = 12,
+                    Children =
+                    {
+                        new TextBlock
+                        {
+                            Text = T("PrereleaseWarningTitle"),
+                            FontSize = 18,
+                            FontWeight = FontWeight.Bold,
+                            Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
+                        },
+                        new TextBlock
+                        {
+                            Text = T("PrereleaseWarningMessage"),
+                            TextWrapping = TextWrapping.Wrap,
+                            Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
+                        },
+                        dontShowAgainCheckBox,
+                        okButton
+                    }
+                }
+            }
+        };
+
+        okButton.Click += (_, _) => dialog.Close(dontShowAgainCheckBox.IsChecked == true);
+        var hideWarning = await dialog.ShowDialog<bool>(this);
+        if (hideWarning)
+        {
+            _settings.HidePrereleaseWarning = true;
+            _store.SaveSettings(_settings);
+        }
+    }
+
+    private void ResetPrereleaseWarningOptOutIfStableRelease()
+    {
+        if (CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase) ||
+            !_settings.HidePrereleaseWarning)
+        {
+            return;
+        }
+
+        _settings.HidePrereleaseWarning = false;
+        _store.SaveSettings(_settings);
     }
 
     private async Task<bool> ShowConfirmDialogAsync(string title, string message, string confirmText, string cancelText)
@@ -1489,8 +1581,33 @@ public sealed partial class MainWindow : Window
     {
         if (!string.IsNullOrWhiteSpace(_availableUpdateUrl))
         {
-            DesktopIntegration.OpenPath(_availableUpdateUrl);
+            DesktopIntegration.OpenUrl(_availableUpdateUrl);
         }
+    }
+
+    private void HerobrineGithubButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://github.com/HerobrineTV");
+    }
+
+    private void HerobrineDiscordButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://discord.com/invite/5bbpH2SpGN");
+    }
+
+    private void HerobrineTwitterButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://twitter.com/HerobrineTVv");
+    }
+
+    private void SnoozbusterGithubButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://github.com/snoozbuster");
+    }
+
+    private void LeoMauroGithubButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://github.com/leomaurodesenv");
     }
 
     private void NotificationButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1709,6 +1826,7 @@ public sealed partial class MainWindow : Window
         SavedCoursesTab.Header = T("SavedCoursesTab");
         CemuTab.Header = T("CemuTab");
         SettingsTab.Header = T("SettingsTab");
+        CreditsTab.Header = T("CreditsTab");
 
         SearchCoursesTitle.Text = T("SearchCourses");
         SearchTextBox.Watermark = T("SearchWatermark");
@@ -1801,6 +1919,18 @@ public sealed partial class MainWindow : Window
         SaveSettingsButton.Content = T("SaveSettings");
         ResetSettingsButton.Content = T("ResetSettings");
         RefreshAllDownloadedDataButton.Content = T("RefreshAllDownloadedData");
+        CreditsTitle.Text = T("CreditsTitle");
+        CreditsDescriptionText.Text = T("CreditsDescription");
+        CreditsArchiveText.Text = T("CreditsArchive");
+        CreditsDatabaseText.Text = T("CreditsDatabase");
+        CreditsNintendoText.Text = T("CreditsNintendo");
+        CreditsAboutTitle.Text = T("CreditsAbout");
+        HerobrineRoleText.Text = T("ToolCreator");
+        SnoozbusterCreditText.Text = T("CourseViewerCredit");
+        LeoMauroCreditText.Text = T("CourseViewerCredit");
+        SpecialThanksTitle.Text = T("SpecialThanksTitle");
+        SpecialThanksText.Text = T("SpecialThanks");
+        CreditsFeedbackText.Text = T("CreditsFeedback");
         UpdateApiStatusUi();
         UpdateReleaseStatusUi();
         ApplyViewerInfoVisibility();
@@ -2046,6 +2176,30 @@ public sealed partial class MainWindow : Window
         ProfileSelectedCreatorRow.IsVisible = level.CreatorMiiImage != null;
         ProfileSelectedWorldRecordMiiImage.Source = level.WorldRecordMiiImage;
         ProfileSelectedWorldRecordRow.IsVisible = level.WorldRecordMiiImage != null;
+    }
+
+    private async Task LoadCreditImagesAsync(CancellationToken cancellationToken)
+    {
+        await LoadCreditImageAsync(HerobrineAvatarImage, "https://github.com/HerobrineTV.png?size=128", cancellationToken);
+        await LoadCreditImageAsync(SnoozbusterAvatarImage, "https://github.com/snoozbuster.png?size=128", cancellationToken);
+        await LoadCreditImageAsync(LeoMauroAvatarImage, "https://github.com/leomaurodesenv.png?size=128", cancellationToken);
+    }
+
+    private async Task LoadCreditImageAsync(Image image, string url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var bytes = await _statusHttpClient.GetByteArrayAsync(url, cancellationToken);
+            using var stream = new MemoryStream(bytes);
+            var bitmap = new Bitmap(stream);
+            await Dispatcher.UIThread.InvokeAsync(() => image.Source = bitmap);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch
+        {
+        }
     }
 
     private void AddProfileLevel(LevelInfo level)
@@ -3199,6 +3353,7 @@ public sealed partial class MainWindow : Window
         ["SavedCoursesTab"] = "Saved Courses",
         ["CemuTab"] = "CEMU",
         ["SettingsTab"] = "Settings",
+        ["CreditsTab"] = "Credits",
         ["Back"] = "Back",
         ["SearchCourses"] = "Search Courses",
         ["SearchWatermark"] = "Level name, level ID, creator name or creator ID",
@@ -3238,6 +3393,7 @@ public sealed partial class MainWindow : Window
         ["Cancel"] = "Cancel",
         ["Close"] = "Close",
         ["Clear"] = "Clear",
+        ["Ok"] = "OK",
         ["Notifications"] = "Notifications",
         ["RemoveCoursePackFolder"] = "Remove Course Pack Folder",
         ["RemovePackTitle"] = "Delete Level Pack",
@@ -3280,7 +3436,21 @@ public sealed partial class MainWindow : Window
         ["UpdateAvailable"] = "Update available",
         ["Version"] = "Version",
         ["SettingsSaved"] = "Settings saved.",
-        ["SettingsReset"] = "Settings reset."
+        ["SettingsReset"] = "Settings reset.",
+        ["CreditsTitle"] = "Information",
+        ["CreditsDescription"] = "This is a fanmade level downloader for Super Mario Maker 1.",
+        ["CreditsArchive"] = "It uses saved levels from the Wayback Machine (archive.org).",
+        ["CreditsDatabase"] = "The level list is indexed in a database so courses can be searched.",
+        ["CreditsNintendo"] = "Super Mario Maker, Mario and all related Nintendo assets belong to Nintendo.",
+        ["CreditsAbout"] = "Credits",
+        ["ToolCreator"] = "Creator of this Tool",
+        ["CourseViewerCredit"] = "Course Viewer for the Course Display",
+        ["SpecialThanksTitle"] = "Special Thanks",
+        ["SpecialThanks"] = "Special thanks to James M***, who brought the project back into focus and made this rework finally get started.",
+        ["CreditsFeedback"] = "Leave feedback or requests for help at any time.",
+        ["PrereleaseWarningTitle"] = "Prerelease Version",
+        ["PrereleaseWarningMessage"] = "This is a prerelease version. Bugs can occur. If you find bugs, please contact me on Discord: nintendo_switch.",
+        ["DontShowAgain"] = "Do not show again"
     };
 
     private static readonly Dictionary<string, string> GermanText = new()
@@ -3289,6 +3459,7 @@ public sealed partial class MainWindow : Window
         ["SavedCoursesTab"] = "Gespeicherte Level",
         ["CemuTab"] = "CEMU",
         ["SettingsTab"] = "Einstellungen",
+        ["CreditsTab"] = "Credits",
         ["Back"] = "Zurueck",
         ["SearchCourses"] = "Level suchen",
         ["SearchWatermark"] = "Levelname, Level-ID, Erstellername oder Ersteller-ID",
@@ -3328,6 +3499,7 @@ public sealed partial class MainWindow : Window
         ["Cancel"] = "Abbrechen",
         ["Close"] = "Schliessen",
         ["Clear"] = "Leeren",
+        ["Ok"] = "OK",
         ["Notifications"] = "Meldungen",
         ["RemoveCoursePackFolder"] = "Level-Pack-Ordner entfernen",
         ["RemovePackTitle"] = "Level-Pack loeschen",
@@ -3370,7 +3542,21 @@ public sealed partial class MainWindow : Window
         ["UpdateAvailable"] = "Update verfuegbar",
         ["Version"] = "Version",
         ["SettingsSaved"] = "Einstellungen gespeichert.",
-        ["SettingsReset"] = "Einstellungen zurueckgesetzt."
+        ["SettingsReset"] = "Einstellungen zurueckgesetzt.",
+        ["CreditsTitle"] = "Information",
+        ["CreditsDescription"] = "Dies ist ein fanmade Level-Downloader fuer Super Mario Maker 1.",
+        ["CreditsArchive"] = "Er nutzt gespeicherte Level aus der Wayback Machine (archive.org).",
+        ["CreditsDatabase"] = "Die Levelliste ist in einer Datenbank indexiert, damit Level gesucht werden koennen.",
+        ["CreditsNintendo"] = "Super Mario Maker, Mario und alle zugehoerigen Nintendo-Assets gehoeren Nintendo.",
+        ["CreditsAbout"] = "Credits",
+        ["ToolCreator"] = "Creator of this Tool",
+        ["CourseViewerCredit"] = "Course Viewer fuer die Level-Anzeige",
+        ["SpecialThanksTitle"] = "Special Thanks",
+        ["SpecialThanks"] = "Special Thanks an James M***, der das Projekt wieder in den Fokus gerueckt hat und wodurch dieser Rework endlich losging.",
+        ["CreditsFeedback"] = "Feedback oder Hilfeanfragen sind jederzeit willkommen.",
+        ["PrereleaseWarningTitle"] = "Prerelease-Version",
+        ["PrereleaseWarningMessage"] = "Dies ist eine Prerelease-Version. Es koennen Bugs auftreten. Wenn du Bugs findest, melde dich gerne bei mir auf Discord: nintendo_switch.",
+        ["DontShowAgain"] = "Nicht erneut anzeigen"
     };
 
     private sealed class DownloadState

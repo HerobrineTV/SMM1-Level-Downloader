@@ -43,6 +43,9 @@ public sealed class AppSettings
     [JsonPropertyName("lastFullRefresh")]
     public string LastFullRefresh { get; set; } = "";
 
+    [JsonPropertyName("hidePrereleaseWarning")]
+    public bool HidePrereleaseWarning { get; set; }
+
     [JsonPropertyName("searchParams")]
     public SearchParams SearchParams { get; set; } = new();
 }

@@ -38,4 +38,14 @@ public static class DesktopIntegration
 
         Process.Start("xdg-open", path);
     }
+
+    public static void OpenUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    }
 }
