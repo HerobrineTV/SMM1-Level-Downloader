@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ApplicationManifest Condition="'$(OS)' == 'Windows_NT'">app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
+    <UseAppHost>true</UseAppHost>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -16,6 +17,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\Icon.png" />
+    <AvaloniaResource Include="Assets\Icon.ico" />
     <AvaloniaResource Include="Assets\CourseViewer\**\*.png" />
   </ItemGroup>
 
