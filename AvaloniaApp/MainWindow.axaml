@@ -8,7 +8,7 @@
         Height="760"
         MinWidth="980"
         MinHeight="640"
-        Icon="/Assets/Icon.png">
+        Icon="/Assets/Icon.ico">
   <Window.Styles>
     <Style Selector="Button">
       <Setter Property="Padding" Value="13,8" />
