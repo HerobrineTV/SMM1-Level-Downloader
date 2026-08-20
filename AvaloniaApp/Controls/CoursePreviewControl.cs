@@ -15,6 +15,10 @@ public sealed class CoursePreviewControl : Control
     private const int MaxCachedPixels = 20_000_000;
     private const int GroundStateCount = 72;
     private const string AssetRoot = "avares://SMMDownloader.Avalonia/Assets/CourseViewer";
+    private static readonly RenderOptions PixelArtRenderOptions = new()
+    {
+        BitmapInterpolationMode = BitmapInterpolationMode.None
+    };
 
     public static readonly StyledProperty<CoursePreview?> CourseProperty =
         AvaloniaProperty.Register<CoursePreviewControl, CoursePreview?>(nameof(Course));
@@ -80,14 +84,17 @@ public sealed class CoursePreviewControl : Control
         var width = Math.Max(Bounds.Width, course.WidthBlocks * Tile);
         var height = course.HeightBlocks * Tile;
 
-        if (TryDrawCachedCourse(context, course, width, height))
+        using (context.PushRenderOptions(PixelArtRenderOptions))
         {
-            DrawDebugOverlay(context, course, height);
-            return;
-        }
+            if (TryDrawCachedCourse(context, course, width, height))
+            {
+                DrawDebugOverlay(context, course, height);
+                return;
+            }
 
-        DrawCourseContent(context, course, width, height);
-        DrawDebugOverlay(context, course, height);
+            DrawCourseContent(context, course, width, height);
+            DrawDebugOverlay(context, course, height);
+        }
     }
 
     private bool TryDrawCachedCourse(DrawingContext context, CoursePreview course, double width, double height)
@@ -109,6 +116,7 @@ public sealed class CoursePreviewControl : Control
             ClearCourseBitmap();
             var bitmap = new RenderTargetBitmap(pixelSize);
             using (var bitmapContext = bitmap.CreateDrawingContext())
+            using (bitmapContext.PushRenderOptions(PixelArtRenderOptions))
             {
                 DrawCourseContent(bitmapContext, course, width, height);
             }
