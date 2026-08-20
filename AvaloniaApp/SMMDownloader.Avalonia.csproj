@@ -18,6 +18,7 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets\Icon.png" />
     <AvaloniaResource Include="Assets\Icon.ico" />
+    <AvaloniaResource Include="Assets\sound.bwv" />
     <AvaloniaResource Include="Assets\CourseViewer\**\*.png" />
   </ItemGroup>
 

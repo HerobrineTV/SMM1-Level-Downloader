@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.VisualTree;
 using SMMDownloader.Avalonia.Models;
 
 namespace SMMDownloader.Avalonia.Controls;
@@ -10,6 +12,8 @@ namespace SMMDownloader.Avalonia.Controls;
 public sealed class CoursePreviewControl : Control
 {
     private const double Tile = 18;
+    private const int MaxCachedPixels = 20_000_000;
+    private const int GroundStateCount = 72;
     private const string AssetRoot = "avares://SMMDownloader.Avalonia/Assets/CourseViewer";
 
     public static readonly StyledProperty<CoursePreview?> CourseProperty =
@@ -18,11 +22,24 @@ public sealed class CoursePreviewControl : Control
     public static readonly StyledProperty<bool> ShowHiddenBlocksProperty =
         AvaloniaProperty.Register<CoursePreviewControl, bool>(nameof(ShowHiddenBlocks));
 
+    public static readonly StyledProperty<bool> DebugLevelViewerProperty =
+        AvaloniaProperty.Register<CoursePreviewControl, bool>(nameof(DebugLevelViewer));
+
+    private Point? _debugPointerPosition;
+    private DebugTileSelection? _debugAnchor;
+    private RenderTargetBitmap? _courseBitmap;
+    private CoursePreview? _cachedCourse;
+    private bool _cachedShowHiddenBlocks;
+    private PixelSize _cachedPixelSize;
+    private DebugHitCache? _debugHitCache;
+    private CoursePreview? _debugHitCacheCourse;
+
     static CoursePreviewControl()
     {
         AffectsRender<CoursePreviewControl>(CourseProperty);
         AffectsMeasure<CoursePreviewControl>(CourseProperty);
         AffectsRender<CoursePreviewControl>(ShowHiddenBlocksProperty);
+        AffectsRender<CoursePreviewControl>(DebugLevelViewerProperty);
     }
 
     public CoursePreview? Course
@@ -35,6 +52,12 @@ public sealed class CoursePreviewControl : Control
     {
         get => GetValue(ShowHiddenBlocksProperty);
         set => SetValue(ShowHiddenBlocksProperty, value);
+    }
+
+    public bool DebugLevelViewer
+    {
+        get => GetValue(DebugLevelViewerProperty);
+        set => SetValue(DebugLevelViewerProperty, value);
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -57,6 +80,69 @@ public sealed class CoursePreviewControl : Control
         var width = Math.Max(Bounds.Width, course.WidthBlocks * Tile);
         var height = course.HeightBlocks * Tile;
 
+        if (TryDrawCachedCourse(context, course, width, height))
+        {
+            DrawDebugOverlay(context, course, height);
+            return;
+        }
+
+        DrawCourseContent(context, course, width, height);
+        DrawDebugOverlay(context, course, height);
+    }
+
+    private bool TryDrawCachedCourse(DrawingContext context, CoursePreview course, double width, double height)
+    {
+        var pixelWidth = Math.Max(1, (int)Math.Ceiling(width));
+        var pixelHeight = Math.Max(1, (int)Math.Ceiling(height));
+        if ((long)pixelWidth * pixelHeight > MaxCachedPixels)
+        {
+            ClearCourseBitmap();
+            return false;
+        }
+
+        var pixelSize = new PixelSize(pixelWidth, pixelHeight);
+        if (_courseBitmap == null ||
+            !ReferenceEquals(_cachedCourse, course) ||
+            _cachedShowHiddenBlocks != ShowHiddenBlocks ||
+            _cachedPixelSize != pixelSize)
+        {
+            ClearCourseBitmap();
+            var bitmap = new RenderTargetBitmap(pixelSize);
+            using (var bitmapContext = bitmap.CreateDrawingContext())
+            {
+                DrawCourseContent(bitmapContext, course, width, height);
+            }
+
+            _courseBitmap = bitmap;
+            _cachedCourse = course;
+            _cachedShowHiddenBlocks = ShowHiddenBlocks;
+            _cachedPixelSize = pixelSize;
+        }
+
+        context.DrawImage(
+            _courseBitmap,
+            new Rect(0, 0, pixelSize.Width, pixelSize.Height),
+            new Rect(0, 0, pixelSize.Width, pixelSize.Height));
+        return true;
+    }
+
+    private void ClearCourseBitmap()
+    {
+        _courseBitmap?.Dispose();
+        _courseBitmap = null;
+        _cachedCourse = null;
+        _cachedPixelSize = default;
+        ClearDebugHitCache();
+    }
+
+    private void ClearDebugHitCache()
+    {
+        _debugHitCache = null;
+        _debugHitCacheCourse = null;
+    }
+
+    private void DrawCourseContent(DrawingContext context, CoursePreview course, double width, double height)
+    {
         DrawCourseBackground(context, width, height, course.ThemeName);
         using (context.PushOpacity(0.45))
         {
@@ -76,10 +162,13 @@ public sealed class CoursePreviewControl : Control
             .Where(obj => ShowHiddenBlocks || !IsHiddenQuestionBlock(obj))
             .OrderBy(item => item.Z)
             .ToList();
+        var drawableObjects = visibleObjects
+            .Where(obj => ShouldDrawObject(course, obj))
+            .ToList();
 
-        DrawTracks(context, visibleObjects.Where(obj => obj.Type == 59).ToList(), height);
+        DrawTracks(context, drawableObjects.Where(obj => obj.Type == 59).ToList(), height);
 
-        foreach (var obj in visibleObjects)
+        foreach (var obj in drawableObjects)
         {
             if (obj.Type == 59)
             {
@@ -88,7 +177,93 @@ public sealed class CoursePreviewControl : Control
 
             DrawCourseObject(context, course, obj, height);
         }
+    }
 
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+
+        if (!DebugLevelViewer || Course == null)
+        {
+            _debugPointerPosition = null;
+            return;
+        }
+
+        var position = e.GetPosition(this);
+        if (_debugPointerPosition is { } previous &&
+            TryGetTile(previous, Course, out var previousX, out var previousY) &&
+            TryGetTile(position, Course, out var nextX, out var nextY) &&
+            previousX == nextX &&
+            previousY == nextY)
+        {
+            return;
+        }
+
+        _debugPointerPosition = position;
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+
+        if (!DebugLevelViewer || Course == null)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(this);
+        if (!point.Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        var position = point.Position;
+        if (!TryGetTile(position, Course, out var tileX, out var tileY))
+        {
+            return;
+        }
+
+        if (_debugAnchor is { } anchor && anchor.X == tileX && anchor.Y == tileY)
+        {
+            _debugAnchor = null;
+        }
+        else
+        {
+            _debugAnchor = new DebugTileSelection(tileX, tileY, position);
+        }
+
+        e.Handled = true;
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        _debugPointerPosition = null;
+        InvalidateVisual();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        ClearCourseBitmap();
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == DebugLevelViewerProperty && DebugLevelViewer ||
+            change.Property != DebugLevelViewerProperty && change.Property != CourseProperty)
+        {
+            return;
+        }
+
+        _debugPointerPosition = null;
+        _debugAnchor = null;
+        ClearCourseBitmap();
+        InvalidateVisual();
     }
 
     private static void DrawCourseBackground(DrawingContext context, double width, double height, string themeName)
@@ -118,6 +293,243 @@ public sealed class CoursePreviewControl : Control
         }
     }
 
+    private void DrawDebugOverlay(DrawingContext context, CoursePreview course, double courseHeight)
+    {
+        if (!DebugLevelViewer)
+        {
+            return;
+        }
+
+        DebugTileSelection? selection = _debugAnchor;
+        if (selection == null &&
+            _debugPointerPosition is { } position &&
+            TryGetTile(position, course, out var hoverX, out var hoverY))
+        {
+            selection = new DebugTileSelection(hoverX, hoverY, position);
+        }
+
+        if (selection is not { } active)
+        {
+            return;
+        }
+
+        var rect = new Rect(active.X * Tile, courseHeight - ((active.Y + 1) * Tile), Tile, Tile);
+        context.FillRectangle(new SolidColorBrush(Color.FromArgb(70, 255, 233, 99)), rect);
+        context.DrawRectangle(new Pen(new SolidColorBrush(Color.Parse("#FFB000")), 2), rect);
+        DrawDebugPanel(context, course, active);
+    }
+
+    private void DrawDebugPanel(DrawingContext context, CoursePreview course, DebugTileSelection selection)
+    {
+        var lines = BuildDebugLines(course, selection.X, selection.Y, selection.Position);
+        if (lines.Count == 0)
+        {
+            return;
+        }
+
+        const double fontSize = 11;
+        const double lineHeight = 15;
+        const double padding = 8;
+        var formattedLines = lines
+            .Select(line => new FormattedText(
+                line,
+                System.Globalization.CultureInfo.CurrentCulture,
+                FlowDirection.LeftToRight,
+                Typeface.Default,
+                fontSize,
+                Brushes.White))
+            .ToList();
+
+        var maxTextWidth = formattedLines.Count == 0 ? 0 : formattedLines.Max(line => line.Width);
+        var panelWidth = Math.Min(720, Math.Max(260, maxTextWidth + padding * 2));
+        var panelHeight = Math.Max(44, Math.Min(Math.Max(44, Bounds.Height - 12), formattedLines.Count * lineHeight + padding * 2));
+        var x = selection.Position.X + 14;
+        var y = selection.Position.Y + 14;
+        if (x + panelWidth > Bounds.Width)
+        {
+            x = Math.Max(6, selection.Position.X - panelWidth - 14);
+        }
+
+        if (y + panelHeight > Bounds.Height)
+        {
+            y = Math.Max(6, Bounds.Height - panelHeight - 6);
+        }
+
+        var panel = new Rect(x, y, panelWidth, panelHeight);
+        context.FillRectangle(new SolidColorBrush(Color.FromArgb(235, 31, 35, 43)), panel, 4);
+        context.DrawRectangle(new Pen(new SolidColorBrush(Color.Parse("#FFB000")), _debugAnchor == null ? 1 : 2), panel, 4);
+
+        using (context.PushClip(panel))
+        {
+            var maxLines = Math.Max(1, (int)Math.Floor((panelHeight - padding * 2) / lineHeight));
+            for (var i = 0; i < Math.Min(maxLines, formattedLines.Count); i++)
+            {
+                context.DrawText(formattedLines[i], new Point(x + padding, y + padding + i * lineHeight));
+            }
+        }
+    }
+
+    private IReadOnlyList<string> BuildDebugLines(CoursePreview course, int tileX, int tileY, Point position)
+    {
+        var hits = GetDebugHitCache(course)
+            .GetHits(tileX, tileY)
+            .OrderBy(item => item.Object.Z)
+            .ToList();
+        var renderedHits = hits
+            .Where(item => item.Hit.RenderedSprite)
+            .ToList();
+        var rawOnlyHits = hits
+            .Where(item => item.Hit.RawBounds && !item.Hit.RenderedSprite)
+            .ToList();
+
+        var lines = new List<string>
+        {
+            $"Tile: x={tileX}, y={tileY}",
+            $"Screen: x={position.X:0.##}, y={position.Y:0.##}",
+            $"Course: {course.Name}",
+            $"Mode={course.Mode}, Theme={course.ThemeName} ({course.Theme}), Scroll={course.ScrollName} ({course.Scroll}), WidthBlocks={course.WidthBlocks}",
+            $"Rendered objects on tile: {renderedHits.Count}",
+            $"Raw bounds only on tile: {rawOnlyHits.Count}"
+        };
+
+        AddDebugObjectLines(lines, renderedHits, "Rendered");
+        AddDebugObjectLines(lines, rawOnlyHits, "Raw bounds only");
+
+        return lines;
+    }
+
+    private DebugHitCache GetDebugHitCache(CoursePreview course)
+    {
+        if (_debugHitCache != null && ReferenceEquals(_debugHitCacheCourse, course))
+        {
+            return _debugHitCache;
+        }
+
+        _debugHitCache = DebugHitCache.Build(course);
+        _debugHitCacheCourse = course;
+        return _debugHitCache;
+    }
+
+    private static void AddDebugObjectLines(
+        ICollection<string> lines,
+        IEnumerable<DebugObjectHit> objects,
+        string heading)
+    {
+        var list = objects.ToList();
+        if (list.Count == 0)
+        {
+            return;
+        }
+
+        lines.Add("");
+        lines.Add($"{heading}:");
+        foreach (var item in list)
+        {
+            var obj = item.Object;
+            lines.Add("");
+            lines.Add($"#{item.Index} {obj.Name} [{(obj.IsBlock ? "Block" : "Object")}]");
+            lines.Add($"match={FormatTileHit(item.Hit)}");
+            lines.Add($"type={obj.Type}, subtype={obj.SubType}, childType={obj.ChildType}");
+            lines.Add($"pos x={obj.X}, y={obj.Y}, z={obj.Z}, width={obj.Width}, height={obj.Height}, size={obj.Size}");
+            lines.Add($"flags=0x{obj.Flags:X8}, childFlags=0x{obj.ChildFlags:X8}, extended=0x{obj.ExtendedData:X8} ({obj.ExtendedData})");
+            lines.Add($"linkId={obj.LinkId}, effect={obj.Effect}, transform={obj.Transform}, childTransform={obj.ChildTransform}, wing={obj.Wing}");
+        }
+    }
+
+    private static bool TryGetTile(Point position, CoursePreview course, out int tileX, out int tileY)
+    {
+        tileX = (int)Math.Floor(position.X / Tile);
+        tileY = course.HeightBlocks - 1 - (int)Math.Floor(position.Y / Tile);
+        return tileX >= 0 && tileY >= 0 && tileX < course.WidthBlocks && tileY < course.HeightBlocks;
+    }
+
+    private static TileHit GetTileHit(CoursePreview course, CourseObjectPreview obj, int tileX, int tileY)
+    {
+        var rawBounds = ContainsTile(GetRawBounds(obj), tileX, tileY);
+        var renderedSprite = ShouldDrawObject(course, obj) &&
+                             GetRenderedTileRects(obj).Any(rect => ContainsTile(rect, tileX, tileY));
+        return new TileHit(rawBounds, renderedSprite);
+    }
+
+    private static bool ShouldDrawObject(CoursePreview course, CourseObjectPreview obj)
+    {
+        if (obj.Type == 49 && course.ThemeName != "castle")
+        {
+            return false;
+        }
+
+        if (obj.Type != 7)
+        {
+            return true;
+        }
+
+        var renderedRects = GetRenderedTileRects(obj).ToList();
+        return renderedRects.Count == 0 ||
+               renderedRects.Any(rect => !IsCoveredByBaseTerrain(course, rect));
+    }
+
+    private static bool IsCoveredByBaseTerrain(CoursePreview course, TileRect rect)
+    {
+        foreach (var terrain in course.Objects.Where(IsBaseTerrain))
+        {
+            foreach (var terrainRect in GetRenderedTileRects(terrain))
+            {
+                if (ContainsTile(terrainRect, rect.X, rect.Y))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsBaseTerrain(CourseObjectPreview obj)
+    {
+        return obj.Type is 26 or 37;
+    }
+
+    private static string FormatTileHit(TileHit hit)
+    {
+        return hit switch
+        {
+            { RawBounds: true, RenderedSprite: true } => "raw bounds + rendered sprite",
+            { RawBounds: true } => "raw bounds only",
+            { RenderedSprite: true } => "rendered sprite only",
+            _ => "none"
+        };
+    }
+
+    private static TileRect GetRawBounds(CourseObjectPreview obj)
+    {
+        var width = Math.Max(1, Math.Abs(obj.Width));
+        var height = Math.Max(1, Math.Abs(obj.Height));
+        return new TileRect(obj.X, obj.Y, width, height);
+    }
+
+    private static IEnumerable<TileRect> GetRenderedTileRects(CourseObjectPreview obj)
+    {
+        foreach (var cell in SpriteMap.GetCells(obj))
+        {
+            var size = Math.Max(1, obj.Size);
+            var x = obj.Size == 1
+                ? obj.X + (int)Math.Floor(cell.X)
+                : obj.X + (int)Math.Floor(cell.X * size) - (2 - (int)Math.Ceiling(obj.Width / 2.0));
+            var y = obj.Size == 1
+                ? obj.Y + (int)Math.Floor(cell.Y)
+                : obj.Y + (int)Math.Floor(cell.Y * size);
+            yield return new TileRect(x, y, size, size);
+        }
+    }
+
+    private static bool ContainsTile(TileRect rect, int tileX, int tileY)
+    {
+        return tileX >= rect.X &&
+               tileX < rect.X + rect.Width &&
+               tileY >= rect.Y &&
+               tileY < rect.Y + rect.Height;
+    }
+
     private static void DrawEllipse(DrawingContext context, IBrush brush, Rect rect)
     {
         context.DrawEllipse(brush, null, rect.Center, rect.Width / 2, rect.Height / 2);
@@ -128,6 +540,12 @@ public sealed class CoursePreviewControl : Control
         var cells = SpriteMap.GetCells(obj).ToList();
         if (cells.Count == 0)
         {
+            if (SpriteAssets.TryGetFormatSprite(obj, out var formatBitmap))
+            {
+                DrawFormatSprite(context, course, obj, courseHeight, formatBitmap);
+                return;
+            }
+
             DrawFallback(context, obj, courseHeight);
             return;
         }
@@ -136,6 +554,12 @@ public sealed class CoursePreviewControl : Control
         var sourceSize = SpriteAssets.GetSourceTileSize(course.Mode, obj.IsBlock);
         if (bitmap == null)
         {
+            if (SpriteAssets.TryGetFormatSprite(obj, out var formatBitmap))
+            {
+                DrawFormatSprite(context, course, obj, courseHeight, formatBitmap);
+                return;
+            }
+
             DrawFallback(context, obj, courseHeight);
             return;
         }
@@ -160,14 +584,34 @@ public sealed class CoursePreviewControl : Control
             {
                 using (context.PushOpacity(cell.Opacity))
                 {
-                    context.DrawImage(bitmap, source, dest);
+                    DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(obj));
                 }
             }
             else
             {
-                context.DrawImage(bitmap, source, dest);
+                DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(obj));
             }
         }
+    }
+
+    private static void DrawSpriteImage(DrawingContext context, Bitmap bitmap, Rect source, Rect dest, bool flipHorizontally)
+    {
+        if (!flipHorizontally)
+        {
+            context.DrawImage(bitmap, source, dest);
+            return;
+        }
+
+        using (context.PushTransform(Matrix.CreateTranslation(-(dest.Left + dest.Right), 0) * Matrix.CreateScale(-1, 1)))
+        {
+            var mirroredDest = new Rect(-dest.Right, dest.Top, dest.Width, dest.Height);
+            context.DrawImage(bitmap, source, mirroredDest);
+        }
+    }
+
+    private static bool ShouldFlipHorizontally(CourseObjectPreview obj)
+    {
+        return obj.Transform == 1 || obj.ChildTransform == 1;
     }
 
     private static bool IsHiddenQuestionBlock(CourseObjectPreview obj)
@@ -243,6 +687,108 @@ public sealed class CoursePreviewControl : Control
     }
 
     private readonly record struct TrackNode(CourseObjectPreview Object, Point Center);
+
+    private readonly record struct TileRect(int X, int Y, int Width, int Height);
+
+    private readonly record struct TileHit(bool RawBounds, bool RenderedSprite)
+    {
+        public bool Hit => RawBounds || RenderedSprite;
+    }
+
+    private readonly record struct DebugObjectHit(int Index, CourseObjectPreview Object, TileHit Hit);
+
+    private readonly record struct DebugTileSelection(int X, int Y, Point Position);
+
+    private sealed class DebugHitCache
+    {
+        private readonly Dictionary<(int X, int Y), List<DebugObjectHit>> _hits;
+
+        private DebugHitCache(Dictionary<(int X, int Y), List<DebugObjectHit>> hits)
+        {
+            _hits = hits;
+        }
+
+        public static DebugHitCache Build(CoursePreview course)
+        {
+            var hits = new Dictionary<(int X, int Y), List<DebugObjectHit>>();
+            for (var i = 0; i < course.Objects.Count; i++)
+            {
+                var obj = course.Objects[i];
+                AddTileRectHits(hits, course, i, obj, GetRawBounds(obj), rawBounds: true);
+
+                if (!ShouldDrawObject(course, obj))
+                {
+                    continue;
+                }
+
+                foreach (var rect in GetRenderedTileRects(obj))
+                {
+                    AddTileRectHits(hits, course, i, obj, rect, rawBounds: false);
+                }
+            }
+
+            return new DebugHitCache(hits);
+        }
+
+        public IReadOnlyList<DebugObjectHit> GetHits(int tileX, int tileY)
+        {
+            return _hits.TryGetValue((tileX, tileY), out var hits) ? hits : [];
+        }
+
+        private static void AddTileRectHits(
+            Dictionary<(int X, int Y), List<DebugObjectHit>> hits,
+            CoursePreview course,
+            int index,
+            CourseObjectPreview obj,
+            TileRect rect,
+            bool rawBounds)
+        {
+            var startX = Math.Max(0, rect.X);
+            var endX = Math.Min(course.WidthBlocks, rect.X + rect.Width);
+            var startY = Math.Max(0, rect.Y);
+            var endY = Math.Min(course.HeightBlocks, rect.Y + rect.Height);
+            for (var x = startX; x < endX; x++)
+            {
+                for (var y = startY; y < endY; y++)
+                {
+                    AddTileHit(hits, (x, y), index, obj, rawBounds);
+                }
+            }
+        }
+
+        private static void AddTileHit(
+            Dictionary<(int X, int Y), List<DebugObjectHit>> hits,
+            (int X, int Y) tile,
+            int index,
+            CourseObjectPreview obj,
+            bool rawBounds)
+        {
+            if (!hits.TryGetValue(tile, out var tileHits))
+            {
+                tileHits = [];
+                hits[tile] = tileHits;
+            }
+
+            for (var i = 0; i < tileHits.Count; i++)
+            {
+                var hit = tileHits[i];
+                if (hit.Index != index)
+                {
+                    continue;
+                }
+
+                tileHits[i] = hit with
+                {
+                    Hit = new TileHit(
+                        hit.Hit.RawBounds || rawBounds,
+                        hit.Hit.RenderedSprite || !rawBounds)
+                };
+                return;
+            }
+
+            tileHits.Add(new DebugObjectHit(index, obj, new TileHit(rawBounds, !rawBounds)));
+        }
+    }
 
     private static void DrawFormatSprite(DrawingContext context, CoursePreview course, CourseObjectPreview obj, double courseHeight, Bitmap bitmap)
     {
@@ -476,7 +1022,7 @@ public sealed class CoursePreviewControl : Control
             switch (obj.Type)
             {
                 case 7:
-                    var offset = (int)Math.Clamp(obj.ExtendedData, 0, 23);
+                    var offset = (int)Math.Clamp(obj.ExtendedData, 0, GroundStateCount - 1);
                     yield return new SpriteCell(0, 0, (8 + offset) % 16, 11 + ((8 + offset) / 16));
                     foreach (var cell in GroundDecorationCells(obj))
                     {
@@ -518,7 +1064,7 @@ public sealed class CoursePreviewControl : Control
                     yield return ((obj.Flags >> 2) & 1) == 1 ? new SpriteCell(0, 0, 6, 5) : new SpriteCell(0, 0, 4, 0);
                     break;
                 case 26:
-                    foreach (var cell in Extend3x4(0, 0, Math.Max(1, obj.Width - 3), Math.Max(1, obj.Height), new Dictionary<int, SpriteSource>
+                    foreach (var cell in Extend3x4(0, 0, Math.Max(1, obj.Width), Math.Max(1, obj.Height), new Dictionary<int, SpriteSource>
                              {
                                  [0] = new(11, 8), [1] = new(12, 8), [2] = new(12, 8),
                                  [3] = new(11, 8), [4] = new(12, 8), [5] = new(12, 8),
@@ -530,7 +1076,7 @@ public sealed class CoursePreviewControl : Control
                     }
                     break;
                 case 37:
-                    foreach (var cell in Extend3x4(0, 0, Math.Max(1, obj.Width - 3), Math.Max(1, obj.Height), new Dictionary<int, SpriteSource>
+                    foreach (var cell in Extend3x4(0, 0, Math.Max(1, obj.Width), Math.Max(1, obj.Height), new Dictionary<int, SpriteSource>
                              {
                                  [0] = new(9, 8), [1] = new(9, 8), [2] = new(10, 8),
                                  [3] = new(9, 8), [4] = new(9, 8), [5] = new(10, 8),
