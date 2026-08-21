@@ -156,7 +156,7 @@ public sealed class SmmCourseParser
         var flags = ReadUInt32(data, pos + 0x0c, 4);
         var isBlock = BlockNames.ContainsKey(type);
         var subType = isBlock ? (int)((flags & 7) >> 2) : (int)((flags & 7 & 4) >> 2);
-        var wing = isBlock ? 0 : (int)((flags & 7 & 2) >> 1);
+        var wing = (int)((flags & 7 & 2) >> 1);
         var size = !isBlock && type != 3 ? (int)(((flags & 0x4000) >> 14) + 1) : 1;
         var addY = type == 30 ? 1 : 0;
 

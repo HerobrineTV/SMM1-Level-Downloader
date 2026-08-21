@@ -16,6 +16,8 @@ public sealed class CoursePreviewControl : Control
     private const int GroundStateCount = 72;
     private const string AssetRoot = "avares://SMMDownloader.Avalonia/Assets/CourseViewer";
     private static readonly HashSet<int> ObjectBoundsFromDataOrigin = [27];
+    private static readonly SpriteCell LeftWingCell = new(0, 0, 0, 2);
+    private static readonly SpriteCell RightWingCell = new(0, 0, 1, 2);
     private static readonly RenderOptions PixelArtRenderOptions = new()
     {
         BitmapInterpolationMode = BitmapInterpolationMode.None
@@ -675,7 +677,12 @@ public sealed class CoursePreviewControl : Control
 
     private static bool TryGetRenderedTileBounds(CourseObjectPreview obj, out TileRect bounds)
     {
-        var rects = GetRenderedTileRects(obj).ToList();
+        return TryGetTileBounds(GetRenderedTileRects(obj), out bounds);
+    }
+
+    private static bool TryGetTileBounds(IEnumerable<TileRect> tileRects, out TileRect bounds)
+    {
+        var rects = tileRects.ToList();
         if (rects.Count == 0)
         {
             bounds = default;
@@ -692,6 +699,19 @@ public sealed class CoursePreviewControl : Control
 
     private static IEnumerable<TileRect> GetRenderedTileRects(CourseObjectPreview obj)
     {
+        foreach (var rect in GetBaseRenderedTileRects(obj))
+        {
+            yield return rect;
+        }
+
+        foreach (var rect in GetWingTileRects(obj))
+        {
+            yield return rect;
+        }
+    }
+
+    private static IEnumerable<TileRect> GetBaseRenderedTileRects(CourseObjectPreview obj)
+    {
         foreach (var cell in SpriteMap.GetCells(obj))
         {
             var size = Math.Max(1, obj.Size);
@@ -703,6 +723,18 @@ public sealed class CoursePreviewControl : Control
                 : obj.Y + (int)Math.Floor(cell.Y * size);
             yield return new TileRect(x, y, size, size);
         }
+    }
+
+    private static IEnumerable<TileRect> GetWingTileRects(CourseObjectPreview obj)
+    {
+        if (obj.Wing <= 0 || !TryGetTileBounds(GetBaseRenderedTileRects(obj), out var baseBounds))
+        {
+            yield break;
+        }
+
+        var y = baseBounds.Y + Math.Max(0, baseBounds.Height - 2);
+        yield return new TileRect(baseBounds.X - 1, y, 1, 1);
+        yield return new TileRect(baseBounds.X + baseBounds.Width, y, 1, 1);
     }
 
     private static IEnumerable<SpriteCell> GetCellsForPipeLayer(CourseObjectPreview obj, PipeDrawLayer pipeLayer)
@@ -873,10 +905,12 @@ public sealed class CoursePreviewControl : Control
 
             if (SpriteAssets.TryGetFormatSprite(obj, out var formatBitmap))
             {
+                DrawWings(context, course, obj, courseHeight);
                 DrawFormatSprite(context, course, obj, courseHeight, formatBitmap);
                 return;
             }
 
+            DrawWings(context, course, obj, courseHeight);
             DrawFallback(context, obj, courseHeight);
             return;
         }
@@ -887,10 +921,12 @@ public sealed class CoursePreviewControl : Control
         {
             if (SpriteAssets.TryGetFormatSprite(obj, out var formatBitmap))
             {
+                DrawWings(context, course, obj, courseHeight);
                 DrawFormatSprite(context, course, obj, courseHeight, formatBitmap);
                 return;
             }
 
+            DrawWings(context, course, obj, courseHeight);
             DrawFallback(context, obj, courseHeight);
             return;
         }
@@ -905,6 +941,10 @@ public sealed class CoursePreviewControl : Control
             : null;
         using (transform)
         {
+            if (pipeLayer != PipeDrawLayer.Outlet)
+            {
+                DrawWings(context, course, obj, courseHeight);
+            }
 
             foreach (var cell in cells)
             {
@@ -1152,6 +1192,51 @@ public sealed class CoursePreviewControl : Control
             var mirroredDest = new Rect(-dest.Right, dest.Top, dest.Width, dest.Height);
             context.DrawImage(bitmap, source, mirroredDest);
         }
+    }
+
+    private static void DrawWings(
+        DrawingContext context,
+        CoursePreview course,
+        CourseObjectPreview obj,
+        double courseHeight)
+    {
+        if (obj.Wing <= 0)
+        {
+            return;
+        }
+
+        var bitmap = SpriteAssets.GetSheet(course, block: false);
+        if (bitmap == null)
+        {
+            return;
+        }
+
+        var wingRects = GetWingTileRects(obj).ToList();
+        if (wingRects.Count < 2)
+        {
+            return;
+        }
+
+        var sourceSize = SpriteAssets.GetSourceTileSize(course.Mode, block: false);
+        DrawWingCell(context, bitmap, sourceSize, LeftWingCell, wingRects[0], courseHeight);
+        DrawWingCell(context, bitmap, sourceSize, RightWingCell, wingRects[1], courseHeight);
+    }
+
+    private static void DrawWingCell(
+        DrawingContext context,
+        Bitmap bitmap,
+        int sourceSize,
+        SpriteCell cell,
+        TileRect tileRect,
+        double courseHeight)
+    {
+        var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
+        var dest = new Rect(
+            tileRect.X * Tile,
+            courseHeight - ((tileRect.Y + tileRect.Height) * Tile),
+            tileRect.Width * Tile,
+            tileRect.Height * Tile);
+        context.DrawImage(bitmap, source, dest);
     }
 
     private static bool ShouldFlipHorizontally(CourseObjectPreview obj)
