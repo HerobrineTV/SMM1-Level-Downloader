@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using Avalonia;
@@ -35,7 +36,8 @@ public sealed partial class MainWindow : Window
     private readonly MiiImageLoader _miiImageLoader = new();
     private readonly HttpClient _statusHttpClient = new();
     private readonly CancellationTokenSource _lifetimeCts = new();
-    private readonly ObservableCollection<LevelInfo> _searchResults = [];
+    private readonly ObservableCollection<object> _searchResults = [];
+    private readonly LoadMoreSearchResultsItem _loadMoreSearchResultsItem = new();
     private readonly ObservableCollection<LevelInfo> _profileLevels = [];
     private readonly ObservableCollection<SavedLevelNode> _savedNodes = [];
     private readonly ObservableCollection<SavedLevelNode> _cemuNodes = [];
@@ -50,6 +52,7 @@ public sealed partial class MainWindow : Window
     private int _currentSearchPage = 1;
     private bool _isLoadingSearchPage;
     private bool _hasMoreSearchPages;
+    private LevelInfo? _selectedSearchResult;
     private string _currentProfileUserName = "";
     private LevelInfo? _selectedPreviewLevel;
     private SavedLevelNode? _selectedSavedNode;
@@ -443,10 +446,11 @@ public sealed partial class MainWindow : Window
             _currentSearchPhrase = phrase;
             _currentSearchPage = 1;
             _hasMoreSearchPages = results.Count > 0;
+            UpdateLoadMoreSearchResultsButton();
             _settings.LastSearchPhrase = phrase;
             _settings.RecentFoundLevels = results.ToDictionary(level => level.LevelId.ToString());
             _store.SaveSettings(_settings);
-            SetStatus($"Found {_searchResults.Count} courses.");
+            SetStatus($"Found {SearchResultCount} courses.");
         });
     }
 
@@ -466,7 +470,8 @@ public sealed partial class MainWindow : Window
             _currentSearchPhrase = "";
             _currentSearchPage = 1;
             _hasMoreSearchPages = false;
-            SetStatus($"Loaded {_searchResults.Count} random result(s).");
+            UpdateLoadMoreSearchResultsButton();
+            SetStatus($"Loaded {SearchResultCount} random result(s).");
         });
     }
 
@@ -497,11 +502,24 @@ public sealed partial class MainWindow : Window
         await LoadNextSearchPageAsync();
     }
 
+    private async void LoadMoreSearchResultsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        await LoadNextSearchPageAsync();
+    }
+
     private async Task LoadNextSearchPageAsync()
     {
+        if (!_hasMoreSearchPages || _isLoadingSearchPage || string.IsNullOrWhiteSpace(_currentSearchPhrase))
+        {
+            UpdateLoadMoreSearchResultsButton();
+            return;
+        }
+
         try
         {
             _isLoadingSearchPage = true;
+            UpdateLoadMoreSearchResultsButton();
             SaveSettingsFromUi();
             var nextPage = _currentSearchPage + 1;
             SetStatus($"Loading search page {nextPage}...");
@@ -509,11 +527,11 @@ public sealed partial class MainWindow : Window
             if (results.Count == 0)
             {
                 _hasMoreSearchPages = false;
-                SetStatus($"Loaded all {_searchResults.Count} search results.");
+                SetStatus($"Loaded all {SearchResultCount} search results.");
                 return;
             }
 
-            var existingIds = _searchResults.Select(level => level.LevelId).ToHashSet();
+            var existingIds = SearchResultLevels.Select(level => level.LevelId).ToHashSet();
             var added = 0;
             foreach (var level in results.Where(level => existingIds.Add(level.LevelId)))
             {
@@ -524,12 +542,12 @@ public sealed partial class MainWindow : Window
             if (added == 0)
             {
                 _hasMoreSearchPages = false;
-                SetStatus($"Loaded all {_searchResults.Count} search results.");
+                SetStatus($"Loaded all {SearchResultCount} search results.");
                 return;
             }
 
             _currentSearchPage = nextPage;
-            SetStatus($"Loaded {_searchResults.Count} courses.");
+            SetStatus($"Loaded {SearchResultCount} courses.");
         }
         catch (Exception ex)
         {
@@ -539,6 +557,26 @@ public sealed partial class MainWindow : Window
         finally
         {
             _isLoadingSearchPage = false;
+            UpdateLoadMoreSearchResultsButton();
+        }
+    }
+
+    private void UpdateLoadMoreSearchResultsButton()
+    {
+        var shouldShow = _hasMoreSearchPages && !string.IsNullOrWhiteSpace(_currentSearchPhrase);
+        _loadMoreSearchResultsItem.Text = T("LoadMore");
+        _loadMoreSearchResultsItem.IsEnabled = shouldShow && !_isLoadingSearchPage;
+
+        if (shouldShow)
+        {
+            if (!_searchResults.Contains(_loadMoreSearchResultsItem))
+            {
+                _searchResults.Add(_loadMoreSearchResultsItem);
+            }
+        }
+        else
+        {
+            _searchResults.Remove(_loadMoreSearchResultsItem);
         }
     }
 
@@ -1069,7 +1107,7 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadAllButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        foreach (var level in _searchResults.ToList())
+        foreach (var level in SearchResultLevels.ToList())
         {
             if (CanStartDownload(level))
             {
@@ -1080,12 +1118,20 @@ public sealed partial class MainWindow : Window
 
     private void SearchResultsListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (SearchResultsListBox.SelectedItem is LoadMoreSearchResultsItem)
+        {
+            SearchResultsListBox.SelectedItem = _selectedSearchResult;
+            return;
+        }
+
         if (SearchResultsListBox.SelectedItem is not LevelInfo level)
         {
+            _selectedSearchResult = null;
             ResetSearchSelectedLevelDetails();
             return;
         }
 
+        _selectedSearchResult = level;
         ShowSearchSelectedLevelContainer();
         SelectedCourseTitle.IsVisible = true;
         SelectedCourseDetailsPanel.IsVisible = true;
@@ -1866,6 +1912,7 @@ public sealed partial class MainWindow : Window
         DownloadToPackCheckBox.Content = T("SaveInLevelPack");
         PackNameTextBox.Watermark = T("LevelPackName");
         DownloadAllButton.Content = T("DownloadAllResults");
+        _loadMoreSearchResultsItem.Text = T("LoadMore");
         SelectedCourseTitle.Text = T("SelectedCourse");
         SelectedLevelTitle.Text = T("NoCourseSelected");
         SelectedCreatorHeader.Text = T("Creator");
@@ -2155,9 +2202,22 @@ public sealed partial class MainWindow : Window
     private void AddSearchResult(LevelInfo level)
     {
         MarkDownloadState(level);
-        _searchResults.Add(level);
+        var loadMoreIndex = _searchResults.IndexOf(_loadMoreSearchResultsItem);
+        if (loadMoreIndex >= 0)
+        {
+            _searchResults.Insert(loadMoreIndex, level);
+        }
+        else
+        {
+            _searchResults.Add(level);
+        }
+
         _ = LoadSearchResultMiiImagesAsync(level);
     }
+
+    private IEnumerable<LevelInfo> SearchResultLevels => _searchResults.OfType<LevelInfo>();
+
+    private int SearchResultCount => _searchResults.OfType<LevelInfo>().Count();
 
     private async Task LoadSearchResultMiiImagesAsync(LevelInfo level)
     {
@@ -2314,7 +2374,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyDownloadStateToSearchResults(long levelId)
     {
-        foreach (var result in _searchResults.Where(result => result.LevelId == levelId))
+        foreach (var result in SearchResultLevels.Where(result => result.LevelId == levelId))
         {
             ApplyDownloadState(result);
         }
@@ -3403,6 +3463,7 @@ public sealed partial class MainWindow : Window
         ["SaveInLevelPack"] = "Save in Level Pack",
         ["LevelPackName"] = "Level Pack Name",
         ["DownloadAllResults"] = "Download All Results",
+        ["LoadMore"] = "Load More",
         ["SelectedCourse"] = "Selected Course",
         ["SelectedLevel"] = "Selected Level",
         ["NoCourseSelected"] = "No course selected",
@@ -3509,6 +3570,7 @@ public sealed partial class MainWindow : Window
         ["SaveInLevelPack"] = "In Level-Pack speichern",
         ["LevelPackName"] = "Level-Pack-Name",
         ["DownloadAllResults"] = "Alle Ergebnisse laden",
+        ["LoadMore"] = "Mehr laden",
         ["SelectedCourse"] = "Ausgewaehltes Level",
         ["SelectedLevel"] = "Ausgewaehltes Level",
         ["NoCourseSelected"] = "Kein Level ausgewaehlt",
@@ -3600,5 +3662,48 @@ public sealed partial class MainWindow : Window
         public bool IsDownloading { get; set; }
         public bool IsDownloaded { get; set; }
         public string ProgressText { get; set; } = "";
+    }
+}
+
+public sealed class LoadMoreSearchResultsItem : INotifyPropertyChanged
+{
+    private string _text = "";
+    private bool _isEnabled;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            if (_text == value)
+            {
+                return;
+            }
+
+            _text = value;
+            OnPropertyChanged(nameof(Text));
+        }
+    }
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (_isEnabled == value)
+            {
+                return;
+            }
+
+            _isEnabled = value;
+            OnPropertyChanged(nameof(IsEnabled));
+        }
+    }
+
+    private void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

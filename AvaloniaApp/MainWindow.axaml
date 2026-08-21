@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:SMMDownloader.Avalonia.Controls"
         xmlns:models="clr-namespace:SMMDownloader.Avalonia.Models"
+        xmlns:local="clr-namespace:SMMDownloader.Avalonia"
         x:Class="SMMDownloader.Avalonia.MainWindow"
         Title="Super Mario Maker 1 Level Downloader"
         Width="1180"
@@ -314,8 +315,8 @@
               <ListBox x:Name="SearchResultsListBox"
                        SelectionChanged="SearchResultsListBox_OnSelectionChanged"
                        ScrollViewer.ScrollChanged="SearchResultsListBox_OnScrollChanged">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
+                <ListBox.DataTemplates>
+                  <DataTemplate DataType="models:LevelInfo">
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9" Margin="0,5">
                       <Border Width="72"
                               Height="42"
@@ -407,7 +408,16 @@
                               Click="DownloadLevelButton_OnClick" />
                     </Grid>
                   </DataTemplate>
-                </ListBox.ItemTemplate>
+                  <DataTemplate DataType="local:LoadMoreSearchResultsItem">
+                    <Border Padding="0,12,0,4">
+                      <Button Content="{Binding Text}"
+                              IsEnabled="{Binding IsEnabled}"
+                              HorizontalAlignment="Center"
+                              MinWidth="150"
+                              Click="LoadMoreSearchResultsButton_OnClick" />
+                    </Border>
+                  </DataTemplate>
+                </ListBox.DataTemplates>
               </ListBox>
             </Border>
             <Border x:Name="SearchSelectedLevelContainer" Classes="panel" Grid.Column="1" IsVisible="False">
