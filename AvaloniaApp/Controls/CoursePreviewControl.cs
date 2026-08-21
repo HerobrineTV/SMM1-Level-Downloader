@@ -468,6 +468,10 @@ public sealed class CoursePreviewControl : Control
             lines.Add($"pos x={obj.X}, y={obj.Y}, z={obj.Z}, width={obj.Width}, height={obj.Height}, size={obj.Size}");
             lines.Add($"flags=0x{obj.Flags:X8}, childFlags=0x{obj.ChildFlags:X8}, extended=0x{obj.ExtendedData:X8} ({obj.ExtendedData})");
             lines.Add($"linkId={obj.LinkId}, effect={obj.Effect}, transform={obj.Transform}, childTransform={obj.ChildTransform}, wing={obj.Wing}");
+            if (IsDirectionalObject(obj))
+            {
+                lines.Add($"direction={GetDirectionalObjectDirection(obj)}, rotation={GetDirectionalObjectRotation(obj) * 180 / Math.PI:0.#}deg");
+            }
         }
     }
 
@@ -743,34 +747,101 @@ public sealed class CoursePreviewControl : Control
             return;
         }
 
-        foreach (var cell in cells)
+        var rotateDirectionalObject = IsDirectionalObject(obj);
+        var rotation = rotateDirectionalObject ? GetDirectionalObjectRotation(obj) : 0;
+        var center = GetObjectRenderCenter(obj, cells, courseHeight);
+        IDisposable? transform = rotateDirectionalObject && Math.Abs(rotation) > double.Epsilon
+            ? context.PushTransform(Matrix.CreateTranslation(-center.X, -center.Y) *
+                                    Matrix.CreateRotation(rotation) *
+                                    Matrix.CreateTranslation(center.X, center.Y))
+            : null;
+        using (transform)
         {
-            var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
-            var size = Math.Max(1, obj.Size);
-            var destX = obj.Size == 1
-                ? (obj.X + cell.X) * Tile
-                : (obj.X + (cell.X * size) - (2 - Math.Ceiling(obj.Width / 2.0))) * Tile;
-            var destY = obj.Size == 1
-                ? courseHeight - ((obj.Y + cell.Y + 1) * Tile)
-                : courseHeight - ((obj.Y + (cell.Y * size) + 2) * Tile);
-            var dest = new Rect(destX, destY, Tile * size, Tile * size);
-            if (dest.Right < 0 || dest.Left > course.WidthBlocks * Tile || dest.Bottom < 0 || dest.Top > courseHeight)
-            {
-                continue;
-            }
 
-            if (cell.Opacity < 1)
+            foreach (var cell in cells)
             {
-                using (context.PushOpacity(cell.Opacity))
+                var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
+                var size = Math.Max(1, obj.Size);
+                var destX = obj.Size == 1
+                    ? (obj.X + cell.X) * Tile
+                    : (obj.X + (cell.X * size) - (2 - Math.Ceiling(obj.Width / 2.0))) * Tile;
+                var destY = obj.Size == 1
+                    ? courseHeight - ((obj.Y + cell.Y + 1) * Tile)
+                    : courseHeight - ((obj.Y + (cell.Y * size) + 2) * Tile);
+                var dest = new Rect(destX, destY, Tile * size, Tile * size);
+                if (dest.Right < 0 || dest.Left > course.WidthBlocks * Tile || dest.Bottom < 0 || dest.Top > courseHeight)
                 {
-                    DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(obj));
+                    continue;
+                }
+
+                if (cell.Opacity < 1)
+                {
+                    using (context.PushOpacity(cell.Opacity))
+                    {
+                        DrawSpriteImage(context, bitmap, source, dest, !rotateDirectionalObject && ShouldFlipHorizontally(obj));
+                    }
+                }
+                else
+                {
+                    DrawSpriteImage(context, bitmap, source, dest, !rotateDirectionalObject && ShouldFlipHorizontally(obj));
                 }
             }
-            else
+        }
+    }
+
+    private static bool IsDirectionalObject(CourseObjectPreview obj)
+    {
+        return obj.Type is 66 or 67;
+    }
+
+    private static double GetDirectionalObjectRotation(CourseObjectPreview obj)
+    {
+        return GetDirectionalObjectDirection(obj) * (Math.PI / 4);
+    }
+
+    private static int GetDirectionalObjectDirection(CourseObjectPreview obj)
+    {
+        foreach (var candidate in GetDirectionalObjectDirectionCandidates(obj))
+        {
+            if (candidate > 0)
             {
-                DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(obj));
+                return candidate % 8;
             }
         }
+
+        return 0;
+    }
+
+    private static IEnumerable<int> GetDirectionalObjectDirectionCandidates(CourseObjectPreview obj)
+    {
+        yield return obj.Transform;
+        yield return (int)(obj.ExtendedData & 7);
+        yield return (int)((obj.Flags >> 28) & 7);
+        yield return (int)((obj.Flags >> 24) & 7);
+        yield return (int)((obj.Flags >> 20) & 7);
+        yield return (int)((obj.Flags >> 16) & 7);
+        yield return (int)((obj.Flags >> 12) & 7);
+        yield return (int)((obj.Flags >> 8) & 7);
+        yield return (int)((obj.Flags >> 4) & 7);
+        yield return obj.ChildTransform;
+    }
+
+    private static Point GetObjectRenderCenter(CourseObjectPreview obj, IReadOnlyList<SpriteCell> cells, double courseHeight)
+    {
+        var size = Math.Max(1, obj.Size);
+        var minX = cells.Min(cell => obj.Size == 1
+            ? obj.X + cell.X
+            : obj.X + (cell.X * size) - (2 - Math.Ceiling(obj.Width / 2.0)));
+        var maxX = cells.Max(cell => obj.Size == 1
+            ? obj.X + cell.X + size
+            : obj.X + (cell.X * size) - (2 - Math.Ceiling(obj.Width / 2.0)) + size);
+        var minY = cells.Min(cell => obj.Size == 1
+            ? obj.Y + cell.Y
+            : obj.Y + (cell.Y * size));
+        var maxY = cells.Max(cell => obj.Size == 1
+            ? obj.Y + cell.Y + size
+            : obj.Y + (cell.Y * size) + size);
+        return new Point(((minX + maxX) / 2) * Tile, courseHeight - (((minY + maxY) / 2) * Tile));
     }
 
     private static void DrawPipeChild(
@@ -801,19 +872,19 @@ public sealed class CoursePreviewControl : Control
         var sourceWidth = Math.Max(1, maxX - minX);
         var sourceHeight = Math.Max(1, maxY - minY);
         var target = GetPipeOutletPlacement(pipe);
+        var targetCenterX = target.X + (target.Width / 2);
+        var targetCenterY = target.Y + (target.Height / 2);
+        var originX = targetCenterX - (sourceWidth / 2) - minX;
+        var originY = targetCenterY - (sourceHeight / 2) - minY;
 
         foreach (var cell in cells)
         {
             var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
-            var normalizedX = ((cell.X * size) - minX) / sourceWidth;
-            var normalizedY = ((cell.Y * size) - minY) / sourceHeight;
-            var normalizedWidth = size / sourceWidth;
-            var normalizedHeight = size / sourceHeight;
             var dest = new Rect(
-                (target.X + (normalizedX * target.Width)) * Tile,
-                courseHeight - ((target.Y + ((normalizedY + normalizedHeight) * target.Height)) * Tile),
-                Tile * normalizedWidth * target.Width,
-                Tile * normalizedHeight * target.Height);
+                (originX + (cell.X * size)) * Tile,
+                courseHeight - ((originY + (cell.Y * size) + size) * Tile),
+                Tile * size,
+                Tile * size);
             if (dest.Right < 0 || dest.Left > course.WidthBlocks * Tile || dest.Bottom < 0 || dest.Top > courseHeight)
             {
                 continue;
@@ -865,67 +936,94 @@ public sealed class CoursePreviewControl : Control
             return;
         }
 
-        var railPen = new Pen(new SolidColorBrush(Color.Parse("#293241")), 4);
-        var railHighlight = new Pen(new SolidColorBrush(Color.Parse("#D7E1EA")), 1.4);
-        var nodes = tracks
-            .Select(track => new TrackNode(track, GetTrackCenter(track, courseHeight)))
+        var segments = tracks
+            .Select(CreateTrackSegment)
+            .Where(segment => segment.HasLength)
             .ToList();
 
-        foreach (var track in tracks)
+        foreach (var segment in segments)
         {
-            var start = GetTrackCenter(track, courseHeight);
-            var width = Math.Max(1, Math.Abs(track.Width));
-            var height = Math.Max(1, Math.Abs(track.Height));
-            Point? end = null;
-            if (width > 1)
-            {
-                end = new Point(start.X + (width - 1) * Tile, start.Y);
-            }
-            else if (height > 1)
-            {
-                end = new Point(start.X, start.Y - (height - 1) * Tile);
-            }
-
-            if (end is { } endPoint)
-            {
-                DrawTrackSegment(context, railPen, railHighlight, start, endPoint);
-            }
+            DrawTrackSegment(context, segment, courseHeight);
         }
 
-        for (var i = 0; i < nodes.Count; i++)
+        var endpoints = segments
+            .SelectMany(segment => new[] { segment.Start, segment.End })
+            .Distinct()
+            .ToList();
+        foreach (var endpoint in endpoints)
         {
-            for (var j = i + 1; j < nodes.Count; j++)
-            {
-                var a = nodes[i];
-                var b = nodes[j];
-                var sameRow = Math.Abs(a.Object.Y - b.Object.Y) <= 0 && Math.Abs(a.Object.X - b.Object.X) <= 1;
-                var sameColumn = Math.Abs(a.Object.X - b.Object.X) <= 0 && Math.Abs(a.Object.Y - b.Object.Y) <= 1;
-                if (sameRow || sameColumn)
-                {
-                    DrawTrackSegment(context, railPen, railHighlight, a.Center, b.Center);
-                }
-            }
-        }
-
-        foreach (var node in nodes)
-        {
-            var rect = new Rect(node.Center.X - 5, node.Center.Y - 5, 10, 10);
-            context.DrawEllipse(new SolidColorBrush(Color.Parse("#D7E1EA")), new Pen(new SolidColorBrush(Color.Parse("#293241")), 2), rect.Center, rect.Width / 2, rect.Height / 2);
+            DrawTrackNode(context, endpoint, courseHeight);
         }
     }
 
-    private static void DrawTrackSegment(DrawingContext context, Pen railPen, Pen railHighlight, Point start, Point end)
+    private static TrackSegment CreateTrackSegment(CourseObjectPreview track)
     {
-        context.DrawLine(railPen, start, end);
-        context.DrawLine(railHighlight, start, end);
+        var offsetX = GetSignedTrackOffset(track.Width);
+        var offsetY = GetSignedTrackOffset(track.Height);
+        return new TrackSegment(
+            new Point(track.X + 0.5, track.Y + 0.5),
+            new Point(track.X + 0.5 + offsetX, track.Y + 0.5 + offsetY));
     }
 
-    private static Point GetTrackCenter(CourseObjectPreview track, double courseHeight)
+    private static int GetSignedTrackOffset(int value)
     {
-        return new Point((track.X + 0.5) * Tile, courseHeight - ((track.Y + 0.5) * Tile));
+        var length = Math.Abs(value);
+        return length <= 1 ? 0 : Math.Sign(value) * (length - 1);
     }
 
-    private readonly record struct TrackNode(CourseObjectPreview Object, Point Center);
+    private static void DrawTrackSegment(DrawingContext context, TrackSegment segment, double courseHeight)
+    {
+        var start = ToScreenPoint(segment.Start, courseHeight);
+        var end = ToScreenPoint(segment.End, courseHeight);
+        var vector = end - start;
+        var length = Math.Sqrt(Math.Pow(vector.X, 2) + Math.Pow(vector.Y, 2));
+        if (length <= 0)
+        {
+            return;
+        }
+
+        var direction = new Vector(vector.X / length, vector.Y / length);
+        var normal = new Vector(-direction.Y, direction.X);
+        var railOffset = normal * 3.2;
+        var tieHalfLength = normal * 5.5;
+        var tiePen = new Pen(new SolidColorBrush(Color.Parse("#E6EDF2")), 1.1);
+        var tieShadowPen = new Pen(new SolidColorBrush(Color.Parse("#14171A")), 2.5);
+        var railPen = new Pen(new SolidColorBrush(Color.Parse("#F2F7FA")), 2.4);
+        var railShadowPen = new Pen(new SolidColorBrush(Color.Parse("#111417")), 4.8);
+
+        for (var distance = 0.0; distance <= length + 0.1; distance += Tile / 2)
+        {
+            var center = start + (direction * distance);
+            context.DrawLine(tieShadowPen, center - tieHalfLength, center + tieHalfLength);
+            context.DrawLine(tiePen, center - tieHalfLength, center + tieHalfLength);
+        }
+
+        context.DrawLine(railShadowPen, start + railOffset, end + railOffset);
+        context.DrawLine(railShadowPen, start - railOffset, end - railOffset);
+        context.DrawLine(railPen, start + railOffset, end + railOffset);
+        context.DrawLine(railPen, start - railOffset, end - railOffset);
+    }
+
+    private static void DrawTrackNode(DrawingContext context, Point endpoint, double courseHeight)
+    {
+        var center = ToScreenPoint(endpoint, courseHeight);
+        var outerBrush = new SolidColorBrush(Color.Parse("#111417"));
+        var innerBrush = new SolidColorBrush(Color.Parse("#DCE6EC"));
+        var capBrush = new SolidColorBrush(Color.Parse("#8B989F"));
+        context.DrawEllipse(outerBrush, null, center, 5.2, 5.2);
+        context.DrawEllipse(innerBrush, null, center, 3.6, 3.6);
+        context.DrawEllipse(capBrush, null, center, 1.5, 1.5);
+    }
+
+    private static Point ToScreenPoint(Point coursePoint, double courseHeight)
+    {
+        return new Point(coursePoint.X * Tile, courseHeight - (coursePoint.Y * Tile));
+    }
+
+    private readonly record struct TrackSegment(Point Start, Point End)
+    {
+        public bool HasLength => Start != End;
+    }
 
     private readonly record struct TileRect(int X, int Y, int Width, int Height);
 
@@ -1317,7 +1415,8 @@ public sealed class CoursePreviewControl : Control
                     yield return ((obj.Flags >> 2) & 1) == 1 ? new SpriteCell(0, 0, 6, 5) : new SpriteCell(0, 0, 4, 0);
                     break;
                 case 26:
-                    foreach (var cell in Extend3x4(0, 0, Math.Max(1, obj.Width), Math.Max(1, obj.Height), new Dictionary<int, SpriteSource>
+                    var (goalWidth, goalHeight) = GetBaseTerrainSize(obj);
+                    foreach (var cell in Extend3x4(0, 0, goalWidth, goalHeight, new Dictionary<int, SpriteSource>
                              {
                                  [0] = new(11, 8), [1] = new(12, 8), [2] = new(12, 8),
                                  [3] = new(11, 8), [4] = new(12, 8), [5] = new(12, 8),
@@ -1329,7 +1428,8 @@ public sealed class CoursePreviewControl : Control
                     }
                     break;
                 case 37:
-                    foreach (var cell in Extend3x4(0, 0, Math.Max(1, obj.Width), Math.Max(1, obj.Height), new Dictionary<int, SpriteSource>
+                    var (startWidth, startHeight) = GetBaseTerrainSize(obj);
+                    foreach (var cell in Extend3x4(0, 0, startWidth, startHeight, new Dictionary<int, SpriteSource>
                              {
                                  [0] = new(9, 8), [1] = new(9, 8), [2] = new(10, 8),
                                  [3] = new(9, 8), [4] = new(9, 8), [5] = new(10, 8),
@@ -1363,6 +1463,13 @@ public sealed class CoursePreviewControl : Control
                     }
                     break;
             }
+        }
+
+        private static (int Width, int Height) GetBaseTerrainSize(CourseObjectPreview obj)
+        {
+            var width = Math.Max(1, Math.Abs(obj.Width));
+            var height = Math.Max(1, Math.Abs(obj.Height));
+            return (Math.Max(1, width - 3), height);
         }
 
         private static IEnumerable<SpriteCell> PipeCells(CourseObjectPreview obj)
