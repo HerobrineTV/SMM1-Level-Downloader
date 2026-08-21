@@ -173,17 +173,44 @@ public sealed class CoursePreviewControl : Control
         var drawableObjects = visibleObjects
             .Where(obj => ShouldDrawObject(course, obj))
             .ToList();
+        var pipes = drawableObjects
+            .Where(obj => obj.Type == 9)
+            .ToList();
+        var pipeContentObjects = drawableObjects
+            .Where(obj => IsPipeContentObject(obj, pipes))
+            .ToList();
 
         DrawTracks(context, drawableObjects.Where(obj => obj.Type == 59).ToList(), height);
 
         foreach (var obj in drawableObjects)
         {
-            if (obj.Type == 59)
+            if (obj.Type == 59 || pipeContentObjects.Contains(obj))
             {
                 continue;
             }
 
-            DrawCourseObject(context, course, obj, height);
+            DrawCourseObject(context, course, obj, height, obj.Type == 9 ? PipeDrawLayer.Body : PipeDrawLayer.All);
+        }
+
+        foreach (var pipe in pipes)
+        {
+            DrawCourseObject(context, course, pipe, height, PipeDrawLayer.Outlet);
+        }
+
+        foreach (var pipeContent in pipeContentObjects)
+        {
+            if (TryFindPipeForContent(pipeContent, pipes, out var pipe))
+            {
+                DrawPipeChild(context, course, pipe, pipeContent, height);
+            }
+        }
+
+        foreach (var pipe in pipes)
+        {
+            if (TryCreatePipeChild(pipe, out var pipeChild))
+            {
+                DrawPipeChild(context, course, pipe, pipeChild, height);
+            }
         }
     }
 
@@ -530,6 +557,132 @@ public sealed class CoursePreviewControl : Control
         }
     }
 
+    private static IEnumerable<SpriteCell> GetCellsForPipeLayer(CourseObjectPreview obj, PipeDrawLayer pipeLayer)
+    {
+        var cells = SpriteMap.GetCells(obj);
+        if (obj.Type != 9 || pipeLayer == PipeDrawLayer.All)
+        {
+            return cells;
+        }
+
+        return cells.Where(cell => pipeLayer == PipeDrawLayer.Outlet
+            ? IsPipeOutletCell(obj, cell)
+            : !IsPipeOutletCell(obj, cell));
+    }
+
+    private static bool IsPipeOutletCell(CourseObjectPreview pipe, SpriteCell cell)
+    {
+        var direction = GetPipeDirection(pipe);
+        var length = Math.Max(1, pipe.Height);
+        return direction switch
+        {
+            0 => cell.X >= length - 1,
+            1 => cell.X <= -(length - 1),
+            2 => cell.Y >= length - 1,
+            _ => cell.Y <= -(length - 1)
+        };
+    }
+
+    private static bool IsPipeContentObject(CourseObjectPreview obj, IReadOnlyList<CourseObjectPreview> pipes)
+    {
+        return TryFindPipeForContent(obj, pipes, out _);
+    }
+
+    private static bool TryFindPipeForContent(
+        CourseObjectPreview obj,
+        IReadOnlyList<CourseObjectPreview> pipes,
+        out CourseObjectPreview pipe)
+    {
+        pipe = null!;
+        if (obj.Type is 9 or 59 || obj.IsBlock)
+        {
+            return false;
+        }
+
+        var rawBounds = GetRawBounds(obj);
+        foreach (var candidate in pipes)
+        {
+            if (!Intersects(rawBounds, GetPipeBounds(candidate)))
+            {
+                continue;
+            }
+
+            pipe = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryCreatePipeChild(CourseObjectPreview pipe, out CourseObjectPreview child)
+    {
+        child = null!;
+        if (pipe.Type != 9 || pipe.ChildType < 0)
+        {
+            return false;
+        }
+
+        var childFlags = pipe.ChildFlags;
+        var childType = pipe.ChildType;
+        var isBlock = false;
+        var size = childType != 3 ? (int)(((childFlags & 0x4000) >> 14) + 1) : 1;
+
+        child = new CourseObjectPreview
+        {
+            X = pipe.X,
+            Y = pipe.Y,
+            Z = pipe.Z,
+            Width = 1,
+            Height = 1,
+            Flags = childFlags,
+            ChildFlags = 0,
+            ExtendedData = pipe.ExtendedData,
+            Type = childType,
+            ChildType = -1,
+            LinkId = pipe.LinkId,
+            Effect = pipe.Effect,
+            Transform = pipe.ChildTransform,
+            ChildTransform = 0,
+            Name = $"Pipe child type {childType}",
+            IsBlock = isBlock,
+            SubType = (int)((childFlags & 7 & 4) >> 2),
+            Wing = (int)((childFlags & 7 & 2) >> 1),
+            Size = Math.Max(1, size)
+        };
+        return true;
+    }
+
+    private static TileRect GetPipeBounds(CourseObjectPreview pipe)
+    {
+        var direction = GetPipeDirection(pipe);
+        var length = Math.Max(1, pipe.Height);
+        return direction switch
+        {
+            0 => new TileRect(pipe.X, pipe.Y - 1, length, 2),
+            1 => new TileRect(pipe.X - (length - 1), pipe.Y, length, 2),
+            2 => new TileRect(pipe.X, pipe.Y, 2, length),
+            _ => new TileRect(pipe.X - 1, pipe.Y - (length - 1), 2, length)
+        };
+    }
+
+    private static CourseRect GetPipeOutletPlacement(CourseObjectPreview pipe)
+    {
+        var direction = GetPipeDirection(pipe);
+        var length = Math.Max(1, pipe.Height);
+        return direction switch
+        {
+            0 => new CourseRect(pipe.X + length - 1, pipe.Y - 0.5, 1, 1),
+            1 => new CourseRect(pipe.X - (length - 1), pipe.Y + 0.5, 1, 1),
+            2 => new CourseRect(pipe.X + 0.5, pipe.Y + length - 1, 1, 1),
+            _ => new CourseRect(pipe.X - 0.5, pipe.Y - (length - 1), 1, 1)
+        };
+    }
+
+    private static int GetPipeDirection(CourseObjectPreview pipe)
+    {
+        return (int)((pipe.Flags & 0x60) / 0x20);
+    }
+
     private static bool ContainsTile(TileRect rect, int tileX, int tileY)
     {
         return tileX >= rect.X &&
@@ -538,16 +691,34 @@ public sealed class CoursePreviewControl : Control
                tileY < rect.Y + rect.Height;
     }
 
+    private static bool Intersects(TileRect a, TileRect b)
+    {
+        return a.X < b.X + b.Width &&
+               a.X + a.Width > b.X &&
+               a.Y < b.Y + b.Height &&
+               a.Y + a.Height > b.Y;
+    }
+
     private static void DrawEllipse(DrawingContext context, IBrush brush, Rect rect)
     {
         context.DrawEllipse(brush, null, rect.Center, rect.Width / 2, rect.Height / 2);
     }
 
-    private static void DrawCourseObject(DrawingContext context, CoursePreview course, CourseObjectPreview obj, double courseHeight)
+    private static void DrawCourseObject(
+        DrawingContext context,
+        CoursePreview course,
+        CourseObjectPreview obj,
+        double courseHeight,
+        PipeDrawLayer pipeLayer = PipeDrawLayer.All)
     {
-        var cells = SpriteMap.GetCells(obj).ToList();
+        var cells = GetCellsForPipeLayer(obj, pipeLayer).ToList();
         if (cells.Count == 0)
         {
+            if (pipeLayer != PipeDrawLayer.All)
+            {
+                return;
+            }
+
             if (SpriteAssets.TryGetFormatSprite(obj, out var formatBitmap))
             {
                 DrawFormatSprite(context, course, obj, courseHeight, formatBitmap);
@@ -598,6 +769,66 @@ public sealed class CoursePreviewControl : Control
             else
             {
                 DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(obj));
+            }
+        }
+    }
+
+    private static void DrawPipeChild(
+        DrawingContext context,
+        CoursePreview course,
+        CourseObjectPreview pipe,
+        CourseObjectPreview child,
+        double courseHeight)
+    {
+        var cells = SpriteMap.GetCells(child).ToList();
+        if (cells.Count == 0)
+        {
+            return;
+        }
+
+        var bitmap = SpriteAssets.GetSheet(course, block: false);
+        if (bitmap == null)
+        {
+            return;
+        }
+
+        var sourceSize = SpriteAssets.GetSourceTileSize(course.Mode, block: false);
+        var size = Math.Max(1, child.Size);
+        var minX = cells.Min(cell => cell.X * size);
+        var maxX = cells.Max(cell => (cell.X * size) + size);
+        var minY = cells.Min(cell => cell.Y * size);
+        var maxY = cells.Max(cell => (cell.Y * size) + size);
+        var sourceWidth = Math.Max(1, maxX - minX);
+        var sourceHeight = Math.Max(1, maxY - minY);
+        var target = GetPipeOutletPlacement(pipe);
+
+        foreach (var cell in cells)
+        {
+            var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
+            var normalizedX = ((cell.X * size) - minX) / sourceWidth;
+            var normalizedY = ((cell.Y * size) - minY) / sourceHeight;
+            var normalizedWidth = size / sourceWidth;
+            var normalizedHeight = size / sourceHeight;
+            var dest = new Rect(
+                (target.X + (normalizedX * target.Width)) * Tile,
+                courseHeight - ((target.Y + ((normalizedY + normalizedHeight) * target.Height)) * Tile),
+                Tile * normalizedWidth * target.Width,
+                Tile * normalizedHeight * target.Height);
+            if (dest.Right < 0 || dest.Left > course.WidthBlocks * Tile || dest.Bottom < 0 || dest.Top > courseHeight)
+            {
+                continue;
+            }
+
+            if (cell.Opacity < 1)
+            {
+                using (context.PushOpacity(cell.Opacity))
+                {
+                    DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(child));
+                }
+            }
+            else
+            {
+                DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(child));
             }
         }
     }
@@ -698,6 +929,15 @@ public sealed class CoursePreviewControl : Control
 
     private readonly record struct TileRect(int X, int Y, int Width, int Height);
 
+    private readonly record struct CourseRect(double X, double Y, double Width, double Height);
+
+    private enum PipeDrawLayer
+    {
+        All,
+        Body,
+        Outlet
+    }
+
     private readonly record struct TileHit(bool RawBounds, bool RenderedSprite)
     {
         public bool Hit => RawBounds || RenderedSprite;
@@ -732,6 +972,11 @@ public sealed class CoursePreviewControl : Control
                 foreach (var rect in GetRenderedTileRects(obj))
                 {
                     AddTileRectHits(hits, course, i, obj, rect, rawBounds: false);
+                }
+
+                if (TryCreatePipeChild(obj, out var pipeChild) && SpriteMap.GetCells(pipeChild).Any())
+                {
+                    AddTileRectHits(hits, course, course.Objects.Count + i, pipeChild, GetPipeBounds(obj), rawBounds: false);
                 }
             }
 
