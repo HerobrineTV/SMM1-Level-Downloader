@@ -36,7 +36,10 @@ public sealed class JsonStore(ProjectPaths paths)
         }
 
         var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(paths.SettingsFile), JsonOptions);
-        return settings ?? new AppSettings();
+        settings ??= new AppSettings();
+        settings.Debug ??= new DebugSettings();
+        settings.SearchParams ??= new SearchParams();
+        return settings;
     }
 
     public void SaveSettings(AppSettings settings)

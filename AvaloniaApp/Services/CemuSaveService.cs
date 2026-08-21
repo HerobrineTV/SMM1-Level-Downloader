@@ -14,13 +14,8 @@ public sealed class CemuSaveService(ProjectPaths paths, SmmCourseParser coursePa
     ];
     private static readonly string[] SmmTitleIds = ["1018dd00", "1018dc00", "1018db00"];
 
-    public string? ResolveCemuDirectory(string? configuredPath)
+    public string? ResolveCemuDirectory()
     {
-        if (IsCemuDirectory(configuredPath))
-        {
-            return Path.GetFullPath(configuredPath!);
-        }
-
         return GetCandidateDirectories()
             .Where(IsCemuDirectory)
             .Select(Path.GetFullPath)

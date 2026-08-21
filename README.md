@@ -31,8 +31,9 @@ But the Total Installations and Downloads are newly tracked.
 ![Total Level Downloads](https://img.shields.io/badge/dynamic/json?label=Total%20Level%20Downloads&query=%24.TotalDownloads&url=https%3A%2F%2Fapi.bobac-analytics.com%2Fsmm1%2Fget%2FTotalDownloads)
 
 # Planned Features
-- Download Levels directly into CEMU (Comming Soon, will also be toggleable in Settings)
-- Overwrite CEMU Levels directly on Download (Comming Soon, Will add a Backup Toggle in Settings)
+- Level Uploads (maybe idk)
+- Accountsystem (maybe idk, but would be needed for the uploads)
+- Maybe a Most Downloaded Levels List (Daily/Monthly/Alltime)
 
 # Usage / Download
 Just unzip the release archive and start the SMM1 Level Downloader executable.

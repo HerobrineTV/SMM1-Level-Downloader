@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
 using Avalonia;
@@ -20,7 +21,7 @@ public sealed partial class MainWindow : Window
 {
     private const string ApiPingUrl = "https://api.bobac-analytics.com/smm1/ping";
     private const string GithubLatestReleaseUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases/latest";
-    private const string CurrentReleaseTag = "Pre_0__V2.0.0";
+    private const string CurrentReleaseTag = "Pre_1__V2.0.0";
     private const string LevelBackupsFolderName = "LevelBackups";
 
     private readonly ProjectPaths _paths = new();
@@ -30,11 +31,13 @@ public sealed partial class MainWindow : Window
     private readonly LevelDownloadService _downloadService;
     private readonly SmmCourseParser _courseParser = new();
     private readonly CemuSaveService _cemuSaveService;
+    private readonly StandardSoundService _standardSoundService;
     private readonly ThumbnailLoader _thumbnailLoader = new();
     private readonly MiiImageLoader _miiImageLoader = new();
     private readonly HttpClient _statusHttpClient = new();
     private readonly CancellationTokenSource _lifetimeCts = new();
-    private readonly ObservableCollection<LevelInfo> _searchResults = [];
+    private readonly ObservableCollection<object> _searchResults = [];
+    private readonly LoadMoreSearchResultsItem _loadMoreSearchResultsItem = new();
     private readonly ObservableCollection<LevelInfo> _profileLevels = [];
     private readonly ObservableCollection<SavedLevelNode> _savedNodes = [];
     private readonly ObservableCollection<SavedLevelNode> _cemuNodes = [];
@@ -49,6 +52,7 @@ public sealed partial class MainWindow : Window
     private int _currentSearchPage = 1;
     private bool _isLoadingSearchPage;
     private bool _hasMoreSearchPages;
+    private LevelInfo? _selectedSearchResult;
     private string _currentProfileUserName = "";
     private LevelInfo? _selectedPreviewLevel;
     private SavedLevelNode? _selectedSavedNode;
@@ -68,6 +72,7 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingPackNameSuggestion;
     private bool _isRefreshingAllDownloadedData;
     private bool _isLoadingCemuProfiles;
+    private bool _isLoadingSettings;
     private int _notificationSequence;
 
     public MainWindow()
@@ -78,6 +83,7 @@ public sealed partial class MainWindow : Window
         _dataMigrationService = new DataMigrationService(_paths);
         _downloadService = new LevelDownloadService(_paths, _store);
         _cemuSaveService = new CemuSaveService(_paths, _courseParser);
+        _standardSoundService = new StandardSoundService(_paths, _cemuSaveService);
         SearchResultsListBox.ItemsSource = _searchResults;
         ProfileLevelsListBox.ItemsSource = _profileLevels;
         SavedLevelsTreeView.ItemsSource = _savedNodes;
@@ -98,9 +104,27 @@ public sealed partial class MainWindow : Window
         _startupInitialized = true;
         await RunStartupMigrationAsync();
         _store.EnsureInitialized();
+        _settings = _store.LoadSettings();
+        EnsureStartupCourseSounds();
         InitializeDataBackedUi();
         ResetPrereleaseWarningOptOutIfStableRelease();
         await ShowPrereleaseWarningIfNeededAsync();
+    }
+
+    private void EnsureStartupCourseSounds()
+    {
+        try
+        {
+            var updated = _standardSoundService.EnsureExistingCourseSounds(_cemuSaveService.ResolveCemuDirectory());
+            if (updated > 0)
+            {
+                SetStatus($"Added missing sound.bwv to {updated} course folder(s).");
+            }
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Could not prepare standard sound file: {ex.Message}");
+        }
     }
 
     private void InitializeDataBackedUi()
@@ -422,10 +446,11 @@ public sealed partial class MainWindow : Window
             _currentSearchPhrase = phrase;
             _currentSearchPage = 1;
             _hasMoreSearchPages = results.Count > 0;
+            UpdateLoadMoreSearchResultsButton();
             _settings.LastSearchPhrase = phrase;
             _settings.RecentFoundLevels = results.ToDictionary(level => level.LevelId.ToString());
             _store.SaveSettings(_settings);
-            SetStatus($"Found {_searchResults.Count} courses.");
+            SetStatus($"Found {SearchResultCount} courses.");
         });
     }
 
@@ -445,7 +470,8 @@ public sealed partial class MainWindow : Window
             _currentSearchPhrase = "";
             _currentSearchPage = 1;
             _hasMoreSearchPages = false;
-            SetStatus($"Loaded {_searchResults.Count} random result(s).");
+            UpdateLoadMoreSearchResultsButton();
+            SetStatus($"Loaded {SearchResultCount} random result(s).");
         });
     }
 
@@ -476,11 +502,24 @@ public sealed partial class MainWindow : Window
         await LoadNextSearchPageAsync();
     }
 
+    private async void LoadMoreSearchResultsButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        await LoadNextSearchPageAsync();
+    }
+
     private async Task LoadNextSearchPageAsync()
     {
+        if (!_hasMoreSearchPages || _isLoadingSearchPage || string.IsNullOrWhiteSpace(_currentSearchPhrase))
+        {
+            UpdateLoadMoreSearchResultsButton();
+            return;
+        }
+
         try
         {
             _isLoadingSearchPage = true;
+            UpdateLoadMoreSearchResultsButton();
             SaveSettingsFromUi();
             var nextPage = _currentSearchPage + 1;
             SetStatus($"Loading search page {nextPage}...");
@@ -488,11 +527,11 @@ public sealed partial class MainWindow : Window
             if (results.Count == 0)
             {
                 _hasMoreSearchPages = false;
-                SetStatus($"Loaded all {_searchResults.Count} search results.");
+                SetStatus($"Loaded all {SearchResultCount} search results.");
                 return;
             }
 
-            var existingIds = _searchResults.Select(level => level.LevelId).ToHashSet();
+            var existingIds = SearchResultLevels.Select(level => level.LevelId).ToHashSet();
             var added = 0;
             foreach (var level in results.Where(level => existingIds.Add(level.LevelId)))
             {
@@ -503,12 +542,12 @@ public sealed partial class MainWindow : Window
             if (added == 0)
             {
                 _hasMoreSearchPages = false;
-                SetStatus($"Loaded all {_searchResults.Count} search results.");
+                SetStatus($"Loaded all {SearchResultCount} search results.");
                 return;
             }
 
             _currentSearchPage = nextPage;
-            SetStatus($"Loaded {_searchResults.Count} courses.");
+            SetStatus($"Loaded {SearchResultCount} courses.");
         }
         catch (Exception ex)
         {
@@ -518,6 +557,26 @@ public sealed partial class MainWindow : Window
         finally
         {
             _isLoadingSearchPage = false;
+            UpdateLoadMoreSearchResultsButton();
+        }
+    }
+
+    private void UpdateLoadMoreSearchResultsButton()
+    {
+        var shouldShow = _hasMoreSearchPages && !string.IsNullOrWhiteSpace(_currentSearchPhrase);
+        _loadMoreSearchResultsItem.Text = T("LoadMore");
+        _loadMoreSearchResultsItem.IsEnabled = shouldShow && !_isLoadingSearchPage;
+
+        if (shouldShow)
+        {
+            if (!_searchResults.Contains(_loadMoreSearchResultsItem))
+            {
+                _searchResults.Add(_loadMoreSearchResultsItem);
+            }
+        }
+        else
+        {
+            _searchResults.Remove(_loadMoreSearchResultsItem);
         }
     }
 
@@ -1048,7 +1107,7 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadAllButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        foreach (var level in _searchResults.ToList())
+        foreach (var level in SearchResultLevels.ToList())
         {
             if (CanStartDownload(level))
             {
@@ -1059,12 +1118,20 @@ public sealed partial class MainWindow : Window
 
     private void SearchResultsListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (SearchResultsListBox.SelectedItem is LoadMoreSearchResultsItem)
+        {
+            SearchResultsListBox.SelectedItem = _selectedSearchResult;
+            return;
+        }
+
         if (SearchResultsListBox.SelectedItem is not LevelInfo level)
         {
+            _selectedSearchResult = null;
             ResetSearchSelectedLevelDetails();
             return;
         }
 
+        _selectedSearchResult = level;
         ShowSearchSelectedLevelContainer();
         SelectedCourseTitle.IsVisible = true;
         SelectedCourseDetailsPanel.IsVisible = true;
@@ -1218,11 +1285,6 @@ public sealed partial class MainWindow : Window
         DesktopIntegration.OpenPath(GetCemuProfilePath());
     }
 
-    private void OpenSettingsForCemuButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        MainTabs.SelectedItem = SettingsTab;
-    }
-
     private void CemuLevelCard_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if ((sender as Control)?.DataContext is SavedLevelNode { Level: { } level } node)
@@ -1275,6 +1337,7 @@ public sealed partial class MainWindow : Window
         await RunSafeAsync(_ =>
         {
             var cemuFolder = cemuLevel.Folder;
+            _standardSoundService.EnsureCourseSoundFile(replacementFolder);
             var backupFolder = _cemuSaveService.BackupAndReplace(cemuLevel, _selectedCemuReplacementLevel, replacementFolder);
             _thumbnailLoader.InvalidateCourseThumbnail(cemuFolder);
             _thumbnailLoader.InvalidateCourseThumbnail(backupFolder);
@@ -1509,21 +1572,6 @@ public sealed partial class MainWindow : Window
         return null;
     }
 
-    private async void SelectCemuFolderButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        var path = await DesktopIntegration.PickFolderAsync(this, "Select Cemu Folder");
-        if (path == null)
-        {
-            return;
-        }
-
-        CemuPathTextBox.Text = path;
-        SaveSettingsFromUi();
-        _store.SaveSettings(_settings);
-        LoadProfiles(path);
-        RefreshCemuLevels();
-    }
-
     private void SaveSettingsButton_OnClick(object? sender, RoutedEventArgs e)
     {
         SaveSettingsFromUi();
@@ -1564,6 +1612,18 @@ public sealed partial class MainWindow : Window
 
         _settings.HideViewerInfo = HideViewerInfoCheckBox.IsChecked == true;
         ApplyViewerInfoVisibility();
+        _store.SaveSettings(_settings);
+    }
+
+    private void DebugSettingsCheckBox_OnChanged(object? sender, RoutedEventArgs e)
+    {
+        if (!IsInitialized || _isLoadingSettings)
+        {
+            return;
+        }
+
+        SaveDebugSettingsFromUi();
+        ApplyDebugSettings();
         _store.SaveSettings(_settings);
     }
 
@@ -1726,7 +1786,9 @@ public sealed partial class MainWindow : Window
             });
 
             packFolder = GetPackFolderIfEnabled();
+            _standardSoundService.EnsureStandardSoundFile();
             await _downloadService.DownloadAsync(level, packFolder, progress, cts.Token);
+            _standardSoundService.EnsureCourseSoundFile(level.Folder);
             DownloadProgressBar.Value = 100;
             state.ProgressText = "100% - Download complete.";
             state.IsDownloaded = true;
@@ -1772,28 +1834,32 @@ public sealed partial class MainWindow : Window
     private void LoadSettingsIntoUi()
     {
         _settings = _store.LoadSettings();
-        var cemuDirectory = _cemuSaveService.ResolveCemuDirectory(_settings.CemuDirPath);
-        if (!string.IsNullOrWhiteSpace(cemuDirectory) &&
-            !string.Equals(cemuDirectory, _settings.CemuDirPath, StringComparison.OrdinalIgnoreCase))
+        var cemuDirectory = _cemuSaveService.ResolveCemuDirectory();
+
+        _isLoadingSettings = true;
+        try
         {
-            _settings.CemuDirPath = cemuDirectory;
-            _store.SaveSettings(_settings);
+            SearchTextBox.Text = _settings.LastSearchPhrase;
+            SearchLevelNameCheckBox.IsChecked = _settings.SearchParams.LevelName;
+            SearchLevelIdCheckBox.IsChecked = _settings.SearchParams.LevelID;
+            SearchCreatorNameCheckBox.IsChecked = _settings.SearchParams.CreatorName;
+            SearchCreatorIdCheckBox.IsChecked = _settings.SearchParams.CreatorID;
+            SearchExactCheckBox.IsChecked = _settings.SearchParams.SearchExact;
+            HideViewerInfoCheckBox.IsChecked = _settings.HideViewerInfo;
+            DebugLevelViewerCheckBox.IsChecked = _settings.Debug.LevelViewer;
+            DebugTileRegionsCheckBox.IsChecked = _settings.Debug.TileRegions;
+            ShowGridCheckBox.IsChecked = _settings.Debug.ShowGrid;
+            UseProxyCheckBox.IsChecked = _settings.UseProxy;
+            ApiLinkTextBox.Text = _settings.ApiLink;
+            SelectComboBoxItemByTag(LanguageComboBox, _settings.Language);
+        }
+        finally
+        {
+            _isLoadingSettings = false;
         }
 
-        SearchTextBox.Text = _settings.LastSearchPhrase;
-        SearchLevelNameCheckBox.IsChecked = _settings.SearchParams.LevelName;
-        SearchLevelIdCheckBox.IsChecked = _settings.SearchParams.LevelID;
-        SearchCreatorNameCheckBox.IsChecked = _settings.SearchParams.CreatorName;
-        SearchCreatorIdCheckBox.IsChecked = _settings.SearchParams.CreatorID;
-        SearchExactCheckBox.IsChecked = _settings.SearchParams.SearchExact;
-        UseCemuCheckBox.IsChecked = _settings.UseCemuDir;
-        CemuPathTextBox.Text = _settings.CemuDirPath;
-        HideViewerInfoCheckBox.IsChecked = _settings.HideViewerInfo;
-        UseProxyCheckBox.IsChecked = _settings.UseProxy;
-        ApiLinkTextBox.Text = _settings.ApiLink;
-        SelectComboBoxItemByTag(LanguageComboBox, _settings.Language);
-        CemuPathTextBox.Text = _settings.CemuDirPath;
-        LoadProfiles(_settings.CemuDirPath);
+        LoadProfiles(cemuDirectory);
+        ApplyDebugSettings();
     }
 
     private void SaveSettingsFromUi()
@@ -1804,15 +1870,21 @@ public sealed partial class MainWindow : Window
         _settings.SearchParams.CreatorName = SearchCreatorNameCheckBox.IsChecked == true;
         _settings.SearchParams.CreatorID = SearchCreatorIdCheckBox.IsChecked == true;
         _settings.SearchParams.SearchExact = SearchExactCheckBox.IsChecked == true;
-        _settings.UseCemuDir = UseCemuCheckBox.IsChecked == true;
-        _settings.CemuDirPath = CemuPathTextBox.Text?.Trim() ?? "";
         _settings.HideViewerInfo = HideViewerInfoCheckBox.IsChecked == true;
+        SaveDebugSettingsFromUi();
         _settings.UseProxy = UseProxyCheckBox.IsChecked == true;
         _settings.ApiLink = string.IsNullOrWhiteSpace(ApiLinkTextBox.Text)
             ? "https://api.bobac-analytics.com/smm1"
             : ApiLinkTextBox.Text.Trim();
         _settings.SelectedProfile = ProfileComboBox.SelectedItem?.ToString() ?? _settings.SelectedProfile;
         _settings.Language = (LanguageComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "en";
+    }
+
+    private void SaveDebugSettingsFromUi()
+    {
+        _settings.Debug.LevelViewer = DebugLevelViewerCheckBox.IsChecked == true;
+        _settings.Debug.TileRegions = DebugTileRegionsCheckBox.IsChecked == true;
+        _settings.Debug.ShowGrid = ShowGridCheckBox.IsChecked == true;
     }
 
     private void ApplyLanguage()
@@ -1840,6 +1912,7 @@ public sealed partial class MainWindow : Window
         DownloadToPackCheckBox.Content = T("SaveInLevelPack");
         PackNameTextBox.Watermark = T("LevelPackName");
         DownloadAllButton.Content = T("DownloadAllResults");
+        _loadMoreSearchResultsItem.Text = T("LoadMore");
         SelectedCourseTitle.Text = T("SelectedCourse");
         SelectedLevelTitle.Text = T("NoCourseSelected");
         SelectedCreatorHeader.Text = T("Creator");
@@ -1892,7 +1965,6 @@ public sealed partial class MainWindow : Window
         OpenCemuFolderButton.Content = T("OpenFolder");
         CemuEmptyTitle.Text = T("CemuSaveNotFound");
         CemuEmptyMessage.Text = T("CemuSetupInstructions");
-        OpenSettingsForCemuButton.Content = T("OpenSettings");
         CemuPageCreatorHeader.Text = T("Creator");
         CemuPageClearRateHeader.Text = T("ClearRate");
         CemuPageWorldRecordHeader.Text = T("WorldRecord");
@@ -1909,10 +1981,12 @@ public sealed partial class MainWindow : Window
 
         SettingsTitle.Text = T("Settings");
         LanguageLabel.Text = T("Language");
-        UseCemuCheckBox.Content = T("UseCemuFolder");
-        CemuPathTextBox.Watermark = T("CemuFolderPath");
-        SelectCemuFolderButton.Content = T("SelectFolder");
         HideViewerInfoCheckBox.Content = T("HideViewerInfo");
+        DebugSettingsTitle.Text = T("DebugMode");
+        DebugLevelViewerTitle.Text = T("LevelViewer");
+        DebugLevelViewerCheckBox.Content = T("DebugLevelViewer");
+        DebugTileRegionsCheckBox.Content = T("DebugTileRegions");
+        ShowGridCheckBox.Content = T("ShowGrid");
         UseProxyCheckBox.Content = T("UseProxy");
         OpenProxyFileButton.Content = T("OpenProxyFile");
         ApiEndpointLabel.Text = T("ApiEndpoint");
@@ -1997,15 +2071,10 @@ public sealed partial class MainWindow : Window
 
     private void RefreshCemuLevels()
     {
-        var cemuDirectory = _cemuSaveService.ResolveCemuDirectory(_settings.CemuDirPath);
-        if (!string.IsNullOrWhiteSpace(cemuDirectory))
-        {
-            _settings.CemuDirPath = cemuDirectory;
-            CemuPathTextBox.Text = cemuDirectory;
-            LoadProfiles(cemuDirectory);
-        }
+        var cemuDirectory = _cemuSaveService.ResolveCemuDirectory();
+        LoadProfiles(cemuDirectory);
 
-        var profilePath = GetCemuProfilePath();
+        var profilePath = GetCemuProfilePath(cemuDirectory);
         var levels = _cemuSaveService.LoadLevels(profilePath)
             .Select(EnrichCemuLevelWithSavedMetadata)
             .ToList();
@@ -2026,8 +2095,9 @@ public sealed partial class MainWindow : Window
         var hasLevels = _cemuNodes.Count > 0;
         CemuLevelsPanel.IsVisible = hasLevels;
         CemuEmptyPanel.IsVisible = !hasLevels;
-        OpenCemuFolderButton.IsEnabled = !string.IsNullOrWhiteSpace(GetCemuProfilePath()) &&
-                                         Directory.Exists(GetCemuProfilePath());
+        var profilePath = GetCemuProfilePath(resolvedCemuDirectory);
+        OpenCemuFolderButton.IsEnabled = !string.IsNullOrWhiteSpace(profilePath) &&
+                                         Directory.Exists(profilePath);
         CemuStatusText.Text = hasLevels ? T("CemuSaveFound") : T("CemuSaveNotFound");
 
         if (hasLevels)
@@ -2037,18 +2107,9 @@ public sealed partial class MainWindow : Window
 
         CemuEmptyTitle.Text = T("CemuSaveNotFound");
         CemuEmptyMessage.Text = T("CemuSetupInstructions");
-        var configuredPath = CemuPathTextBox.Text?.Trim() ?? _settings.CemuDirPath;
-        var pathText = string.IsNullOrWhiteSpace(configuredPath)
-            ? T("CemuCurrentPathNotSet")
-            : string.Format(CultureInfo.InvariantCulture, T("CemuCurrentPath"), configuredPath);
-        if (!string.IsNullOrWhiteSpace(resolvedCemuDirectory) &&
-            !string.Equals(resolvedCemuDirectory, configuredPath, StringComparison.OrdinalIgnoreCase))
-        {
-            pathText = string.Format(CultureInfo.InvariantCulture, T("CemuDetectedPath"), resolvedCemuDirectory);
-        }
-
-        CemuEmptyPathText.Text = pathText;
-        OpenSettingsForCemuButton.Content = T("OpenSettings");
+        CemuEmptyPathText.Text = string.IsNullOrWhiteSpace(resolvedCemuDirectory)
+            ? T("CemuDetectedPathNotFound")
+            : string.Format(CultureInfo.InvariantCulture, T("CemuDetectedPath"), resolvedCemuDirectory);
     }
 
     private SavedLevelNode ToCemuNode(LevelInfo level)
@@ -2141,9 +2202,22 @@ public sealed partial class MainWindow : Window
     private void AddSearchResult(LevelInfo level)
     {
         MarkDownloadState(level);
-        _searchResults.Add(level);
+        var loadMoreIndex = _searchResults.IndexOf(_loadMoreSearchResultsItem);
+        if (loadMoreIndex >= 0)
+        {
+            _searchResults.Insert(loadMoreIndex, level);
+        }
+        else
+        {
+            _searchResults.Add(level);
+        }
+
         _ = LoadSearchResultMiiImagesAsync(level);
     }
+
+    private IEnumerable<LevelInfo> SearchResultLevels => _searchResults.OfType<LevelInfo>();
+
+    private int SearchResultCount => _searchResults.OfType<LevelInfo>().Count();
 
     private async Task LoadSearchResultMiiImagesAsync(LevelInfo level)
     {
@@ -2300,7 +2374,7 @@ public sealed partial class MainWindow : Window
 
     private void ApplyDownloadStateToSearchResults(long levelId)
     {
-        foreach (var result in _searchResults.Where(result => result.LevelId == levelId))
+        foreach (var result in SearchResultLevels.Where(result => result.LevelId == levelId))
         {
             ApplyDownloadState(result);
         }
@@ -3094,10 +3168,10 @@ public sealed partial class MainWindow : Window
         return (SavedSourceComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "downloaded";
     }
 
-    private string GetCemuProfilePath()
+    private string GetCemuProfilePath(string? cemuDirectory = null)
     {
         var profile = ProfileComboBox.SelectedItem?.ToString() ?? _settings.SelectedProfile;
-        return _cemuSaveService.GetProfilePath(_settings.CemuDirPath, profile);
+        return _cemuSaveService.GetProfilePath(cemuDirectory ?? _cemuSaveService.ResolveCemuDirectory(), profile);
     }
 
     private string? GetPackFolderIfEnabled()
@@ -3198,6 +3272,28 @@ public sealed partial class MainWindow : Window
     {
         CoursePreviewInfo.IsVisible = !_settings.HideViewerInfo;
         LevelViewerInfo.IsVisible = !_settings.HideViewerInfo;
+    }
+
+    private void ApplyDebugSettings()
+    {
+        var debugLevelViewer = _settings.Debug.LevelViewer;
+        var debugTileRegions = _settings.Debug.TileRegions;
+        var showGrid = _settings.Debug.ShowGrid;
+        SearchSelectedPreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        SearchSelectedPreviewCanvas.DebugTileRegions = debugTileRegions;
+        SearchSelectedPreviewCanvas.ShowGrid = showGrid;
+        CoursePreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        CoursePreviewCanvas.DebugTileRegions = debugTileRegions;
+        CoursePreviewCanvas.ShowGrid = showGrid;
+        ProfileSelectedPreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        ProfileSelectedPreviewCanvas.DebugTileRegions = debugTileRegions;
+        ProfileSelectedPreviewCanvas.ShowGrid = showGrid;
+        CemuPagePreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        CemuPagePreviewCanvas.DebugTileRegions = debugTileRegions;
+        CemuPagePreviewCanvas.ShowGrid = showGrid;
+        LevelViewerCanvas.DebugLevelViewer = debugLevelViewer;
+        LevelViewerCanvas.DebugTileRegions = debugTileRegions;
+        LevelViewerCanvas.ShowGrid = showGrid;
     }
 
     private async Task RunApiStatusLoopAsync(CancellationToken token)
@@ -3367,6 +3463,7 @@ public sealed partial class MainWindow : Window
         ["SaveInLevelPack"] = "Save in Level Pack",
         ["LevelPackName"] = "Level Pack Name",
         ["DownloadAllResults"] = "Download All Results",
+        ["LoadMore"] = "Load More",
         ["SelectedCourse"] = "Selected Course",
         ["SelectedLevel"] = "Selected Level",
         ["NoCourseSelected"] = "No course selected",
@@ -3408,11 +3505,9 @@ public sealed partial class MainWindow : Window
         ["ClearRate"] = "Clear Rate",
         ["CemuSaveFound"] = "CEMU save found",
         ["CemuSaveNotFound"] = "CEMU save was not found",
-        ["CemuSetupInstructions"] = "Open Settings, enable the CEMU folder option, and select the folder that contains Cemu.exe and the mlc01 directory. The save is expected below mlc01/usr/save/00050000/<Super Mario Maker title id>/user/<profile>.",
-        ["CemuCurrentPath"] = "Current Settings path: {0}",
-        ["CemuCurrentPathNotSet"] = "Current Settings path: not set",
+        ["CemuSetupInstructions"] = "CEMU is detected automatically when a folder containing Cemu.exe and the mlc01 directory is found. The save is expected below mlc01/usr/save/00050000/<Super Mario Maker title id>/user/<profile>.",
         ["CemuDetectedPath"] = "Detected path: {0}",
-        ["OpenSettings"] = "Open Settings",
+        ["CemuDetectedPathNotFound"] = "Detected path: not found",
         ["NoCemuLevelSelected"] = "No CEMU level selected",
         ["ReplaceWithDownloadedLevel"] = "Replace with downloaded level",
         ["SearchDownloadedLevels"] = "Search downloaded levels",
@@ -3420,10 +3515,12 @@ public sealed partial class MainWindow : Window
         ["ReplaceCemuLevelWarning"] = "Replace '{0}' in your CEMU save with '{1}'?\n\nA backup of the current CEMU level folder will be created first.",
         ["Settings"] = "Settings",
         ["Language"] = "Language",
-        ["UseCemuFolder"] = "Use Cemu Folder",
-        ["CemuFolderPath"] = "Cemu folder path",
-        ["SelectFolder"] = "Select Folder",
         ["HideViewerInfo"] = "Hide Viewer Info",
+        ["DebugMode"] = "Debug Mode",
+        ["LevelViewer"] = "Level Viewer",
+        ["DebugLevelViewer"] = "Debug Tiles",
+        ["DebugTileRegions"] = "Debug Tile Regions",
+        ["ShowGrid"] = "Show Grid",
         ["UseProxy"] = "Use Proxy for Downloads",
         ["OpenProxyFile"] = "Open Proxy File",
         ["ApiEndpoint"] = "API Endpoint",
@@ -3473,6 +3570,7 @@ public sealed partial class MainWindow : Window
         ["SaveInLevelPack"] = "In Level-Pack speichern",
         ["LevelPackName"] = "Level-Pack-Name",
         ["DownloadAllResults"] = "Alle Ergebnisse laden",
+        ["LoadMore"] = "Mehr laden",
         ["SelectedCourse"] = "Ausgewaehltes Level",
         ["SelectedLevel"] = "Ausgewaehltes Level",
         ["NoCourseSelected"] = "Kein Level ausgewaehlt",
@@ -3514,11 +3612,9 @@ public sealed partial class MainWindow : Window
         ["ClearRate"] = "Clear-Rate",
         ["CemuSaveFound"] = "CEMU-Save gefunden",
         ["CemuSaveNotFound"] = "CEMU-Save wurde nicht gefunden",
-        ["CemuSetupInstructions"] = "Oeffne die Einstellungen, aktiviere den CEMU-Ordner und waehle den Ordner aus, der Cemu.exe und den mlc01-Ordner enthaelt. Der Save wird unter mlc01/usr/save/00050000/<Super Mario Maker Title-ID>/user/<Profil> erwartet.",
-        ["CemuCurrentPath"] = "Aktueller Pfad in den Einstellungen: {0}",
-        ["CemuCurrentPathNotSet"] = "Aktueller Pfad in den Einstellungen: nicht gesetzt",
+        ["CemuSetupInstructions"] = "CEMU wird automatisch erkannt, wenn ein Ordner mit Cemu.exe und dem mlc01-Ordner gefunden wird. Der Save wird unter mlc01/usr/save/00050000/<Super Mario Maker Title-ID>/user/<Profil> erwartet.",
         ["CemuDetectedPath"] = "Erkannter Pfad: {0}",
-        ["OpenSettings"] = "Einstellungen oeffnen",
+        ["CemuDetectedPathNotFound"] = "Erkannter Pfad: nicht gefunden",
         ["NoCemuLevelSelected"] = "Kein CEMU-Level ausgewaehlt",
         ["ReplaceWithDownloadedLevel"] = "Mit geladenem Level ersetzen",
         ["SearchDownloadedLevels"] = "Geladene Level suchen",
@@ -3526,10 +3622,12 @@ public sealed partial class MainWindow : Window
         ["ReplaceCemuLevelWarning"] = "'{0}' im CEMU-Save durch '{1}' ersetzen?\n\nVorher wird ein Backup des aktuellen CEMU-Level-Ordners erstellt.",
         ["Settings"] = "Einstellungen",
         ["Language"] = "Sprache",
-        ["UseCemuFolder"] = "Cemu-Ordner verwenden",
-        ["CemuFolderPath"] = "Cemu-Ordnerpfad",
-        ["SelectFolder"] = "Ordner waehlen",
         ["HideViewerInfo"] = "Viewer-Info ausblenden",
+        ["DebugMode"] = "Debug-Modus",
+        ["LevelViewer"] = "Level Viewer",
+        ["DebugLevelViewer"] = "Tiles debuggen",
+        ["DebugTileRegions"] = "Tile-Regionen debuggen",
+        ["ShowGrid"] = "Raster anzeigen",
         ["UseProxy"] = "Proxy fuer Downloads verwenden",
         ["OpenProxyFile"] = "Proxy-Datei oeffnen",
         ["ApiEndpoint"] = "API-Endpunkt",
@@ -3564,5 +3662,48 @@ public sealed partial class MainWindow : Window
         public bool IsDownloading { get; set; }
         public bool IsDownloaded { get; set; }
         public string ProgressText { get; set; } = "";
+    }
+}
+
+public sealed class LoadMoreSearchResultsItem : INotifyPropertyChanged
+{
+    private string _text = "";
+    private bool _isEnabled;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            if (_text == value)
+            {
+                return;
+            }
+
+            _text = value;
+            OnPropertyChanged(nameof(Text));
+        }
+    }
+
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            if (_isEnabled == value)
+            {
+                return;
+            }
+
+            _isEnabled = value;
+            OnPropertyChanged(nameof(IsEnabled));
+        }
+    }
+
+    private void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

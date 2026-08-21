@@ -4,14 +4,8 @@ namespace SMMDownloader.Avalonia.Models;
 
 public sealed class AppSettings
 {
-    [JsonPropertyName("useCemuDir")]
-    public bool UseCemuDir { get; set; }
-
     [JsonPropertyName("BackupLevels")]
     public bool BackupLevels { get; set; }
-
-    [JsonPropertyName("CemuDirPath")]
-    public string CemuDirPath { get; set; } = "";
 
     [JsonPropertyName("selectedProfile")]
     public string SelectedProfile { get; set; } = "";
@@ -46,8 +40,23 @@ public sealed class AppSettings
     [JsonPropertyName("hidePrereleaseWarning")]
     public bool HidePrereleaseWarning { get; set; }
 
+    [JsonPropertyName("debug")]
+    public DebugSettings Debug { get; set; } = new();
+
     [JsonPropertyName("searchParams")]
     public SearchParams SearchParams { get; set; } = new();
+}
+
+public sealed class DebugSettings
+{
+    [JsonPropertyName("levelViewer")]
+    public bool LevelViewer { get; set; }
+
+    [JsonPropertyName("tileRegions")]
+    public bool TileRegions { get; set; }
+
+    [JsonPropertyName("showGrid")]
+    public bool ShowGrid { get; set; } = true;
 }
 
 public sealed class SearchParams
