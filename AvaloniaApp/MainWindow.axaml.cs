@@ -69,6 +69,7 @@ public sealed partial class MainWindow : Window
     private bool _isApplyingPackNameSuggestion;
     private bool _isRefreshingAllDownloadedData;
     private bool _isLoadingCemuProfiles;
+    private bool _isLoadingSettings;
     private int _notificationSequence;
 
     public MainWindow()
@@ -1570,12 +1571,12 @@ public sealed partial class MainWindow : Window
 
     private void DebugSettingsCheckBox_OnChanged(object? sender, RoutedEventArgs e)
     {
-        if (!IsInitialized)
+        if (!IsInitialized || _isLoadingSettings)
         {
             return;
         }
 
-        _settings.Debug.LevelViewer = DebugLevelViewerCheckBox.IsChecked == true;
+        SaveDebugSettingsFromUi();
         ApplyDebugSettings();
         _store.SaveSettings(_settings);
     }
@@ -1789,17 +1790,28 @@ public sealed partial class MainWindow : Window
         _settings = _store.LoadSettings();
         var cemuDirectory = _cemuSaveService.ResolveCemuDirectory();
 
-        SearchTextBox.Text = _settings.LastSearchPhrase;
-        SearchLevelNameCheckBox.IsChecked = _settings.SearchParams.LevelName;
-        SearchLevelIdCheckBox.IsChecked = _settings.SearchParams.LevelID;
-        SearchCreatorNameCheckBox.IsChecked = _settings.SearchParams.CreatorName;
-        SearchCreatorIdCheckBox.IsChecked = _settings.SearchParams.CreatorID;
-        SearchExactCheckBox.IsChecked = _settings.SearchParams.SearchExact;
-        HideViewerInfoCheckBox.IsChecked = _settings.HideViewerInfo;
-        DebugLevelViewerCheckBox.IsChecked = _settings.Debug.LevelViewer;
-        UseProxyCheckBox.IsChecked = _settings.UseProxy;
-        ApiLinkTextBox.Text = _settings.ApiLink;
-        SelectComboBoxItemByTag(LanguageComboBox, _settings.Language);
+        _isLoadingSettings = true;
+        try
+        {
+            SearchTextBox.Text = _settings.LastSearchPhrase;
+            SearchLevelNameCheckBox.IsChecked = _settings.SearchParams.LevelName;
+            SearchLevelIdCheckBox.IsChecked = _settings.SearchParams.LevelID;
+            SearchCreatorNameCheckBox.IsChecked = _settings.SearchParams.CreatorName;
+            SearchCreatorIdCheckBox.IsChecked = _settings.SearchParams.CreatorID;
+            SearchExactCheckBox.IsChecked = _settings.SearchParams.SearchExact;
+            HideViewerInfoCheckBox.IsChecked = _settings.HideViewerInfo;
+            DebugLevelViewerCheckBox.IsChecked = _settings.Debug.LevelViewer;
+            DebugTileRegionsCheckBox.IsChecked = _settings.Debug.TileRegions;
+            ShowGridCheckBox.IsChecked = _settings.Debug.ShowGrid;
+            UseProxyCheckBox.IsChecked = _settings.UseProxy;
+            ApiLinkTextBox.Text = _settings.ApiLink;
+            SelectComboBoxItemByTag(LanguageComboBox, _settings.Language);
+        }
+        finally
+        {
+            _isLoadingSettings = false;
+        }
+
         LoadProfiles(cemuDirectory);
         ApplyDebugSettings();
     }
@@ -1813,13 +1825,20 @@ public sealed partial class MainWindow : Window
         _settings.SearchParams.CreatorID = SearchCreatorIdCheckBox.IsChecked == true;
         _settings.SearchParams.SearchExact = SearchExactCheckBox.IsChecked == true;
         _settings.HideViewerInfo = HideViewerInfoCheckBox.IsChecked == true;
-        _settings.Debug.LevelViewer = DebugLevelViewerCheckBox.IsChecked == true;
+        SaveDebugSettingsFromUi();
         _settings.UseProxy = UseProxyCheckBox.IsChecked == true;
         _settings.ApiLink = string.IsNullOrWhiteSpace(ApiLinkTextBox.Text)
             ? "https://api.bobac-analytics.com/smm1"
             : ApiLinkTextBox.Text.Trim();
         _settings.SelectedProfile = ProfileComboBox.SelectedItem?.ToString() ?? _settings.SelectedProfile;
         _settings.Language = (LanguageComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "en";
+    }
+
+    private void SaveDebugSettingsFromUi()
+    {
+        _settings.Debug.LevelViewer = DebugLevelViewerCheckBox.IsChecked == true;
+        _settings.Debug.TileRegions = DebugTileRegionsCheckBox.IsChecked == true;
+        _settings.Debug.ShowGrid = ShowGridCheckBox.IsChecked == true;
     }
 
     private void ApplyLanguage()
@@ -1917,7 +1936,10 @@ public sealed partial class MainWindow : Window
         LanguageLabel.Text = T("Language");
         HideViewerInfoCheckBox.Content = T("HideViewerInfo");
         DebugSettingsTitle.Text = T("DebugMode");
+        DebugLevelViewerTitle.Text = T("LevelViewer");
         DebugLevelViewerCheckBox.Content = T("DebugLevelViewer");
+        DebugTileRegionsCheckBox.Content = T("DebugTileRegions");
+        ShowGridCheckBox.Content = T("ShowGrid");
         UseProxyCheckBox.Content = T("UseProxy");
         OpenProxyFileButton.Content = T("OpenProxyFile");
         ApiEndpointLabel.Text = T("ApiEndpoint");
@@ -3195,11 +3217,23 @@ public sealed partial class MainWindow : Window
     private void ApplyDebugSettings()
     {
         var debugLevelViewer = _settings.Debug.LevelViewer;
+        var debugTileRegions = _settings.Debug.TileRegions;
+        var showGrid = _settings.Debug.ShowGrid;
         SearchSelectedPreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        SearchSelectedPreviewCanvas.DebugTileRegions = debugTileRegions;
+        SearchSelectedPreviewCanvas.ShowGrid = showGrid;
         CoursePreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        CoursePreviewCanvas.DebugTileRegions = debugTileRegions;
+        CoursePreviewCanvas.ShowGrid = showGrid;
         ProfileSelectedPreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        ProfileSelectedPreviewCanvas.DebugTileRegions = debugTileRegions;
+        ProfileSelectedPreviewCanvas.ShowGrid = showGrid;
         CemuPagePreviewCanvas.DebugLevelViewer = debugLevelViewer;
+        CemuPagePreviewCanvas.DebugTileRegions = debugTileRegions;
+        CemuPagePreviewCanvas.ShowGrid = showGrid;
         LevelViewerCanvas.DebugLevelViewer = debugLevelViewer;
+        LevelViewerCanvas.DebugTileRegions = debugTileRegions;
+        LevelViewerCanvas.ShowGrid = showGrid;
     }
 
     private async Task RunApiStatusLoopAsync(CancellationToken token)
@@ -3422,7 +3456,10 @@ public sealed partial class MainWindow : Window
         ["Language"] = "Language",
         ["HideViewerInfo"] = "Hide Viewer Info",
         ["DebugMode"] = "Debug Mode",
-        ["DebugLevelViewer"] = "Debug LevelViewer",
+        ["LevelViewer"] = "Level Viewer",
+        ["DebugLevelViewer"] = "Debug Tiles",
+        ["DebugTileRegions"] = "Debug Tile Regions",
+        ["ShowGrid"] = "Show Grid",
         ["UseProxy"] = "Use Proxy for Downloads",
         ["OpenProxyFile"] = "Open Proxy File",
         ["ApiEndpoint"] = "API Endpoint",
@@ -3525,7 +3562,10 @@ public sealed partial class MainWindow : Window
         ["Language"] = "Sprache",
         ["HideViewerInfo"] = "Viewer-Info ausblenden",
         ["DebugMode"] = "Debug-Modus",
-        ["DebugLevelViewer"] = "LevelViewer debuggen",
+        ["LevelViewer"] = "Level Viewer",
+        ["DebugLevelViewer"] = "Tiles debuggen",
+        ["DebugTileRegions"] = "Tile-Regionen debuggen",
+        ["ShowGrid"] = "Raster anzeigen",
         ["UseProxy"] = "Proxy fuer Downloads verwenden",
         ["OpenProxyFile"] = "Proxy-Datei oeffnen",
         ["ApiEndpoint"] = "API-Endpunkt",

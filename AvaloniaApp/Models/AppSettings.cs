@@ -51,6 +51,12 @@ public sealed class DebugSettings
 {
     [JsonPropertyName("levelViewer")]
     public bool LevelViewer { get; set; }
+
+    [JsonPropertyName("tileRegions")]
+    public bool TileRegions { get; set; }
+
+    [JsonPropertyName("showGrid")]
+    public bool ShowGrid { get; set; } = true;
 }
 
 public sealed class SearchParams

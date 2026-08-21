@@ -858,15 +858,27 @@
                       Content="Hide Viewer Info"
                       Checked="HideViewerInfoCheckBox_OnChanged"
                       Unchecked="HideViewerInfoCheckBox_OnChanged" />
-            <TextBlock x:Name="DebugSettingsTitle" Text="Debug Mode" FontWeight="SemiBold" Margin="0,8,0,0" />
-            <StackPanel Spacing="8" Margin="12,0,0,0">
-              <CheckBox x:Name="DebugLevelViewerCheckBox"
-                        Content="Debug LevelViewer"
-                        Checked="DebugSettingsCheckBox_OnChanged"
-                        Unchecked="DebugSettingsCheckBox_OnChanged" />
-            </StackPanel>
             <CheckBox x:Name="UseProxyCheckBox" Content="Use Proxy for Downloads" />
             <Button x:Name="OpenProxyFileButton" Content="Open Proxy File" Click="OpenProxyFileButton_OnClick" HorizontalAlignment="Left" />
+            <TextBlock x:Name="DebugSettingsTitle" Text="Debug Mode" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <StackPanel Spacing="8" Margin="12,0,0,0">
+              <TextBlock x:Name="DebugLevelViewerTitle" Text="Level Viewer" FontWeight="SemiBold" />
+              <StackPanel Spacing="8" Margin="12,0,0,0">
+                <CheckBox x:Name="DebugLevelViewerCheckBox"
+                          Content="Debug Tiles"
+                          Checked="DebugSettingsCheckBox_OnChanged"
+                          Unchecked="DebugSettingsCheckBox_OnChanged" />
+                <CheckBox x:Name="DebugTileRegionsCheckBox"
+                          Content="Debug Tile Regions"
+                          Checked="DebugSettingsCheckBox_OnChanged"
+                          Unchecked="DebugSettingsCheckBox_OnChanged" />
+                <CheckBox x:Name="ShowGridCheckBox"
+                          Content="Show Grid"
+                          IsChecked="True"
+                          Checked="DebugSettingsCheckBox_OnChanged"
+                          Unchecked="DebugSettingsCheckBox_OnChanged" />
+              </StackPanel>
+            </StackPanel>
             <TextBlock x:Name="ApiEndpointLabel" Text="API Endpoint" FontWeight="SemiBold" />
             <TextBox x:Name="ApiLinkTextBox" />
             <WrapPanel>

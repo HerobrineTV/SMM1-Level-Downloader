@@ -150,6 +150,9 @@ public sealed class SmmCourseParser
     private static CourseObjectPreview ReadObject(byte[] data, int pos)
     {
         var type = ReadSigned(data, pos + 0x18, 1);
+        var rawX = ReadUInt(data, pos, 4);
+        var rawZ = ReadUInt(data, pos + 0x04, 4);
+        var rawY = ReadSigned(data, pos + 0x08, 2);
         var flags = ReadUInt32(data, pos + 0x0c, 4);
         var isBlock = BlockNames.ContainsKey(type);
         var subType = isBlock ? (int)((flags & 7) >> 2) : (int)((flags & 7 & 4) >> 2);
@@ -159,9 +162,13 @@ public sealed class SmmCourseParser
 
         return new CourseObjectPreview
         {
-            X = ReadUInt(data, pos, 4) / 160,
-            Z = ReadUInt(data, pos + 0x04, 4) / 160,
-            Y = ReadSigned(data, pos + 0x08, 2) / 160 + addY,
+            RawDataHex = Convert.ToHexString(data.AsSpan(pos, 32)),
+            RawX = rawX,
+            RawY = rawY,
+            RawZ = rawZ,
+            X = rawX / 160,
+            Z = rawZ / 160,
+            Y = rawY / 160 + addY,
             Width = ReadSigned(data, pos + 0x0a, 1),
             Height = ReadSigned(data, pos + 0x0b, 1),
             Flags = flags,

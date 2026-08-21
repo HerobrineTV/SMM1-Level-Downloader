@@ -21,6 +21,10 @@ public sealed class CoursePreview
 
 public sealed class CourseObjectPreview
 {
+    public string RawDataHex { get; init; } = "";
+    public int RawX { get; init; }
+    public int RawY { get; init; }
+    public int RawZ { get; init; }
     public int X { get; init; }
     public int Y { get; init; }
     public int Z { get; init; }

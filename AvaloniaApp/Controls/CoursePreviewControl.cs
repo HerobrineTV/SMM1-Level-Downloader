@@ -15,6 +15,7 @@ public sealed class CoursePreviewControl : Control
     private const int MaxCachedPixels = 20_000_000;
     private const int GroundStateCount = 72;
     private const string AssetRoot = "avares://SMMDownloader.Avalonia/Assets/CourseViewer";
+    private static readonly HashSet<int> ObjectBoundsFromDataOrigin = [27];
     private static readonly RenderOptions PixelArtRenderOptions = new()
     {
         BitmapInterpolationMode = BitmapInterpolationMode.None
@@ -29,11 +30,19 @@ public sealed class CoursePreviewControl : Control
     public static readonly StyledProperty<bool> DebugLevelViewerProperty =
         AvaloniaProperty.Register<CoursePreviewControl, bool>(nameof(DebugLevelViewer));
 
+    public static readonly StyledProperty<bool> DebugTileRegionsProperty =
+        AvaloniaProperty.Register<CoursePreviewControl, bool>(nameof(DebugTileRegions));
+
+    public static readonly StyledProperty<bool> ShowGridProperty =
+        AvaloniaProperty.Register<CoursePreviewControl, bool>(nameof(ShowGrid), true);
+
     private Point? _debugPointerPosition;
     private DebugTileSelection? _debugAnchor;
     private RenderTargetBitmap? _courseBitmap;
     private CoursePreview? _cachedCourse;
     private bool _cachedShowHiddenBlocks;
+    private bool _cachedDebugTileRegions;
+    private bool _cachedShowGrid;
     private PixelSize _cachedPixelSize;
     private DebugHitCache? _debugHitCache;
     private CoursePreview? _debugHitCacheCourse;
@@ -44,6 +53,8 @@ public sealed class CoursePreviewControl : Control
         AffectsMeasure<CoursePreviewControl>(CourseProperty);
         AffectsRender<CoursePreviewControl>(ShowHiddenBlocksProperty);
         AffectsRender<CoursePreviewControl>(DebugLevelViewerProperty);
+        AffectsRender<CoursePreviewControl>(DebugTileRegionsProperty);
+        AffectsRender<CoursePreviewControl>(ShowGridProperty);
     }
 
     public CoursePreview? Course
@@ -62,6 +73,18 @@ public sealed class CoursePreviewControl : Control
     {
         get => GetValue(DebugLevelViewerProperty);
         set => SetValue(DebugLevelViewerProperty, value);
+    }
+
+    public bool DebugTileRegions
+    {
+        get => GetValue(DebugTileRegionsProperty);
+        set => SetValue(DebugTileRegionsProperty, value);
+    }
+
+    public bool ShowGrid
+    {
+        get => GetValue(ShowGridProperty);
+        set => SetValue(ShowGridProperty, value);
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -111,6 +134,8 @@ public sealed class CoursePreviewControl : Control
         if (_courseBitmap == null ||
             !ReferenceEquals(_cachedCourse, course) ||
             _cachedShowHiddenBlocks != ShowHiddenBlocks ||
+            _cachedDebugTileRegions != DebugTileRegions ||
+            _cachedShowGrid != ShowGrid ||
             _cachedPixelSize != pixelSize)
         {
             ClearCourseBitmap();
@@ -124,6 +149,8 @@ public sealed class CoursePreviewControl : Control
             _courseBitmap = bitmap;
             _cachedCourse = course;
             _cachedShowHiddenBlocks = ShowHiddenBlocks;
+            _cachedDebugTileRegions = DebugTileRegions;
+            _cachedShowGrid = ShowGrid;
             _cachedPixelSize = pixelSize;
         }
 
@@ -152,17 +179,20 @@ public sealed class CoursePreviewControl : Control
     private void DrawCourseContent(DrawingContext context, CoursePreview course, double width, double height)
     {
         DrawCourseBackground(context, width, height, course.ThemeName);
-        using (context.PushOpacity(0.45))
+        if (ShowGrid)
         {
-            var gridPen = new Pen(new SolidColorBrush(Color.Parse("#7CB7D4")), 1);
-            for (var x = 0; x <= course.WidthBlocks; x++)
+            using (context.PushOpacity(0.45))
             {
-                context.DrawLine(gridPen, new Point(x * Tile, 0), new Point(x * Tile, height));
-            }
+                var gridPen = new Pen(new SolidColorBrush(Color.Parse("#7CB7D4")), 1);
+                for (var x = 0; x <= course.WidthBlocks; x++)
+                {
+                    context.DrawLine(gridPen, new Point(x * Tile, 0), new Point(x * Tile, height));
+                }
 
-            for (var y = 0; y <= course.HeightBlocks; y++)
-            {
-                context.DrawLine(gridPen, new Point(0, y * Tile), new Point(width, y * Tile));
+                for (var y = 0; y <= course.HeightBlocks; y++)
+                {
+                    context.DrawLine(gridPen, new Point(0, y * Tile), new Point(width, y * Tile));
+                }
             }
         }
 
@@ -212,6 +242,8 @@ public sealed class CoursePreviewControl : Control
                 DrawPipeChild(context, course, pipe, pipeChild, height);
             }
         }
+
+        DrawDebugTileRegions(context, course, height);
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -289,8 +321,15 @@ public sealed class CoursePreviewControl : Control
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == DebugLevelViewerProperty && DebugLevelViewer ||
-            change.Property != DebugLevelViewerProperty && change.Property != CourseProperty)
+        if (change.Property == DebugLevelViewerProperty && DebugLevelViewer)
+        {
+            return;
+        }
+
+        if (change.Property != DebugLevelViewerProperty &&
+            change.Property != DebugTileRegionsProperty &&
+            change.Property != ShowGridProperty &&
+            change.Property != CourseProperty)
         {
             return;
         }
@@ -326,6 +365,41 @@ public sealed class CoursePreviewControl : Control
                 DrawEllipse(context, cloud, new Rect(x + 50, 34, 38, 16));
             }
         }
+    }
+
+    private void DrawDebugTileRegions(DrawingContext context, CoursePreview course, double courseHeight)
+    {
+        if (!DebugTileRegions || !course.Objects.Any())
+        {
+            return;
+        }
+
+        foreach (var obj in course.Objects.OrderBy(item => item.Z))
+        {
+            var bounds = GetRawBounds(obj);
+            var rect = new Rect(
+                bounds.X * Tile,
+                courseHeight - ((bounds.Y + bounds.Height) * Tile),
+                bounds.Width * Tile,
+                bounds.Height * Tile);
+            var color = GetDebugRegionColor(obj);
+            context.FillRectangle(new SolidColorBrush(Color.FromArgb(48, color.R, color.G, color.B)), rect);
+            context.DrawRectangle(new Pen(new SolidColorBrush(Color.FromArgb(155, color.R, color.G, color.B)), 1), rect);
+        }
+    }
+
+    private static Color GetDebugRegionColor(CourseObjectPreview obj)
+    {
+        var palette = new[]
+        {
+            Color.Parse("#F45B69"),
+            Color.Parse("#2EC4B6"),
+            Color.Parse("#FF9F1C"),
+            Color.Parse("#7B61FF"),
+            Color.Parse("#4D96FF"),
+            Color.Parse("#8AC926")
+        };
+        return palette[Math.Abs(obj.Type) % palette.Length];
     }
 
     private void DrawDebugOverlay(DrawingContext context, CoursePreview course, double courseHeight)
@@ -465,14 +539,41 @@ public sealed class CoursePreviewControl : Control
             lines.Add($"#{item.Index} {obj.Name} [{(obj.IsBlock ? "Block" : "Object")}]");
             lines.Add($"match={FormatTileHit(item.Hit)}");
             lines.Add($"type={obj.Type}, subtype={obj.SubType}, childType={obj.ChildType}");
+            lines.Add($"construct={FormatObjectConstruct(obj)}");
             lines.Add($"pos x={obj.X}, y={obj.Y}, z={obj.Z}, width={obj.Width}, height={obj.Height}, size={obj.Size}");
+            lines.Add($"rawPos x={obj.RawX}, y={obj.RawY}, z={obj.RawZ}, rem x={FloorMod(obj.RawX, 160)}, y={FloorMod(obj.RawY, 160)}, z={FloorMod(obj.RawZ, 160)}");
             lines.Add($"flags=0x{obj.Flags:X8}, childFlags=0x{obj.ChildFlags:X8}, extended=0x{obj.ExtendedData:X8} ({obj.ExtendedData})");
             lines.Add($"linkId={obj.LinkId}, effect={obj.Effect}, transform={obj.Transform}, childTransform={obj.ChildTransform}, wing={obj.Wing}");
             if (IsDirectionalObject(obj))
             {
                 lines.Add($"direction={GetDirectionalObjectDirection(obj)}, rotation={GetDirectionalObjectRotation(obj) * 180 / Math.PI:0.#}deg");
+                lines.Add($"direction candidates={FormatDirectionCandidates(obj)}");
             }
         }
+    }
+
+    private static string FormatObjectConstruct(CourseObjectPreview obj)
+    {
+        if (obj.RawDataHex.Length < 64)
+        {
+            return obj.RawDataHex;
+        }
+
+        return string.Join(" ",
+            $"00:x={obj.RawDataHex[..8]}",
+            $"04:z={obj.RawDataHex.Substring(8, 8)}",
+            $"08:y={obj.RawDataHex.Substring(16, 4)}",
+            $"0A:w={obj.RawDataHex.Substring(20, 2)}",
+            $"0B:h={obj.RawDataHex.Substring(22, 2)}",
+            $"0C:flags={obj.RawDataHex.Substring(24, 8)}",
+            $"10:childFlags={obj.RawDataHex.Substring(32, 8)}",
+            $"14:ext={obj.RawDataHex.Substring(40, 8)}",
+            $"18:type={obj.RawDataHex.Substring(48, 2)}",
+            $"19:child={obj.RawDataHex.Substring(50, 2)}",
+            $"1A:link={obj.RawDataHex.Substring(52, 4)}",
+            $"1C:effect={obj.RawDataHex.Substring(56, 4)}",
+            $"1E:tr={obj.RawDataHex.Substring(60, 2)}",
+            $"1F:childTr={obj.RawDataHex.Substring(62, 2)}");
     }
 
     private static bool TryGetTile(Point position, CoursePreview course, out int tileX, out int tileY)
@@ -480,6 +581,12 @@ public sealed class CoursePreviewControl : Control
         tileX = (int)Math.Floor(position.X / Tile);
         tileY = course.HeightBlocks - 1 - (int)Math.Floor(position.Y / Tile);
         return tileX >= 0 && tileY >= 0 && tileX < course.WidthBlocks && tileY < course.HeightBlocks;
+    }
+
+    private static int FloorMod(int value, int divisor)
+    {
+        var mod = value % divisor;
+        return mod < 0 ? mod + divisor : mod;
     }
 
     private static TileHit GetTileHit(CoursePreview course, CourseObjectPreview obj, int tileX, int tileY)
@@ -541,9 +648,46 @@ public sealed class CoursePreviewControl : Control
 
     private static TileRect GetRawBounds(CourseObjectPreview obj)
     {
+        if (obj.Type == 9)
+        {
+            return GetPipeBounds(obj);
+        }
+
+        if (!obj.IsBlock &&
+            !ObjectBoundsFromDataOrigin.Contains(obj.Type) &&
+            TryGetRenderedTileBounds(obj, out var renderedBounds))
+        {
+            return renderedBounds;
+        }
+
         var width = Math.Max(1, Math.Abs(obj.Width));
         var height = Math.Max(1, Math.Abs(obj.Height));
+        if (!obj.IsBlock)
+        {
+            width = Math.Max(width, obj.Size);
+            height = Math.Max(height, obj.Size == 2 ? 2 : 1);
+            var x = obj.Size > 1 ? obj.X - (width / 2) : obj.X;
+            return new TileRect(x, obj.Y, width, height);
+        }
+
         return new TileRect(obj.X, obj.Y, width, height);
+    }
+
+    private static bool TryGetRenderedTileBounds(CourseObjectPreview obj, out TileRect bounds)
+    {
+        var rects = GetRenderedTileRects(obj).ToList();
+        if (rects.Count == 0)
+        {
+            bounds = default;
+            return false;
+        }
+
+        var minX = rects.Min(rect => rect.X);
+        var minY = rects.Min(rect => rect.Y);
+        var maxX = rects.Max(rect => rect.X + rect.Width);
+        var maxY = rects.Max(rect => rect.Y + rect.Height);
+        bounds = new TileRect(minX, minY, maxX - minX, maxY - minY);
+        return true;
     }
 
     private static IEnumerable<TileRect> GetRenderedTileRects(CourseObjectPreview obj)
@@ -603,10 +747,9 @@ public sealed class CoursePreviewControl : Control
             return false;
         }
 
-        var rawBounds = GetRawBounds(obj);
         foreach (var candidate in pipes)
         {
-            if (!Intersects(rawBounds, GetPipeBounds(candidate)))
+            if (!IsPipeContentMatch(obj, candidate))
             {
                 continue;
             }
@@ -616,6 +759,11 @@ public sealed class CoursePreviewControl : Control
         }
 
         return false;
+    }
+
+    private static bool IsPipeContentMatch(CourseObjectPreview obj, CourseObjectPreview pipe)
+    {
+        return pipe.LinkId >= 0 && obj.LinkId == pipe.LinkId;
     }
 
     private static bool TryCreatePipeChild(CourseObjectPreview pipe, out CourseObjectPreview child)
@@ -646,7 +794,7 @@ public sealed class CoursePreviewControl : Control
             LinkId = pipe.LinkId,
             Effect = pipe.Effect,
             Transform = pipe.ChildTransform,
-            ChildTransform = 0,
+            ChildTransform = -1,
             Name = $"Pipe child type {childType}",
             IsBlock = isBlock,
             SubType = (int)((childFlags & 7 & 4) >> 2),
@@ -801,6 +949,38 @@ public sealed class CoursePreviewControl : Control
 
     private static int GetDirectionalObjectDirection(CourseObjectPreview obj)
     {
+        if (obj.Type == 66)
+        {
+            return GetAirSignBoardDirection(obj);
+        }
+
+        if (obj.Transform >= 0)
+        {
+            return obj.Transform % 8;
+        }
+
+        return (int)(obj.ExtendedData & 7);
+    }
+
+    private static int GetAirSignBoardDirection(CourseObjectPreview obj)
+    {
+        var state = GetAirSignBoardState(obj);
+        return state switch
+        {
+            0xC => 2,
+            0xE => 4,
+            0xF => 6,
+            _ => GetFallbackDirectionalObjectDirection(obj)
+        };
+    }
+
+    private static int GetAirSignBoardState(CourseObjectPreview obj)
+    {
+        return (int)((obj.Flags >> 24) & 0xF);
+    }
+
+    private static int GetFallbackDirectionalObjectDirection(CourseObjectPreview obj)
+    {
         foreach (var candidate in GetDirectionalObjectDirectionCandidates(obj))
         {
             if (candidate > 0)
@@ -812,18 +992,62 @@ public sealed class CoursePreviewControl : Control
         return 0;
     }
 
+    private static string FormatDirectionCandidates(CourseObjectPreview obj)
+    {
+        return string.Join(", ", GetNamedDirectionCandidates(obj)
+            .Select(item => $"{item.Name}:{item.Value}"));
+    }
+
+    private static IEnumerable<(string Name, int Value)> GetNamedDirectionCandidates(CourseObjectPreview obj)
+    {
+        yield return ("transform", obj.Transform);
+        yield return ("extended", (int)(obj.ExtendedData & 7));
+        yield return ("flags28", (int)((obj.Flags >> 28) & 7));
+        yield return ("airSignState", GetAirSignBoardState(obj));
+        yield return ("flags23", (int)((obj.Flags >> 23) & 1));
+        yield return ("flags24_4bit", (int)((obj.Flags >> 24) & 0xF));
+        yield return ("flags24", (int)((obj.Flags >> 24) & 7));
+        yield return ("flags20", (int)((obj.Flags >> 20) & 7));
+        yield return ("flags16", (int)((obj.Flags >> 16) & 7));
+        yield return ("flags12", (int)((obj.Flags >> 12) & 7));
+        yield return ("flags8", (int)((obj.Flags >> 8) & 7));
+        yield return ("flags4", (int)((obj.Flags >> 4) & 7));
+        yield return ("childTransform", obj.ChildTransform);
+    }
+
+    private static double GetPipeChildRotation(CourseObjectPreview child)
+    {
+        return GetPipeChildDirection(child) * (Math.PI / 4);
+    }
+
+    private static int GetPipeChildDirection(CourseObjectPreview child)
+    {
+        if (child.Type == 66)
+        {
+            if (child.Transform >= 0)
+            {
+                return child.Transform % 8;
+            }
+
+            return GetAirSignBoardDirection(child);
+        }
+
+        if (child.ChildTransform > 0)
+        {
+            return child.ChildTransform % 8;
+        }
+
+        if (child.Transform >= 0)
+        {
+            return child.Transform % 8;
+        }
+
+        return GetFallbackDirectionalObjectDirection(child);
+    }
+
     private static IEnumerable<int> GetDirectionalObjectDirectionCandidates(CourseObjectPreview obj)
     {
-        yield return obj.Transform;
-        yield return (int)(obj.ExtendedData & 7);
-        yield return (int)((obj.Flags >> 28) & 7);
-        yield return (int)((obj.Flags >> 24) & 7);
-        yield return (int)((obj.Flags >> 20) & 7);
-        yield return (int)((obj.Flags >> 16) & 7);
-        yield return (int)((obj.Flags >> 12) & 7);
-        yield return (int)((obj.Flags >> 8) & 7);
-        yield return (int)((obj.Flags >> 4) & 7);
-        yield return obj.ChildTransform;
+        return GetNamedDirectionCandidates(obj).Select(item => item.Value);
     }
 
     private static Point GetObjectRenderCenter(CourseObjectPreview obj, IReadOnlyList<SpriteCell> cells, double courseHeight)
@@ -876,30 +1100,41 @@ public sealed class CoursePreviewControl : Control
         var targetCenterY = target.Y + (target.Height / 2);
         var originX = targetCenterX - (sourceWidth / 2) - minX;
         var originY = targetCenterY - (sourceHeight / 2) - minY;
+        var rotateDirectionalObject = IsDirectionalObject(child);
+        var rotation = rotateDirectionalObject ? GetPipeChildRotation(child) : 0;
+        var center = new Point(targetCenterX * Tile, courseHeight - (targetCenterY * Tile));
+        IDisposable? transform = rotateDirectionalObject && Math.Abs(rotation) > double.Epsilon
+            ? context.PushTransform(Matrix.CreateTranslation(-center.X, -center.Y) *
+                                    Matrix.CreateRotation(rotation) *
+                                    Matrix.CreateTranslation(center.X, center.Y))
+            : null;
 
-        foreach (var cell in cells)
+        using (transform)
         {
-            var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
-            var dest = new Rect(
-                (originX + (cell.X * size)) * Tile,
-                courseHeight - ((originY + (cell.Y * size) + size) * Tile),
-                Tile * size,
-                Tile * size);
-            if (dest.Right < 0 || dest.Left > course.WidthBlocks * Tile || dest.Bottom < 0 || dest.Top > courseHeight)
+            foreach (var cell in cells)
             {
-                continue;
-            }
-
-            if (cell.Opacity < 1)
-            {
-                using (context.PushOpacity(cell.Opacity))
+                var source = new Rect(cell.SourceX * sourceSize, cell.SourceY * sourceSize, sourceSize, sourceSize);
+                var dest = new Rect(
+                    (originX + (cell.X * size)) * Tile,
+                    courseHeight - ((originY + (cell.Y * size) + size) * Tile),
+                    Tile * size,
+                    Tile * size);
+                if (dest.Right < 0 || dest.Left > course.WidthBlocks * Tile || dest.Bottom < 0 || dest.Top > courseHeight)
                 {
-                    DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(child));
+                    continue;
                 }
-            }
-            else
-            {
-                DrawSpriteImage(context, bitmap, source, dest, ShouldFlipHorizontally(child));
+
+                if (cell.Opacity < 1)
+                {
+                    using (context.PushOpacity(cell.Opacity))
+                    {
+                        DrawSpriteImage(context, bitmap, source, dest, !rotateDirectionalObject && ShouldFlipHorizontally(child));
+                    }
+                }
+                else
+                {
+                    DrawSpriteImage(context, bitmap, source, dest, !rotateDirectionalObject && ShouldFlipHorizontally(child));
+                }
             }
         }
     }
@@ -958,17 +1193,17 @@ public sealed class CoursePreviewControl : Control
 
     private static TrackSegment CreateTrackSegment(CourseObjectPreview track)
     {
-        var offsetX = GetSignedTrackOffset(track.Width);
-        var offsetY = GetSignedTrackOffset(track.Height);
+        var offsetX = GetSignedTrackOffset(track.Width) / 160.0;
+        var offsetY = GetSignedTrackOffset(track.Height) / 160.0;
         return new TrackSegment(
-            new Point(track.X + 0.5, track.Y + 0.5),
-            new Point(track.X + 0.5 + offsetX, track.Y + 0.5 + offsetY));
+            new Point(track.RawX / 160.0, track.RawY / 160.0),
+            new Point(track.RawX / 160.0 + offsetX, track.RawY / 160.0 + offsetY));
     }
 
     private static int GetSignedTrackOffset(int value)
     {
         var length = Math.Abs(value);
-        return length <= 1 ? 0 : Math.Sign(value) * (length - 1);
+        return length <= 1 ? 0 : Math.Sign(value) * (length - 1) * 32;
     }
 
     private static void DrawTrackSegment(DrawingContext context, TrackSegment segment, double courseHeight)
@@ -978,6 +1213,11 @@ public sealed class CoursePreviewControl : Control
         var vector = end - start;
         var length = Math.Sqrt(Math.Pow(vector.X, 2) + Math.Pow(vector.Y, 2));
         if (length <= 0)
+        {
+            return;
+        }
+
+        if (TryDrawTexturedTrackSegment(context, start, length, vector))
         {
             return;
         }
@@ -1002,6 +1242,26 @@ public sealed class CoursePreviewControl : Control
         context.DrawLine(railShadowPen, start - railOffset, end - railOffset);
         context.DrawLine(railPen, start + railOffset, end + railOffset);
         context.DrawLine(railPen, start - railOffset, end - railOffset);
+    }
+
+    private static bool TryDrawTexturedTrackSegment(DrawingContext context, Point start, double length, Vector vector)
+    {
+        var trackPreview = new CourseObjectPreview { Type = 59, Name = "Track" };
+        if (!SpriteAssets.TryGetFormatSprite(trackPreview, out var bitmap))
+        {
+            return false;
+        }
+
+        const double trackHeight = Tile * 0.55;
+        var angle = Math.Atan2(vector.Y, vector.X);
+        using (context.PushTransform(Matrix.CreateRotation(angle) * Matrix.CreateTranslation(start.X, start.Y)))
+        {
+            var source = new Rect(0, 0, bitmap.Size.Width, bitmap.Size.Height);
+            var destination = new Rect(0, -trackHeight / 2, Math.Max(Tile * 0.4, length), trackHeight);
+            context.DrawImage(bitmap, source, destination);
+        }
+
+        return true;
     }
 
     private static void DrawTrackNode(DrawingContext context, Point endpoint, double courseHeight)
