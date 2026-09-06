@@ -21,7 +21,7 @@ public sealed partial class MainWindow : Window
 {
     private const string ApiPingUrl = "https://api.bobac-analytics.com/smm1/ping";
     private const string GithubLatestReleaseUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases/latest";
-    private const string CurrentReleaseTag = "Pre_1__V2.0.0";
+    private const string CurrentReleaseTag = "RC1_V2.0.0";
     private const string LevelBackupsFolderName = "LevelBackups";
 
     private readonly ProjectPaths _paths = new();
@@ -262,8 +262,8 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowPrereleaseWarningIfNeededAsync()
     {
-        if (!CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase) ||
-            _settings.HidePrereleaseWarning)
+        var warningTextKeys = GetReleaseWarningTextKeys();
+        if (warningTextKeys == null || _settings.HidePrereleaseWarning)
         {
             return;
         }
@@ -289,7 +289,7 @@ public sealed partial class MainWindow : Window
 
         var dialog = new Window
         {
-            Title = T("PrereleaseWarningTitle"),
+            Title = T(warningTextKeys.Value.TitleKey),
             Width = 520,
             SizeToContent = SizeToContent.Height,
             CanResize = false,
@@ -309,14 +309,14 @@ public sealed partial class MainWindow : Window
                     {
                         new TextBlock
                         {
-                            Text = T("PrereleaseWarningTitle"),
+                            Text = T(warningTextKeys.Value.TitleKey),
                             FontSize = 18,
                             FontWeight = FontWeight.Bold,
                             Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
                         },
                         new TextBlock
                         {
-                            Text = T("PrereleaseWarningMessage"),
+                            Text = T(warningTextKeys.Value.MessageKey),
                             TextWrapping = TextWrapping.Wrap,
                             Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
                         },
@@ -338,14 +338,28 @@ public sealed partial class MainWindow : Window
 
     private void ResetPrereleaseWarningOptOutIfStableRelease()
     {
-        if (CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase) ||
-            !_settings.HidePrereleaseWarning)
+        if (GetReleaseWarningTextKeys() != null || !_settings.HidePrereleaseWarning)
         {
             return;
         }
 
         _settings.HidePrereleaseWarning = false;
         _store.SaveSettings(_settings);
+    }
+
+    private static (string TitleKey, string MessageKey)? GetReleaseWarningTextKeys()
+    {
+        if (CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("PrereleaseWarningTitle", "PrereleaseWarningMessage");
+        }
+
+        if (CurrentReleaseTag.Contains("RC", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("ReleaseCandidateWarningTitle", "ReleaseCandidateWarningMessage");
+        }
+
+        return null;
     }
 
     private async Task<bool> ShowConfirmDialogAsync(string title, string message, string confirmText, string cancelText)
@@ -3560,6 +3574,8 @@ public sealed partial class MainWindow : Window
         ["CreditsFeedback"] = "Leave feedback or requests for help at any time.",
         ["PrereleaseWarningTitle"] = "Prerelease Version",
         ["PrereleaseWarningMessage"] = "This is a prerelease version. Bugs can occur. If you find bugs, please contact me on Discord: nintendo_switch.",
+        ["ReleaseCandidateWarningTitle"] = "Release Candidate",
+        ["ReleaseCandidateWarningMessage"] = "This is a release candidate. It should be close to a stable release, but bugs can still occur. If you find issues, please report them on GitHub or contact me on Discord: nintendo_switch.",
         ["DontShowAgain"] = "Do not show again"
     };
 
@@ -3671,6 +3687,8 @@ public sealed partial class MainWindow : Window
         ["CreditsFeedback"] = "Feedback oder Hilfeanfragen sind jederzeit willkommen.",
         ["PrereleaseWarningTitle"] = "Prerelease-Version",
         ["PrereleaseWarningMessage"] = "Dies ist eine Prerelease-Version. Es koennen Bugs auftreten. Wenn du Bugs findest, melde dich gerne bei mir auf Discord: nintendo_switch.",
+        ["ReleaseCandidateWarningTitle"] = "Release Candidate",
+        ["ReleaseCandidateWarningMessage"] = "Dies ist ein Release Candidate. Er sollte nahe an einer stabilen Version sein, aber es koennen weiterhin Bugs auftreten. Wenn du Fehler findest, melde sie bitte auf GitHub oder kontaktiere mich auf Discord: nintendo_switch.",
         ["DontShowAgain"] = "Nicht erneut anzeigen"
     };
 
