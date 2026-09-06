@@ -5,6 +5,10 @@ A Super Mario Maker 1 Level Downloader designed for the Use of the WayBackMachin
 ![Version](https://img.shields.io/github/v/release/HerobrineTV/SMM1-Level-Downloader)
 ![Contributors](https://img.shields.io/github/contributors/HerobrineTV/SMM1-Level-Downloader)
 
+If u want to support this Project,
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Q0H726HIOB)
+
 <img width="1177" height="789" alt="grafik" src="https://github.com/user-attachments/assets/cd2c1e91-e9e9-4da3-83a6-20e7968f05b2" />
 
 
@@ -34,6 +38,12 @@ But the Total Installations and Downloads are newly tracked.
 - Level Uploads (maybe idk)
 - Accountsystem (maybe idk, but would be needed for the uploads)
 - Maybe a Most Downloaded Levels List (Daily/Monthly/Alltime)
+
+# Support
+If you want to help with server costs or development progress, you can support the project on Ko-fi:
+https://ko-fi.com/herobrinetvv
+
+Support is completely optional and does not unlock extra benefits.
 
 # Usage / Download
 Just unzip the release archive and start the SMM1 Level Downloader executable.

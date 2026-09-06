@@ -1660,6 +1660,11 @@ public sealed partial class MainWindow : Window
         DesktopIntegration.OpenUrl("https://twitter.com/HerobrineTVv");
     }
 
+    private void KofiButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://ko-fi.com/herobrinetvv");
+    }
+
     private void SnoozbusterGithubButton_OnClick(object? sender, RoutedEventArgs e)
     {
         DesktopIntegration.OpenUrl("https://github.com/snoozbuster");
@@ -2000,6 +2005,10 @@ public sealed partial class MainWindow : Window
         CreditsNintendoText.Text = T("CreditsNintendo");
         CreditsAboutTitle.Text = T("CreditsAbout");
         HerobrineRoleText.Text = T("ToolCreator");
+        SupportTitle.Text = T("SupportTitle");
+        SupportDescriptionText.Text = T("SupportDescription");
+        SupportNoBenefitsText.Text = T("SupportNoBenefits");
+        KofiButtonText.Text = T("OpenKofi");
         SnoozbusterCreditText.Text = T("CourseViewerCredit");
         LeoMauroCreditText.Text = T("CourseViewerCredit");
         SpecialThanksTitle.Text = T("SpecialThanksTitle");
@@ -3541,6 +3550,10 @@ public sealed partial class MainWindow : Window
         ["CreditsNintendo"] = "Super Mario Maker, Mario and all related Nintendo assets belong to Nintendo.",
         ["CreditsAbout"] = "Credits",
         ["ToolCreator"] = "Creator of this Tool",
+        ["SupportTitle"] = "Support this project",
+        ["SupportDescription"] = "If you want to help with server costs or development progress, you can support the project on Ko-fi.",
+        ["SupportNoBenefits"] = "Support is completely optional and does not unlock extra benefits.",
+        ["OpenKofi"] = "Open Ko-fi",
         ["CourseViewerCredit"] = "Course Viewer for the Course Display",
         ["SpecialThanksTitle"] = "Special Thanks",
         ["SpecialThanks"] = "Special thanks to James M***, who brought the project back into focus and made this rework finally get started.",
@@ -3648,6 +3661,10 @@ public sealed partial class MainWindow : Window
         ["CreditsNintendo"] = "Super Mario Maker, Mario und alle zugehoerigen Nintendo-Assets gehoeren Nintendo.",
         ["CreditsAbout"] = "Credits",
         ["ToolCreator"] = "Creator of this Tool",
+        ["SupportTitle"] = "Projekt unterstuetzen",
+        ["SupportDescription"] = "Wenn du bei Serverkosten oder Development Progress helfen moechtest, kannst du das Projekt auf Ko-fi unterstuetzen.",
+        ["SupportNoBenefits"] = "Support ist komplett freiwillig und schaltet keine Extra-Benefits frei.",
+        ["OpenKofi"] = "Ko-fi oeffnen",
         ["CourseViewerCredit"] = "Course Viewer fuer die Level-Anzeige",
         ["SpecialThanksTitle"] = "Special Thanks",
         ["SpecialThanks"] = "Special Thanks an James M***, der das Projekt wieder in den Fokus gerueckt hat und wodurch dieser Rework endlich losging.",

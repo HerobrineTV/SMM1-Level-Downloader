@@ -1076,6 +1076,39 @@
                       BorderThickness="1"
                       CornerRadius="5"
                       Padding="12">
+                <StackPanel Spacing="8">
+                  <TextBlock x:Name="SupportTitle"
+                             Text="Support this project"
+                             FontSize="16"
+                             FontWeight="Bold"
+                             Foreground="#2B1605" />
+                  <TextBlock x:Name="SupportDescriptionText"
+                             Text="If you want to help with server costs or development progress, you can support the project on Ko-fi."
+                             Foreground="#2B1605"
+                             TextWrapping="Wrap" />
+                  <TextBlock x:Name="SupportNoBenefitsText"
+                             Text="Support is completely optional and does not unlock extra benefits."
+                             Classes="muted"
+                             TextWrapping="Wrap" />
+                  <Button x:Name="KofiButton"
+                          HorizontalAlignment="Left"
+                          Click="KofiButton_OnClick">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Width="18"
+                                Height="18"
+                                Data="M5 7h10v5a5 5 0 0 1-10 0V7Zm10 1h1.5a2 2 0 0 1 0 4H15M4 19h12M6 4h1M10 4h1M14 4h1" />
+                      <TextBlock x:Name="KofiButtonText"
+                                 Text="Open Ko-fi" />
+                    </StackPanel>
+                  </Button>
+                </StackPanel>
+              </Border>
+
+              <Border Background="#FFF8D6"
+                      BorderBrush="#A86725"
+                      BorderThickness="1"
+                      CornerRadius="5"
+                      Padding="12">
                 <StackPanel Spacing="4">
                   <TextBlock x:Name="SpecialThanksTitle"
                              Text="Special Thanks"
