@@ -311,7 +311,7 @@
           </Border>
 
           <Grid x:Name="SearchResultsLayout" Grid.Row="1" ColumnDefinitions="*,0" ColumnSpacing="12" Margin="0,12,0,0">
-            <Border x:Name="CemuLevelsPanel" Classes="panel">
+            <Border x:Name="SearchResultsPanel" Classes="panel">
               <ListBox x:Name="SearchResultsListBox"
                        SelectionChanged="SearchResultsListBox_OnSelectionChanged"
                        ScrollViewer.ScrollChanged="SearchResultsListBox_OnScrollChanged">
@@ -525,7 +525,7 @@
             <Button x:Name="ResetOfficialButton" Content="Reset Official Courses" Click="ResetOfficialButton_OnClick" />
           </WrapPanel>
           <Grid x:Name="SavedLevelsLayout" Grid.Row="1" ColumnDefinitions="*,0" ColumnSpacing="12">
-            <Border Classes="panel">
+            <Border x:Name="CemuLevelsPanel" Classes="panel">
               <TreeView x:Name="SavedLevelsTreeView" SelectionChanged="SavedLevelsTreeView_OnSelectionChanged">
                 <TreeView.DataTemplates>
                   <TreeDataTemplate DataType="models:SavedLevelNode" ItemsSource="{Binding Children}">
