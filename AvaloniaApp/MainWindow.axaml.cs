@@ -1775,7 +1775,6 @@ public sealed partial class MainWindow : Window
         try
         {
             SaveSettingsFromUi();
-            await RegisterLevelDownloadAsync(level.LevelId, cts.Token);
             DownloadProgressBar.Value = 0;
             state.IsDownloaded = false;
             state.IsDownloading = true;
@@ -1794,6 +1793,7 @@ public sealed partial class MainWindow : Window
             _standardSoundService.EnsureStandardSoundFile();
             await _downloadService.DownloadAsync(level, packFolder, progress, cts.Token);
             _standardSoundService.EnsureCourseSoundFile(level.Folder);
+            await RegisterLevelDownloadAsync(level.LevelId, cts.Token);
             DownloadProgressBar.Value = 100;
             state.ProgressText = "100% - Download complete.";
             state.IsDownloaded = true;
