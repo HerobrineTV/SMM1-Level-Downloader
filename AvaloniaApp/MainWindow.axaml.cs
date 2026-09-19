@@ -2623,6 +2623,7 @@ public sealed partial class MainWindow : Window
         SupportDescriptionText.Text = T("SupportDescription");
         SupportNoBenefitsText.Text = T("SupportNoBenefits");
         KofiButtonText.Text = T("OpenKofi");
+        ToolTip.SetTip(FloatingKofiButton, T("OpenKofi"));
         SnoozbusterCreditText.Text = T("CourseViewerCredit");
         LeoMauroCreditText.Text = T("CourseViewerCredit");
         SpecialThanksTitle.Text = T("SpecialThanksTitle");
