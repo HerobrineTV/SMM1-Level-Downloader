@@ -182,7 +182,7 @@ public static class AshExtractor
 
             if (_bitIndex == 31)
             {
-                _word = ReadU32BE(_data, _nextWordOffset);
+                _word = ReadPaddedU32BE(_data, _nextWordOffset);
                 _nextWordOffset += 4;
                 _bitIndex = 0;
             }
@@ -205,6 +205,24 @@ public static class AshExtractor
                 value = (value << 1) | (uint)ReadBit();
 
             return value;
+        }
+
+        private static uint ReadPaddedU32BE(byte[] data, int offset)
+        {
+            if ((uint)offset > (uint)data.Length)
+                throw new InvalidDataException("Unexpected end of ASH data.");
+
+            if (offset + 4 <= data.Length)
+                return ReadU32BE(data, offset);
+
+            if (offset == data.Length)
+                return 0;
+
+            uint value = 0;
+            for (int i = offset; i < data.Length; i++)
+                value = (value << 8) | data[i];
+
+            return value << ((offset + 4 - data.Length) * 8);
         }
     }
 

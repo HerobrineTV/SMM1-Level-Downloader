@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Avalonia;
@@ -20,9 +21,11 @@ namespace SMMDownloader.Avalonia;
 public sealed partial class MainWindow : Window
 {
     private const string ApiPingUrl = "https://api.bobac-analytics.com/smm1/ping";
-    private const string GithubLatestReleaseUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases/latest";
-    private const string CurrentReleaseTag = "Pre_1__V2.0.0";
+    private const string ArchivePingUrl = "https://web.archive.org/__wb/sparkline?output=json&url=https%3A%2F%2Fexample.com&collection=web";
+    private const string GithubReleasesUrl = "https://api.github.com/repos/HerobrineTV/SMM1-Level-Downloader/releases";
+    private const string CurrentReleaseTag = "RC1_V2.0.0";
     private const string LevelBackupsFolderName = "LevelBackups";
+    private const string SavedMovePlaceholderTag = "__move_placeholder";
 
     private readonly ProjectPaths _paths = new();
     private readonly JsonStore _store;
@@ -43,9 +46,11 @@ public sealed partial class MainWindow : Window
     private readonly ObservableCollection<SavedLevelNode> _cemuNodes = [];
     private readonly ObservableCollection<LevelInfo> _cemuReplaceResults = [];
     private readonly ObservableCollection<NotificationEntry> _notifications = [];
+    private readonly ObservableCollection<ReleaseNoteEntry> _changeNotes = [];
     private readonly Dictionary<long, DownloadState> _downloadStates = [];
     private IReadOnlyList<LevelInfo> _allSavedLevels = [];
     private IReadOnlyList<SavedLevelNode> _allSavedNodes = [];
+    private IReadOnlyList<ReleaseNoteEntry> _allChangeNotes = [];
     private AppSettings _settings = new();
     private CancellationTokenSource? _workCts;
     private string _currentSearchPhrase = "";
@@ -53,10 +58,12 @@ public sealed partial class MainWindow : Window
     private bool _isLoadingSearchPage;
     private bool _hasMoreSearchPages;
     private LevelInfo? _selectedSearchResult;
+    private LevelInfo? _lastMultiSelectedSearchResult;
     private string _currentProfileUserName = "";
     private LevelInfo? _selectedPreviewLevel;
     private SavedLevelNode? _selectedSavedNode;
     private SavedLevelNode? _selectedPackNode;
+    private SavedLevelNode? _lastMultiSelectedSavedNode;
     private SavedLevelNode? _selectedCemuNode;
     private LevelInfo? _selectedCemuReplacementLevel;
     private string _selectedPreviewFile = "course_data.cdt";
@@ -66,13 +73,23 @@ public sealed partial class MainWindow : Window
     private bool _returnToProfilePageFromViewer;
     private bool _returnToCemuLevelPageFromProfile;
     private bool? _isApiOnline;
+    private long? _apiLatencyMs;
+    private bool? _isArchiveOnline;
+    private long? _archiveLatencyMs;
     private string? _availableUpdateVersion;
     private string? _availableUpdateUrl;
+    private string? _availableUpdateAssetName;
+    private string? _availableUpdateAssetDownloadUrl;
+    private string? _availableUpdateSha256;
+    private bool _isUpdating;
     private bool _startupInitialized;
     private bool _isApplyingPackNameSuggestion;
     private bool _isRefreshingAllDownloadedData;
     private bool _isLoadingCemuProfiles;
     private bool _isLoadingSettings;
+    private bool _isUpdatingSavedMovePackComboBox;
+    private bool _isSavedMultiSelectMode;
+    private bool _isDownloadMultiSelectMode;
     private int _notificationSequence;
 
     public MainWindow()
@@ -90,6 +107,7 @@ public sealed partial class MainWindow : Window
         CemuLevelsItemsControl.ItemsSource = _cemuNodes;
         CemuReplaceResultsListBox.ItemsSource = _cemuReplaceResults;
         NotificationHistoryListBox.ItemsSource = _notifications;
+        ChangeNotesItemsControl.ItemsSource = _changeNotes;
     }
 
     protected override async void OnOpened(EventArgs e)
@@ -137,6 +155,7 @@ public sealed partial class MainWindow : Window
         LoadSavedLevels();
         RefreshCemuLevels();
         _ = LoadCreditImagesAsync(_lifetimeCts.Token);
+        _ = LoadChangeNotesAsync(_lifetimeCts.Token);
         _ = RunApiStatusLoopAsync(_lifetimeCts.Token);
         _ = CheckForUpdatesAsync(_lifetimeCts.Token);
         _ = RegisterFirstStartIfNeededAsync(_lifetimeCts.Token);
@@ -262,8 +281,8 @@ public sealed partial class MainWindow : Window
 
     private async Task ShowPrereleaseWarningIfNeededAsync()
     {
-        if (!CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase) ||
-            _settings.HidePrereleaseWarning)
+        var warningTextKeys = GetReleaseWarningTextKeys();
+        if (warningTextKeys == null || _settings.HidePrereleaseWarning)
         {
             return;
         }
@@ -289,7 +308,7 @@ public sealed partial class MainWindow : Window
 
         var dialog = new Window
         {
-            Title = T("PrereleaseWarningTitle"),
+            Title = T(warningTextKeys.Value.TitleKey),
             Width = 520,
             SizeToContent = SizeToContent.Height,
             CanResize = false,
@@ -309,14 +328,14 @@ public sealed partial class MainWindow : Window
                     {
                         new TextBlock
                         {
-                            Text = T("PrereleaseWarningTitle"),
+                            Text = T(warningTextKeys.Value.TitleKey),
                             FontSize = 18,
                             FontWeight = FontWeight.Bold,
                             Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
                         },
                         new TextBlock
                         {
-                            Text = T("PrereleaseWarningMessage"),
+                            Text = T(warningTextKeys.Value.MessageKey),
                             TextWrapping = TextWrapping.Wrap,
                             Foreground = new SolidColorBrush(Color.Parse("#2B1605"))
                         },
@@ -338,14 +357,28 @@ public sealed partial class MainWindow : Window
 
     private void ResetPrereleaseWarningOptOutIfStableRelease()
     {
-        if (CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase) ||
-            !_settings.HidePrereleaseWarning)
+        if (GetReleaseWarningTextKeys() != null || !_settings.HidePrereleaseWarning)
         {
             return;
         }
 
         _settings.HidePrereleaseWarning = false;
         _store.SaveSettings(_settings);
+    }
+
+    private static (string TitleKey, string MessageKey)? GetReleaseWarningTextKeys()
+    {
+        if (CurrentReleaseTag.Contains("Pre", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("PrereleaseWarningTitle", "PrereleaseWarningMessage");
+        }
+
+        if (CurrentReleaseTag.Contains("RC", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("ReleaseCandidateWarningTitle", "ReleaseCandidateWarningMessage");
+        }
+
+        return null;
     }
 
     private async Task<bool> ShowConfirmDialogAsync(string title, string message, string confirmText, string cancelText)
@@ -437,6 +470,9 @@ public sealed partial class MainWindow : Window
 
             SetBusy("Searching courses...");
             var results = await _apiClient.SearchAsync(_settings, phrase, 1, token);
+            _isDownloadMultiSelectMode = false;
+            _lastMultiSelectedSearchResult = null;
+            SelectAllDownloadButton.IsVisible = false;
             _searchResults.Clear();
             foreach (var level in results)
             {
@@ -447,6 +483,7 @@ public sealed partial class MainWindow : Window
             _currentSearchPage = 1;
             _hasMoreSearchPages = results.Count > 0;
             UpdateLoadMoreSearchResultsButton();
+            UpdateDownloadMultiSelectUi();
             _settings.LastSearchPhrase = phrase;
             _settings.RecentFoundLevels = results.ToDictionary(level => level.LevelId.ToString());
             _store.SaveSettings(_settings);
@@ -461,6 +498,9 @@ public sealed partial class MainWindow : Window
             SaveSettingsFromUi();
             SetBusy("Loading random course...");
             var results = await _apiClient.RandomAsync(_settings, token);
+            _isDownloadMultiSelectMode = false;
+            _lastMultiSelectedSearchResult = null;
+            SelectAllDownloadButton.IsVisible = false;
             _searchResults.Clear();
             foreach (var level in results)
             {
@@ -471,6 +511,7 @@ public sealed partial class MainWindow : Window
             _currentSearchPage = 1;
             _hasMoreSearchPages = false;
             UpdateLoadMoreSearchResultsButton();
+            UpdateDownloadMultiSelectUi();
             SetStatus($"Loaded {SearchResultCount} random result(s).");
         });
     }
@@ -929,10 +970,15 @@ public sealed partial class MainWindow : Window
         RefreshSavedMetadataButton.IsVisible = false;
         OpenSelectedLevelFolderButton.IsVisible = false;
         RemoveSelectedPackButton.IsVisible = false;
+        UpdateSavedMovePackUi();
         SavedLevelTitle.Text = T("SelectSavedCourse");
         SavedLevelDetailsPanel.IsVisible = false;
         CoursePreviewCanvas.Course = null;
         UnderworldPreviewButton.IsVisible = true;
+        if (!_isSavedMultiSelectMode)
+        {
+            ClearSavedMultiSelection();
+        }
     }
 
     private void SetSelectedSavedNode(SavedLevelNode? node)
@@ -974,6 +1020,115 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private static IEnumerable<SavedLevelNode> EnumerateSelectableSavedNodes(IEnumerable<SavedLevelNode> nodes)
+    {
+        return EnumerateSavedNodes(nodes).Where(node => node.CanMultiSelect);
+    }
+
+    private List<SavedLevelNode> GetVisibleSelectableSavedNodes()
+    {
+        return EnumerateSelectableSavedNodes(_savedNodes).ToList();
+    }
+
+    private IReadOnlyList<SavedLevelNode> GetMultiSelectedSavedNodes()
+    {
+        return EnumerateSelectableSavedNodes(_savedNodes)
+            .Where(node => node.IsMultiSelected)
+            .ToList();
+    }
+
+    private void SetSavedMultiSelectMode(bool enabled)
+    {
+        _isSavedMultiSelectMode = enabled;
+        SelectAllSavedButton.IsVisible = enabled;
+        SavedLevelsTreeView.SelectedItem = null;
+        ResetSavedSelectedLevelDetails();
+        ClearSavedMultiSelection();
+        foreach (var node in EnumerateSavedNodes(_savedNodes))
+        {
+            node.IsMultiSelectMode = enabled;
+        }
+
+        UpdateSavedMultiSelectUi();
+    }
+
+    private void ClearSavedMultiSelection()
+    {
+        foreach (var node in EnumerateSelectableSavedNodes(_savedNodes))
+        {
+            node.IsMultiSelected = false;
+        }
+
+        _lastMultiSelectedSavedNode = null;
+        UpdateSavedMultiSelectUi();
+    }
+
+    private void UpdateSavedMultiSelectUi()
+    {
+        if (!_isSavedMultiSelectMode)
+        {
+            MultiSelectSavedButton.Content = T("MultiSelect");
+            DeleteSavedButton.Content = T("DeleteSelected");
+            UpdateSavedMovePackUi();
+            return;
+        }
+
+        var selectedCount = GetMultiSelectedSavedNodes().Count;
+        MultiSelectSavedButton.Content = T("ExitMultiSelect");
+        DeleteSavedButton.Content = selectedCount > 0
+            ? string.Format(CultureInfo.InvariantCulture, T("DeleteSelectedCount"), selectedCount)
+            : T("DeleteSelected");
+        UpdateSavedMovePackUi();
+    }
+
+    private void UpdateSavedMovePackUi()
+    {
+        var isDownloadedSource = GetSavedSource() == "downloaded";
+        var selectedCount = _isSavedMultiSelectMode
+            ? GetMultiSelectedSavedNodes().Count
+            : _selectedPreviewLevel == null ? 0 : 1;
+        SavedMovePackComboBox.IsVisible = isDownloadedSource && (_isSavedMultiSelectMode || _selectedPreviewLevel != null);
+        SavedMovePackComboBox.IsEnabled = isDownloadedSource && selectedCount > 0;
+    }
+
+    private void ToggleSavedNodeMultiSelection(SavedLevelNode node, bool selected, bool selectRange)
+    {
+        if (!node.CanMultiSelect)
+        {
+            return;
+        }
+
+        var visibleNodes = GetVisibleSelectableSavedNodes();
+        if (selectRange && _lastMultiSelectedSavedNode != null)
+        {
+            var start = visibleNodes.IndexOf(_lastMultiSelectedSavedNode);
+            var end = visibleNodes.IndexOf(node);
+            if (start >= 0 && end >= 0)
+            {
+                if (start > end)
+                {
+                    (start, end) = (end, start);
+                }
+
+                for (var i = start; i <= end; i++)
+                {
+                    visibleNodes[i].IsMultiSelected = selected;
+                }
+            }
+            else
+            {
+                node.IsMultiSelected = selected;
+            }
+        }
+        else
+        {
+            node.IsMultiSelected = selected;
+        }
+
+        _lastMultiSelectedSavedNode = node;
+        UpdateSavedMultiSelectUi();
+    }
+
     private void ShowSearchSelectedLevelContainer()
     {
         SearchResultsLayout.ColumnDefinitions = new ColumnDefinitions("2*,*");
@@ -985,6 +1140,91 @@ public sealed partial class MainWindow : Window
     {
         SearchResultsLayout.ColumnDefinitions = new ColumnDefinitions("*,0");
         SearchResultsLayout.ColumnSpacing = 0;
+    }
+
+    private List<LevelInfo> GetVisibleDownloadSelectableLevels()
+    {
+        return SearchResultLevels.ToList();
+    }
+
+    private IReadOnlyList<LevelInfo> GetMultiSelectedDownloadLevels()
+    {
+        return SearchResultLevels.Where(level => level.IsMultiSelected).ToList();
+    }
+
+    private void SetDownloadMultiSelectMode(bool enabled)
+    {
+        _isDownloadMultiSelectMode = enabled;
+        SelectAllDownloadButton.IsVisible = enabled;
+        SearchResultsListBox.SelectedItem = null;
+        ResetSearchSelectedLevelDetails();
+        ClearDownloadMultiSelection();
+        foreach (var level in SearchResultLevels)
+        {
+            level.IsMultiSelectMode = enabled;
+        }
+
+        UpdateDownloadMultiSelectUi();
+    }
+
+    private void ClearDownloadMultiSelection()
+    {
+        foreach (var level in SearchResultLevels)
+        {
+            level.IsMultiSelected = false;
+        }
+
+        _lastMultiSelectedSearchResult = null;
+        UpdateDownloadMultiSelectUi();
+    }
+
+    private void UpdateDownloadMultiSelectUi()
+    {
+        if (!_isDownloadMultiSelectMode)
+        {
+            MultiSelectDownloadButton.Content = T("MultiSelect");
+            DownloadAllButton.Content = T("DownloadAllResults");
+            return;
+        }
+
+        var selectedCount = GetMultiSelectedDownloadLevels().Count;
+        MultiSelectDownloadButton.Content = T("ExitMultiSelect");
+        DownloadAllButton.Content = selectedCount > 0
+            ? string.Format(CultureInfo.InvariantCulture, T("DownloadSelectedCount"), selectedCount)
+            : T("DownloadSelected");
+    }
+
+    private void ToggleDownloadLevelMultiSelection(LevelInfo level, bool selected, bool selectRange)
+    {
+        var visibleLevels = GetVisibleDownloadSelectableLevels();
+        if (selectRange && _lastMultiSelectedSearchResult != null)
+        {
+            var start = visibleLevels.IndexOf(_lastMultiSelectedSearchResult);
+            var end = visibleLevels.IndexOf(level);
+            if (start >= 0 && end >= 0)
+            {
+                if (start > end)
+                {
+                    (start, end) = (end, start);
+                }
+
+                for (var i = start; i <= end; i++)
+                {
+                    visibleLevels[i].IsMultiSelected = selected;
+                }
+            }
+            else
+            {
+                level.IsMultiSelected = selected;
+            }
+        }
+        else
+        {
+            level.IsMultiSelected = selected;
+        }
+
+        _lastMultiSelectedSearchResult = level;
+        UpdateDownloadMultiSelectUi();
     }
 
     private void ShowSavedSelectedLevelContainer()
@@ -1107,7 +1347,11 @@ public sealed partial class MainWindow : Window
 
     private async void DownloadAllButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        foreach (var level in SearchResultLevels.ToList())
+        var levels = _isDownloadMultiSelectMode
+            ? GetMultiSelectedDownloadLevels().ToList()
+            : SearchResultLevels.ToList();
+
+        foreach (var level in levels)
         {
             if (CanStartDownload(level))
             {
@@ -1118,6 +1362,12 @@ public sealed partial class MainWindow : Window
 
     private void SearchResultsListBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (_isDownloadMultiSelectMode)
+        {
+            SearchResultsListBox.SelectedItem = null;
+            return;
+        }
+
         if (SearchResultsListBox.SelectedItem is LoadMoreSearchResultsItem)
         {
             SearchResultsListBox.SelectedItem = _selectedSearchResult;
@@ -1148,8 +1398,67 @@ public sealed partial class MainWindow : Window
         _ = LoadSearchResultMiiImagesAsync(level);
     }
 
+    private void SearchResultLevel_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if ((e.Source as Control)?.FindAncestorOfType<Button>() != null ||
+            (e.Source as Control)?.FindAncestorOfType<CheckBox>() != null)
+        {
+            return;
+        }
+
+        if (!_isDownloadMultiSelectMode ||
+            (sender as Control)?.DataContext is not LevelInfo level)
+        {
+            return;
+        }
+
+        ToggleDownloadLevelMultiSelection(level, !level.IsMultiSelected, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+        SearchResultsListBox.SelectedItem = null;
+        e.Handled = true;
+    }
+
+    private void SearchResultMultiSelectCheckBox_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not LevelInfo level)
+        {
+            return;
+        }
+
+        ToggleDownloadLevelMultiSelection(level, level.IsMultiSelected, false);
+        e.Handled = true;
+    }
+
+    private void MultiSelectDownloadButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        SetDownloadMultiSelectMode(!_isDownloadMultiSelectMode);
+    }
+
+    private void SelectAllDownloadButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var visibleLevels = GetVisibleDownloadSelectableLevels();
+        if (visibleLevels.Count == 0)
+        {
+            return;
+        }
+
+        var selectAll = visibleLevels.Any(level => !level.IsMultiSelected);
+        foreach (var level in visibleLevels)
+        {
+            level.IsMultiSelected = selectAll;
+        }
+
+        _lastMultiSelectedSearchResult = selectAll ? visibleLevels.LastOrDefault() : null;
+        UpdateDownloadMultiSelectUi();
+    }
+
     private void SavedLevelsTreeView_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (_isSavedMultiSelectMode)
+        {
+            SavedLevelsTreeView.SelectedItem = null;
+            return;
+        }
+
         if (SavedLevelsTreeView.SelectedItem is SavedLevelNode { Level: { } level } node)
         {
             SetSavedStatsHidden(true);
@@ -1162,6 +1471,7 @@ public sealed partial class MainWindow : Window
             RefreshSavedMetadataButton.IsVisible = CanRefreshSavedMetadata();
             OpenSelectedLevelFolderButton.IsVisible = true;
             RemoveSelectedPackButton.IsVisible = false;
+            UpdateSavedMovePackUi();
             ShowSavedSelectedLevelContainer();
             SavedLevelDetailsPanel.IsVisible = true;
             ShowSavedLevelDetails(level);
@@ -1175,7 +1485,8 @@ public sealed partial class MainWindow : Window
 
     private void SavedLevelNode_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if ((e.Source as Control)?.FindAncestorOfType<Button>() != null)
+        if ((e.Source as Control)?.FindAncestorOfType<Button>() != null ||
+            (e.Source as Control)?.FindAncestorOfType<CheckBox>() != null)
         {
             return;
         }
@@ -1185,19 +1496,15 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (node is { IsFolder: true })
+        if (_isSavedMultiSelectMode)
         {
-            SavedLevelsTreeView.SelectedItem = null;
-            ResetSavedSelectedLevelDetails();
-            _selectedPackNode = node;
-            RemoveSelectedPackButton.IsVisible = false;
-
-            var treeViewItem = (sender as Control)?.FindAncestorOfType<TreeViewItem>();
-            if (treeViewItem != null)
+            if (node.CanMultiSelect)
             {
-                treeViewItem.IsExpanded = !treeViewItem.IsExpanded;
+                var modifiers = e.KeyModifiers;
+                ToggleSavedNodeMultiSelection(node, !node.IsMultiSelected, modifiers.HasFlag(KeyModifiers.Shift));
             }
 
+            SavedLevelsTreeView.SelectedItem = null;
             e.Handled = true;
             return;
         }
@@ -1208,6 +1515,67 @@ public sealed partial class MainWindow : Window
             ResetSavedSelectedLevelDetails();
             e.Handled = true;
         }
+    }
+
+    private void SavedLevelNode_OnTapped(object? sender, TappedEventArgs e)
+    {
+        if ((e.Source as Control)?.FindAncestorOfType<Button>() != null ||
+            (e.Source as Control)?.FindAncestorOfType<CheckBox>() != null)
+        {
+            return;
+        }
+
+        if ((sender as Control)?.DataContext is not SavedLevelNode { IsFolder: true } node)
+        {
+            return;
+        }
+
+        SavedLevelsTreeView.SelectedItem = null;
+        ResetSavedSelectedLevelDetails();
+        _selectedPackNode = node;
+        RemoveSelectedPackButton.IsVisible = false;
+
+        var treeViewItem = (sender as Control)?.FindAncestorOfType<TreeViewItem>();
+        if (treeViewItem != null)
+        {
+            treeViewItem.IsExpanded = !treeViewItem.IsExpanded;
+        }
+
+        e.Handled = true;
+    }
+
+    private void SavedNodeMultiSelectCheckBox_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not SavedLevelNode node)
+        {
+            return;
+        }
+
+        ToggleSavedNodeMultiSelection(node, node.IsMultiSelected, false);
+        e.Handled = true;
+    }
+
+    private void MultiSelectSavedButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        SetSavedMultiSelectMode(!_isSavedMultiSelectMode);
+    }
+
+    private void SelectAllSavedButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        var visibleNodes = GetVisibleSelectableSavedNodes();
+        if (visibleNodes.Count == 0)
+        {
+            return;
+        }
+
+        var selectAll = visibleNodes.Any(node => !node.IsMultiSelected);
+        foreach (var node in visibleNodes)
+        {
+            node.IsMultiSelected = selectAll;
+        }
+
+        _lastMultiSelectedSavedNode = selectAll ? visibleNodes.LastOrDefault() : null;
+        UpdateSavedMultiSelectUi();
     }
 
     private void UnderworldPreviewButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1252,6 +1620,59 @@ public sealed partial class MainWindow : Window
     private void SavedSourceComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         LoadSavedLevels();
+    }
+
+    private async void SavedMovePackComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isUpdatingSavedMovePackComboBox ||
+            SavedMovePackComboBox.SelectedItem is not ComboBoxItem item)
+        {
+            return;
+        }
+
+        var tag = item.Tag?.ToString();
+        if (string.Equals(tag, SavedMovePlaceholderTag, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var levels = _isSavedMultiSelectMode
+            ? GetMultiSelectedSavedNodes().Select(node => node.Level).OfType<LevelInfo>().ToList()
+            : _selectedPreviewLevel == null ? new List<LevelInfo>() : new List<LevelInfo> { _selectedPreviewLevel };
+        if (levels.Count == 0)
+        {
+            ResetSavedMovePackSelection();
+            return;
+        }
+
+        var targetPackName = string.IsNullOrWhiteSpace(tag) ? null : tag;
+        await RunSafeAsync(_ =>
+        {
+            foreach (var level in levels)
+            {
+                _downloadService.MoveToPack(level, targetPackName);
+            }
+
+            var targetName = string.IsNullOrWhiteSpace(targetPackName) ? T("NoLevelPack") : targetPackName;
+            SetSavedMultiSelectMode(false);
+            LoadSavedLevels();
+            SetStatus($"Moved {levels.Count} saved course(s) to {targetName}.");
+            return Task.CompletedTask;
+        });
+        ResetSavedMovePackSelection();
+    }
+
+    private void ResetSavedMovePackSelection()
+    {
+        _isUpdatingSavedMovePackComboBox = true;
+        try
+        {
+            SavedMovePackComboBox.SelectedIndex = SavedMovePackComboBox.Items.Count > 0 ? 0 : -1;
+        }
+        finally
+        {
+            _isUpdatingSavedMovePackComboBox = false;
+        }
     }
 
     private void ProfileComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -1375,6 +1796,32 @@ public sealed partial class MainWindow : Window
 
     private async void DeleteSavedButton_OnClick(object? sender, RoutedEventArgs e)
     {
+        if (_isSavedMultiSelectMode)
+        {
+            var selectedLevels = GetMultiSelectedSavedNodes()
+                .Select(node => node.Level)
+                .OfType<LevelInfo>()
+                .ToList();
+            if (selectedLevels.Count == 0)
+            {
+                return;
+            }
+
+            await RunSafeAsync(token =>
+            {
+                foreach (var level in selectedLevels)
+                {
+                    _downloadService.Delete(level);
+                }
+
+                SetSavedMultiSelectMode(false);
+                LoadSavedLevels();
+                SetStatus($"Deleted {selectedLevels.Count} saved course(s).");
+                return Task.CompletedTask;
+            });
+            return;
+        }
+
         if (_selectedPackNode is { PackName: { } packName, PackFolder: { } packFolder })
         {
             await RemovePackFolderAsync(packName, packFolder);
@@ -1603,6 +2050,31 @@ public sealed partial class MainWindow : Window
         _store.SaveSettings(_settings);
     }
 
+    private void ReleaseChannelComboBox_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (!IsInitialized || _isLoadingSettings)
+        {
+            return;
+        }
+
+        SaveSettingsFromUi();
+        _store.SaveSettings(_settings);
+        ClearAvailableUpdate();
+        UpdateReleaseStatusUi();
+        ApplyChangeNotesFilter();
+        _ = CheckForUpdatesAsync(_lifetimeCts.Token, TimeSpan.Zero);
+    }
+
+    private void ShowPrereleaseChangeNotesCheckBox_OnChanged(object? sender, RoutedEventArgs e)
+    {
+        ApplyChangeNotesFilter();
+    }
+
+    private async void RefreshChangeNotesButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        await RunSafeAsync(LoadChangeNotesAsync);
+    }
+
     private void HideViewerInfoCheckBox_OnChanged(object? sender, RoutedEventArgs e)
     {
         if (!IsInitialized)
@@ -1637,11 +2109,83 @@ public sealed partial class MainWindow : Window
         DesktopIntegration.OpenPath(_paths.ProxyFile);
     }
 
-    private void UpdateButton_OnClick(object? sender, RoutedEventArgs e)
+    private async void UpdateButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(_availableUpdateUrl))
+        if (_isUpdating)
         {
-            DesktopIntegration.OpenUrl(_availableUpdateUrl);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_availableUpdateAssetDownloadUrl) ||
+            string.IsNullOrWhiteSpace(_availableUpdateSha256))
+        {
+            if (!string.IsNullOrWhiteSpace(_availableUpdateUrl))
+            {
+                DesktopIntegration.OpenUrl(_availableUpdateUrl);
+            }
+
+            return;
+        }
+
+        await RunSafeAsync(DownloadAndStartUpdaterAsync);
+    }
+
+    private async Task DownloadAndStartUpdaterAsync(CancellationToken token)
+    {
+        var updateAssetDownloadUrl = _availableUpdateAssetDownloadUrl;
+        var expectedSha256 = _availableUpdateSha256;
+        if (string.IsNullOrWhiteSpace(updateAssetDownloadUrl) || string.IsNullOrWhiteSpace(expectedSha256))
+        {
+            throw new InvalidOperationException(T("OpenReleasePage"));
+        }
+
+        _isUpdating = true;
+        UpdateButton.IsEnabled = false;
+        try
+        {
+            SetBusy(string.Format(CultureInfo.InvariantCulture, T("DownloadingUpdate"), _availableUpdateVersion));
+            var updateDirectory = Path.Combine(_paths.DataDirectory, "UpdateCache");
+            Directory.CreateDirectory(updateDirectory);
+            var packageName = string.IsNullOrWhiteSpace(_availableUpdateAssetName)
+                ? "update-package"
+                : SanitizeDownloadFileName(_availableUpdateAssetName);
+            var packagePath = Path.Combine(updateDirectory, packageName);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, updateAssetDownloadUrl);
+            request.Headers.TryAddWithoutValidation("User-Agent", "SMM1-Level-Downloader-Avalonia");
+            using var response = await _statusHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
+            response.EnsureSuccessStatusCode();
+
+            await using (var input = await response.Content.ReadAsStreamAsync(token))
+            await using (var output = File.Create(packagePath))
+            {
+                await input.CopyToAsync(output, token);
+            }
+
+            var actualHash = UpdateInstaller.ComputeSha256(packagePath);
+            if (!string.Equals(actualHash, expectedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(T("UpdateHashMismatch"));
+            }
+
+            var executablePath = Environment.ProcessPath ?? throw new InvalidOperationException(T("UpdateExecutableMissing"));
+            var installDirectory = Path.GetDirectoryName(executablePath) ?? AppContext.BaseDirectory;
+            UpdateInstaller.Start(new UpdatePlan
+            {
+                ParentProcessId = Environment.ProcessId,
+                PackagePath = packagePath,
+                ExpectedSha256 = expectedSha256,
+                InstallDirectory = installDirectory,
+                AppExecutablePath = executablePath
+            });
+
+            SetStatus(T("UpdateRestarting"));
+            Close();
+        }
+        finally
+        {
+            _isUpdating = false;
+            UpdateButton.IsEnabled = true;
         }
     }
 
@@ -1658,6 +2202,11 @@ public sealed partial class MainWindow : Window
     private void HerobrineTwitterButton_OnClick(object? sender, RoutedEventArgs e)
     {
         DesktopIntegration.OpenUrl("https://twitter.com/HerobrineTVv");
+    }
+
+    private void KofiButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        DesktopIntegration.OpenUrl("https://ko-fi.com/herobrinetvv");
     }
 
     private void SnoozbusterGithubButton_OnClick(object? sender, RoutedEventArgs e)
@@ -1704,6 +2253,45 @@ public sealed partial class MainWindow : Window
             .Where(name => !string.Equals(name, LevelBackupsFolderName, StringComparison.OrdinalIgnoreCase))
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+        RefreshSavedMovePackOptions();
+    }
+
+    private void RefreshSavedMovePackOptions()
+    {
+        _isUpdatingSavedMovePackComboBox = true;
+        try
+        {
+            SavedMovePackComboBox.Items.Clear();
+            SavedMovePackComboBox.Items.Add(new ComboBoxItem
+            {
+                Content = T("MoveToLevelPack"),
+                Tag = SavedMovePlaceholderTag,
+                IsEnabled = false
+            });
+            SavedMovePackComboBox.Items.Add(new ComboBoxItem
+            {
+                Content = T("NoLevelPack"),
+                Tag = ""
+            });
+
+            foreach (var packName in _store.LoadLevelPacks()
+                         .Keys
+                         .Where(name => !string.Equals(name, LevelBackupsFolderName, StringComparison.OrdinalIgnoreCase))
+                         .OrderBy(name => name, StringComparer.OrdinalIgnoreCase))
+            {
+                SavedMovePackComboBox.Items.Add(new ComboBoxItem
+                {
+                    Content = packName,
+                    Tag = packName
+                });
+            }
+
+            SavedMovePackComboBox.SelectedIndex = 0;
+        }
+        finally
+        {
+            _isUpdatingSavedMovePackComboBox = false;
+        }
     }
 
     private void PackNameTextBox_OnTextChanged(object? sender, TextChangedEventArgs e)
@@ -1770,7 +2358,6 @@ public sealed partial class MainWindow : Window
         try
         {
             SaveSettingsFromUi();
-            await RegisterLevelDownloadAsync(level.LevelId, cts.Token);
             DownloadProgressBar.Value = 0;
             state.IsDownloaded = false;
             state.IsDownloading = true;
@@ -1789,6 +2376,7 @@ public sealed partial class MainWindow : Window
             _standardSoundService.EnsureStandardSoundFile();
             await _downloadService.DownloadAsync(level, packFolder, progress, cts.Token);
             _standardSoundService.EnsureCourseSoundFile(level.Folder);
+            await RegisterLevelDownloadAsync(level.LevelId, cts.Token);
             DownloadProgressBar.Value = 100;
             state.ProgressText = "100% - Download complete.";
             state.IsDownloaded = true;
@@ -1852,6 +2440,7 @@ public sealed partial class MainWindow : Window
             UseProxyCheckBox.IsChecked = _settings.UseProxy;
             ApiLinkTextBox.Text = _settings.ApiLink;
             SelectComboBoxItemByTag(LanguageComboBox, _settings.Language);
+            SelectComboBoxItemByTag(ReleaseChannelComboBox, ReleaseChannel.Normalize(_settings.ReleaseChannel));
         }
         finally
         {
@@ -1878,6 +2467,8 @@ public sealed partial class MainWindow : Window
             : ApiLinkTextBox.Text.Trim();
         _settings.SelectedProfile = ProfileComboBox.SelectedItem?.ToString() ?? _settings.SelectedProfile;
         _settings.Language = (LanguageComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "en";
+        _settings.ReleaseChannel =
+            ReleaseChannel.Normalize((ReleaseChannelComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString());
     }
 
     private void SaveDebugSettingsFromUi()
@@ -1898,6 +2489,7 @@ public sealed partial class MainWindow : Window
         SavedCoursesTab.Header = T("SavedCoursesTab");
         CemuTab.Header = T("CemuTab");
         SettingsTab.Header = T("SettingsTab");
+        ChangeNotesTab.Header = T("ChangeNotesTab");
         CreditsTab.Header = T("CreditsTab");
 
         SearchCoursesTitle.Text = T("SearchCourses");
@@ -1911,7 +2503,10 @@ public sealed partial class MainWindow : Window
         SearchExactCheckBox.Content = T("Exact");
         DownloadToPackCheckBox.Content = T("SaveInLevelPack");
         PackNameTextBox.Watermark = T("LevelPackName");
+        MultiSelectDownloadButton.Content = _isDownloadMultiSelectMode ? T("ExitMultiSelect") : T("MultiSelect");
+        SelectAllDownloadButton.Content = T("SelectAll");
         DownloadAllButton.Content = T("DownloadAllResults");
+        UpdateDownloadMultiSelectUi();
         _loadMoreSearchResultsItem.Text = T("LoadMore");
         SelectedCourseTitle.Text = T("SelectedCourse");
         SelectedLevelTitle.Text = T("NoCourseSelected");
@@ -1942,9 +2537,13 @@ public sealed partial class MainWindow : Window
         ToolTip.SetTip(RefreshSavedMetadataButton, T("RefreshData"));
         ToolTip.SetTip(OpenSelectedLevelFolderButton, T("OpenLevelFolder"));
         OpenSavedFolderButton.Content = T("OpenFolder");
+        RefreshSavedMovePackOptions();
+        MultiSelectSavedButton.Content = _isSavedMultiSelectMode ? T("ExitMultiSelect") : T("MultiSelect");
+        SelectAllSavedButton.Content = T("SelectAll");
         DeleteSavedButton.Content = T("DeleteSelected");
         RemoveSelectedPackButton.Content = T("RemoveCoursePackFolder");
         ResetOfficialButton.Content = T("ResetOfficialCourses");
+        UpdateSavedMultiSelectUi();
         SavedLevelTitle.Text = T("SelectSavedCourse");
         CoursePreviewInfo.Text = T("CoursePreviewHint");
         UnderworldPreviewButton.Content = GetAreaSwitchText(_selectedPreviewFile);
@@ -1980,8 +2579,22 @@ public sealed partial class MainWindow : Window
         ReplaceCemuLevelButton.Content = T("Replace");
 
         SettingsTitle.Text = T("Settings");
+        SettingsDescriptionText.Text = T("SettingsDescription");
+        GeneralSettingsTitle.Text = T("GeneralSettings");
         LanguageLabel.Text = T("Language");
+        ReleaseChannelLabel.Text = T("ReleaseChannel");
+        foreach (var item in ReleaseChannelComboBox.Items.OfType<ComboBoxItem>())
+        {
+            item.Content = item.Tag?.ToString() switch
+            {
+                ReleaseChannel.Stable => T("ReleaseChannelStable"),
+                ReleaseChannel.Prerelease => T("ReleaseChannelPrerelease"),
+                _ => item.Content
+            };
+        }
+
         HideViewerInfoCheckBox.Content = T("HideViewerInfo");
+        DownloadSettingsTitle.Text = T("DownloadSettings");
         DebugSettingsTitle.Text = T("DebugMode");
         DebugLevelViewerTitle.Text = T("LevelViewer");
         DebugLevelViewerCheckBox.Content = T("DebugLevelViewer");
@@ -1989,10 +2602,16 @@ public sealed partial class MainWindow : Window
         ShowGridCheckBox.Content = T("ShowGrid");
         UseProxyCheckBox.Content = T("UseProxy");
         OpenProxyFileButton.Content = T("OpenProxyFile");
+        AdvancedSettingsTitle.Text = T("AdvancedSettings");
         ApiEndpointLabel.Text = T("ApiEndpoint");
         SaveSettingsButton.Content = T("SaveSettings");
         ResetSettingsButton.Content = T("ResetSettings");
         RefreshAllDownloadedDataButton.Content = T("RefreshAllDownloadedData");
+        ChangeNotesTitle.Text = T("ChangeNotes");
+        ChangeNotesDescriptionText.Text = T("ChangeNotesDescription");
+        ShowPrereleaseChangeNotesCheckBox.Content = T("ShowPrereleaseChangeNotes");
+        RefreshChangeNotesButton.Content = T("Refresh");
+        ApplyChangeNotesFilter();
         CreditsTitle.Text = T("CreditsTitle");
         CreditsDescriptionText.Text = T("CreditsDescription");
         CreditsArchiveText.Text = T("CreditsArchive");
@@ -2000,6 +2619,11 @@ public sealed partial class MainWindow : Window
         CreditsNintendoText.Text = T("CreditsNintendo");
         CreditsAboutTitle.Text = T("CreditsAbout");
         HerobrineRoleText.Text = T("ToolCreator");
+        SupportTitle.Text = T("SupportTitle");
+        SupportDescriptionText.Text = T("SupportDescription");
+        SupportNoBenefitsText.Text = T("SupportNoBenefits");
+        KofiButtonText.Text = T("OpenKofi");
+        ToolTip.SetTip(FloatingKofiButton, T("OpenKofi"));
         SnoozbusterCreditText.Text = T("CourseViewerCredit");
         LeoMauroCreditText.Text = T("CourseViewerCredit");
         SpecialThanksTitle.Text = T("SpecialThanksTitle");
@@ -2064,8 +2688,12 @@ public sealed partial class MainWindow : Window
             ? LoadDownloadedSavedCourseNodes()
             : _allSavedLevels.Select(ToLevelNode).ToList();
 
+        _isSavedMultiSelectMode = false;
+        _lastMultiSelectedSavedNode = null;
+        SelectAllSavedButton.IsVisible = false;
         ResetSavedSelectedLevelDetails();
         ApplySavedFilter();
+        UpdateSavedMultiSelectUi();
         SetStatus($"Loaded {_allSavedLevels.Count} saved course(s).");
     }
 
@@ -2202,6 +2830,8 @@ public sealed partial class MainWindow : Window
     private void AddSearchResult(LevelInfo level)
     {
         MarkDownloadState(level);
+        level.IsMultiSelectMode = _isDownloadMultiSelectMode;
+        level.IsMultiSelected = false;
         var loadMoreIndex = _searchResults.IndexOf(_loadMoreSearchResultsItem);
         if (loadMoreIndex >= 0)
         {
@@ -3051,6 +3681,13 @@ public sealed partial class MainWindow : Window
         {
             _savedNodes.Add(node);
         }
+
+        foreach (var node in EnumerateSavedNodes(_savedNodes))
+        {
+            node.IsMultiSelectMode = _isSavedMultiSelectMode;
+        }
+
+        UpdateSavedMultiSelectUi();
     }
 
     private static IEnumerable<SavedLevelNode> FilterSavedNodes(IEnumerable<SavedLevelNode> nodes, string filter)
@@ -3317,10 +3954,12 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
-            timeoutCts.CancelAfter(TimeSpan.FromSeconds(6));
-            using var response = await _statusHttpClient.GetAsync(ApiPingUrl, timeoutCts.Token);
-            _isApiOnline = response.IsSuccessStatusCode;
+            var apiStatusTask = CheckEndpointStatusAsync(ApiPingUrl, token);
+            var archiveStatusTask = CheckEndpointStatusAsync(ArchivePingUrl, token);
+            await Task.WhenAll(apiStatusTask, archiveStatusTask);
+
+            (_isApiOnline, _apiLatencyMs) = apiStatusTask.Result;
+            (_isArchiveOnline, _archiveLatencyMs) = archiveStatusTask.Result;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -3329,17 +3968,145 @@ public sealed partial class MainWindow : Window
         catch
         {
             _isApiOnline = false;
+            _apiLatencyMs = null;
+            _isArchiveOnline = false;
+            _archiveLatencyMs = null;
         }
 
         Dispatcher.UIThread.Post(UpdateApiStatusUi);
     }
 
-    private async Task CheckForUpdatesAsync(CancellationToken token)
+    private async Task<(bool IsOnline, long? LatencyMs)> CheckEndpointStatusAsync(string url, CancellationToken token)
     {
         try
         {
-            await Task.Delay(TimeSpan.FromSeconds(5), token);
-            using var request = new HttpRequestMessage(HttpMethod.Get, GithubLatestReleaseUrl);
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(6));
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.TryAddWithoutValidation("User-Agent", "SMM1-Level-Downloader-Avalonia");
+
+            var stopwatch = Stopwatch.StartNew();
+            using var response = await _statusHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
+            stopwatch.Stop();
+            return (response.IsSuccessStatusCode, stopwatch.ElapsedMilliseconds);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return (false, null);
+        }
+    }
+
+    private async Task LoadChangeNotesAsync(CancellationToken token)
+    {
+        ChangeNotesStatusText.Text = T("ChangeNotesLoading");
+        RefreshChangeNotesButton.IsEnabled = false;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, GithubReleasesUrl);
+            request.Headers.TryAddWithoutValidation("User-Agent", "SMM1-Level-Downloader-Avalonia");
+            using var response = await _statusHttpClient.SendAsync(request, token);
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync(token);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: token);
+            _allChangeNotes = ParseChangeNotes(document.RootElement);
+            ApplyChangeNotesFilter();
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _allChangeNotes = [];
+            _changeNotes.Clear();
+            ChangeNotesStatusText.Text = string.Format(CultureInfo.InvariantCulture, T("ChangeNotesLoadFailed"), ex.Message);
+        }
+        finally
+        {
+            RefreshChangeNotesButton.IsEnabled = true;
+        }
+    }
+
+    private static IReadOnlyList<ReleaseNoteEntry> ParseChangeNotes(JsonElement releasesRoot)
+    {
+        if (releasesRoot.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return releasesRoot.EnumerateArray()
+            .Where(release => !(release.TryGetProperty("draft", out var draftElement) && draftElement.GetBoolean()))
+            .Select(CreateReleaseNoteEntry)
+            .OrderByDescending(note => note.PublishedAt)
+            .ToList();
+    }
+
+    private static ReleaseNoteEntry CreateReleaseNoteEntry(JsonElement release)
+    {
+        var name = release.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : null;
+        var tag = release.TryGetProperty("tag_name", out var tagElement) ? tagElement.GetString() : null;
+        var body = release.TryGetProperty("body", out var bodyElement) ? bodyElement.GetString() : null;
+        var isPrerelease = release.TryGetProperty("prerelease", out var prereleaseElement) && prereleaseElement.GetBoolean();
+        var publishedAt = TryGetReleaseDate(release, "published_at") ??
+                          TryGetReleaseDate(release, "created_at") ??
+                          DateTimeOffset.MinValue;
+
+        var title = string.IsNullOrWhiteSpace(name) ? tag : name;
+        if (!string.IsNullOrWhiteSpace(tag) &&
+            !string.Equals(title, tag, StringComparison.OrdinalIgnoreCase))
+        {
+            title = $"{title} ({tag})";
+        }
+
+        return new ReleaseNoteEntry
+        {
+            Title = string.IsNullOrWhiteSpace(title) ? "Release" : title,
+            Body = string.IsNullOrWhiteSpace(body) ? "No release notes provided." : body.Trim(),
+            IsPrerelease = isPrerelease,
+            PublishedAt = publishedAt,
+            PublishedText = publishedAt == DateTimeOffset.MinValue
+                ? ""
+                : publishedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+        };
+    }
+
+    private static DateTimeOffset? TryGetReleaseDate(JsonElement release, string propertyName)
+    {
+        if (!release.TryGetProperty(propertyName, out var element))
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(element.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var date)
+            ? date
+            : null;
+    }
+
+    private void ApplyChangeNotesFilter()
+    {
+        var showPrereleases = ReleaseChannel.IsPrerelease(_settings.ReleaseChannel) ||
+                              ShowPrereleaseChangeNotesCheckBox.IsChecked == true;
+        _changeNotes.Clear();
+        foreach (var note in _allChangeNotes.Where(note => showPrereleases || !note.IsPrerelease))
+        {
+            _changeNotes.Add(note);
+        }
+
+        ChangeNotesStatusText.Text = _allChangeNotes.Count == 0
+            ? T("ChangeNotesEmpty")
+            : string.Format(CultureInfo.InvariantCulture, T("ChangeNotesLoaded"), _changeNotes.Count, _allChangeNotes.Count);
+    }
+
+    private async Task CheckForUpdatesAsync(CancellationToken token, TimeSpan? delay = null)
+    {
+        try
+        {
+            await Task.Delay(delay ?? TimeSpan.FromSeconds(5), token);
+            using var request = new HttpRequestMessage(HttpMethod.Get, GithubReleasesUrl);
             request.Headers.TryAddWithoutValidation("User-Agent", "SMM1-Level-Downloader-Avalonia");
             using var response = await _statusHttpClient.SendAsync(request, token);
             if (!response.IsSuccessStatusCode)
@@ -3349,18 +4116,27 @@ public sealed partial class MainWindow : Window
 
             await using var stream = await response.Content.ReadAsStreamAsync(token);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: token);
-            var root = document.RootElement;
-            var latestTag = root.TryGetProperty("tag_name", out var tagElement) ? tagElement.GetString() : null;
-            if (string.IsNullOrWhiteSpace(latestTag) ||
-                string.Equals(latestTag, CurrentReleaseTag, StringComparison.OrdinalIgnoreCase))
+            var selectedRelease = FindReleaseForChannel(document.RootElement, _settings.ReleaseChannel);
+            if (selectedRelease == null ||
+                string.IsNullOrWhiteSpace(selectedRelease.TagName) ||
+                string.Equals(selectedRelease.TagName, CurrentReleaseTag, StringComparison.OrdinalIgnoreCase))
             {
+                ClearAvailableUpdate();
+                Dispatcher.UIThread.Post(UpdateReleaseStatusUi);
                 return;
             }
 
-            _availableUpdateVersion = latestTag;
-            _availableUpdateUrl = root.TryGetProperty("html_url", out var urlElement)
-                ? urlElement.GetString()
-                : "https://github.com/HerobrineTV/SMM1-Level-Downloader/releases/latest";
+            var sha256 = selectedRelease.Sha256;
+            if (Uri.TryCreate(sha256, UriKind.Absolute, out var hashUri))
+            {
+                sha256 = await DownloadSha256Async(hashUri, token);
+            }
+
+            _availableUpdateVersion = selectedRelease.TagName;
+            _availableUpdateUrl = selectedRelease.HtmlUrl;
+            _availableUpdateAssetName = selectedRelease.AssetName;
+            _availableUpdateAssetDownloadUrl = selectedRelease.AssetDownloadUrl;
+            _availableUpdateSha256 = sha256;
             Dispatcher.UIThread.Post(UpdateReleaseStatusUi);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -3371,15 +4147,190 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private static ReleaseUpdateInfo? FindReleaseForChannel(JsonElement releasesRoot, string releaseChannel)
+    {
+        if (releasesRoot.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var includePrereleases = ReleaseChannel.IsPrerelease(releaseChannel);
+        foreach (var release in releasesRoot.EnumerateArray())
+        {
+            var isDraft = release.TryGetProperty("draft", out var draftElement) && draftElement.GetBoolean();
+            var isPrerelease = release.TryGetProperty("prerelease", out var prereleaseElement) &&
+                               prereleaseElement.GetBoolean();
+            if (isDraft || (!includePrereleases && isPrerelease))
+            {
+                continue;
+            }
+
+            var tagName = release.TryGetProperty("tag_name", out var tagElement) ? tagElement.GetString() : null;
+            var htmlUrl = release.TryGetProperty("html_url", out var urlElement)
+                ? urlElement.GetString()
+                : "https://github.com/HerobrineTV/SMM1-Level-Downloader/releases";
+            var assets = release.TryGetProperty("assets", out var assetsElement) ? assetsElement : default;
+            var asset = SelectUpdateAsset(assets);
+            var sha256 = asset != null ? ResolveAssetSha256(assets, asset.Value) : null;
+            var assetName = asset?.TryGetProperty("name", out var assetNameElement) == true
+                ? assetNameElement.GetString()
+                : null;
+            var assetDownloadUrl = asset?.TryGetProperty("browser_download_url", out var downloadUrlElement) == true
+                ? downloadUrlElement.GetString()
+                : null;
+
+            return new ReleaseUpdateInfo(
+                tagName,
+                htmlUrl,
+                assetName,
+                assetDownloadUrl,
+                sha256);
+        }
+
+        return null;
+    }
+
+    private async Task<string?> DownloadSha256Async(Uri hashUri, CancellationToken token)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, hashUri);
+        request.Headers.TryAddWithoutValidation("User-Agent", "SMM1-Level-Downloader-Avalonia");
+        using var response = await _statusHttpClient.SendAsync(request, token);
+        response.EnsureSuccessStatusCode();
+        var text = await response.Content.ReadAsStringAsync(token);
+
+        return ParseSha256(text);
+    }
+
+    private static string? ParseSha256(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var token = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(part => part.Length == 64 && part.All(Uri.IsHexDigit));
+        return token?.ToLowerInvariant();
+    }
+
+    private static JsonElement? SelectUpdateAsset(JsonElement assets)
+    {
+        if (assets.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var assetsList = assets.EnumerateArray()
+            .Where(asset => asset.TryGetProperty("name", out var nameElement) &&
+                            !string.IsNullOrWhiteSpace(nameElement.GetString()) &&
+                            asset.TryGetProperty("browser_download_url", out var urlElement) &&
+                            !string.IsNullOrWhiteSpace(urlElement.GetString()))
+            .ToList();
+        if (assetsList.Count == 0)
+        {
+            return null;
+        }
+
+        static bool IsPackage(JsonElement asset)
+        {
+            var name = asset.GetProperty("name").GetString() ?? "";
+            return (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
+                    name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) &&
+                   !name.Contains("sha256", StringComparison.OrdinalIgnoreCase);
+        }
+
+        var osNeedle = OperatingSystem.IsWindows()
+            ? "win"
+            : OperatingSystem.IsMacOS()
+                ? "osx"
+                : "linux";
+        foreach (var asset in assetsList)
+        {
+            if (IsPackage(asset) &&
+                asset.GetProperty("name").GetString()!.Contains(osNeedle, StringComparison.OrdinalIgnoreCase))
+            {
+                return asset;
+            }
+        }
+
+        foreach (var asset in assetsList)
+        {
+            if (IsPackage(asset))
+            {
+                return asset;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ResolveAssetSha256(JsonElement assets, JsonElement packageAsset)
+    {
+        if (packageAsset.TryGetProperty("digest", out var digestElement))
+        {
+            var digest = digestElement.GetString();
+            const string prefix = "sha256:";
+            if (!string.IsNullOrWhiteSpace(digest) && digest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return digest[prefix.Length..].Trim();
+            }
+        }
+
+        if (assets.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var packageName = packageAsset.GetProperty("name").GetString() ?? "";
+        foreach (var asset in assets.EnumerateArray())
+        {
+            var hashAssetName = asset.TryGetProperty("name", out var nameElement) ? nameElement.GetString() : null;
+            if (string.IsNullOrWhiteSpace(hashAssetName) ||
+                !hashAssetName.Contains("sha256", StringComparison.OrdinalIgnoreCase) ||
+                !hashAssetName.StartsWith(packageName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (asset.TryGetProperty("browser_download_url", out var urlElement))
+            {
+                return urlElement.GetString();
+            }
+        }
+
+        return null;
+    }
+
+    private void ClearAvailableUpdate()
+    {
+        _availableUpdateVersion = null;
+        _availableUpdateUrl = null;
+        _availableUpdateAssetName = null;
+        _availableUpdateAssetDownloadUrl = null;
+        _availableUpdateSha256 = null;
+    }
+
     private void UpdateApiStatusUi()
     {
-        ApiStatusText.Text = _isApiOnline switch
-        {
-            true => T("ApiOnline"),
-            false => T("ApiOffline"),
-            _ => T("ApiChecking")
-        };
+        ApiStatusText.Text = FormatServiceStatus(
+            _isApiOnline,
+            _apiLatencyMs,
+            T("ApiOnline"),
+            T("ApiOffline"),
+            T("ApiChecking"));
         ApiStatusDot.Background = _isApiOnline switch
+        {
+            true => Brushes.ForestGreen,
+            false => Brushes.Firebrick,
+            _ => Brushes.Goldenrod
+        };
+        ArchiveStatusText.Text = FormatServiceStatus(
+            _isArchiveOnline,
+            _archiveLatencyMs,
+            T("ArchiveOnline"),
+            T("ArchiveOffline"),
+            T("ArchiveChecking"));
+        ArchiveStatusDot.Background = _isArchiveOnline switch
         {
             true => Brushes.ForestGreen,
             false => Brushes.Firebrick,
@@ -3387,15 +4338,36 @@ public sealed partial class MainWindow : Window
         };
     }
 
+    private static string FormatServiceStatus(
+        bool? isOnline,
+        long? latencyMs,
+        string onlineText,
+        string offlineText,
+        string checkingText)
+    {
+        var text = isOnline switch
+        {
+            true => onlineText,
+            false => offlineText,
+            _ => checkingText
+        };
+
+        return latencyMs.HasValue ? $"{text} ({latencyMs.Value} ms)" : text;
+    }
+
     private void UpdateReleaseStatusUi()
     {
         var hasUpdate = !string.IsNullOrWhiteSpace(_availableUpdateUrl);
         UpdateButton.IsVisible = hasUpdate;
+        UpdateButton.IsEnabled = !_isUpdating;
         if (hasUpdate)
         {
+            var canInstall = !string.IsNullOrWhiteSpace(_availableUpdateAssetDownloadUrl) &&
+                             !string.IsNullOrWhiteSpace(_availableUpdateSha256);
+            var label = canInstall ? T("InstallUpdate") : T("OpenReleasePage");
             UpdateButton.Content = string.IsNullOrWhiteSpace(_availableUpdateVersion)
-                ? T("UpdateAvailable")
-                : $"{T("UpdateAvailable")}: {_availableUpdateVersion}";
+                ? label
+                : $"{label}: {_availableUpdateVersion}";
         }
     }
 
@@ -3403,6 +4375,14 @@ public sealed partial class MainWindow : Window
     {
         var chars = value.Select(character => char.IsLetterOrDigit(character) || character == '_' ? character : '_');
         return string.Concat(chars).Trim('_');
+    }
+
+    private static string SanitizeDownloadFileName(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars().ToHashSet();
+        var chars = value.Select(character => invalid.Contains(character) ? '_' : character);
+        var sanitized = string.Concat(chars).Trim();
+        return string.IsNullOrWhiteSpace(sanitized) ? "update-package" : sanitized;
     }
 
     private static string FormatTime(long milliseconds)
@@ -3449,6 +4429,7 @@ public sealed partial class MainWindow : Window
         ["SavedCoursesTab"] = "Saved Courses",
         ["CemuTab"] = "CEMU",
         ["SettingsTab"] = "Settings",
+        ["ChangeNotesTab"] = "Change Notes",
         ["CreditsTab"] = "Credits",
         ["Back"] = "Back",
         ["SearchCourses"] = "Search Courses",
@@ -3463,6 +4444,8 @@ public sealed partial class MainWindow : Window
         ["SaveInLevelPack"] = "Save in Level Pack",
         ["LevelPackName"] = "Level Pack Name",
         ["DownloadAllResults"] = "Download All Results",
+        ["DownloadSelected"] = "Download Selected",
+        ["DownloadSelectedCount"] = "Download Selected ({0})",
         ["LoadMore"] = "Load More",
         ["SelectedCourse"] = "Selected Course",
         ["SelectedLevel"] = "Selected Level",
@@ -3484,7 +4467,13 @@ public sealed partial class MainWindow : Window
         ["RefreshData"] = "Refresh Data",
         ["OpenLevelFolder"] = "Open Level Folder",
         ["OpenFolder"] = "Open Folder",
+        ["MultiSelect"] = "Multi Select",
+        ["ExitMultiSelect"] = "Exit Multi Select",
+        ["SelectAll"] = "Select All",
+        ["MoveToLevelPack"] = "Move to Level Pack...",
+        ["NoLevelPack"] = "No Level Pack",
         ["DeleteSelected"] = "Delete Selected",
+        ["DeleteSelectedCount"] = "Delete Selected ({0})",
         ["Delete"] = "Delete",
         ["Replace"] = "Replace",
         ["Cancel"] = "Cancel",
@@ -3514,7 +4503,14 @@ public sealed partial class MainWindow : Window
         ["ReplaceCemuLevelTitle"] = "Replace CEMU Level",
         ["ReplaceCemuLevelWarning"] = "Replace '{0}' in your CEMU save with '{1}'?\n\nA backup of the current CEMU level folder will be created first.",
         ["Settings"] = "Settings",
+        ["SettingsDescription"] = "Adjust application behavior and maintenance options.",
+        ["GeneralSettings"] = "General",
+        ["DownloadSettings"] = "Downloads",
+        ["AdvancedSettings"] = "Advanced",
         ["Language"] = "Language",
+        ["ReleaseChannel"] = "Release Channel",
+        ["ReleaseChannelStable"] = "Releases",
+        ["ReleaseChannelPrerelease"] = "Pre-Releases",
         ["HideViewerInfo"] = "Hide Viewer Info",
         ["DebugMode"] = "Debug Mode",
         ["LevelViewer"] = "Level Viewer",
@@ -3527,10 +4523,26 @@ public sealed partial class MainWindow : Window
         ["SaveSettings"] = "Save Settings",
         ["ResetSettings"] = "Reset Settings",
         ["RefreshAllDownloadedData"] = "Refresh All Downloaded Course Data",
+        ["ChangeNotes"] = "Change Notes",
+        ["ChangeNotesDescription"] = "Release notes from GitHub, newest to oldest.",
+        ["ShowPrereleaseChangeNotes"] = "Show Pre-Releases",
+        ["ChangeNotesLoading"] = "Loading change notes...",
+        ["ChangeNotesLoaded"] = "Showing {0} of {1} release notes.",
+        ["ChangeNotesEmpty"] = "No change notes loaded.",
+        ["ChangeNotesLoadFailed"] = "Could not load change notes: {0}",
         ["ApiChecking"] = "API: Checking",
         ["ApiOnline"] = "API: Online",
         ["ApiOffline"] = "API: Offline",
+        ["ArchiveChecking"] = "Archive.org: Checking",
+        ["ArchiveOnline"] = "Archive.org: Online",
+        ["ArchiveOffline"] = "Archive.org: Offline",
         ["UpdateAvailable"] = "Update available",
+        ["InstallUpdate"] = "Install update",
+        ["OpenReleasePage"] = "Open release page",
+        ["DownloadingUpdate"] = "Downloading update {0}...",
+        ["UpdateHashMismatch"] = "The downloaded update does not match the expected SHA-256 hash.",
+        ["UpdateExecutableMissing"] = "Could not resolve the running application executable.",
+        ["UpdateRestarting"] = "Update downloaded. Restarting to install it...",
         ["Version"] = "Version",
         ["SettingsSaved"] = "Settings saved.",
         ["SettingsReset"] = "Settings reset.",
@@ -3541,12 +4553,18 @@ public sealed partial class MainWindow : Window
         ["CreditsNintendo"] = "Super Mario Maker, Mario and all related Nintendo assets belong to Nintendo.",
         ["CreditsAbout"] = "Credits",
         ["ToolCreator"] = "Creator of this Tool",
+        ["SupportTitle"] = "Support this project",
+        ["SupportDescription"] = "If you want to help with server costs or development progress, you can support the project on Ko-fi.",
+        ["SupportNoBenefits"] = "Support is completely optional and does not unlock extra benefits.",
+        ["OpenKofi"] = "Open Ko-fi",
         ["CourseViewerCredit"] = "Course Viewer for the Course Display",
         ["SpecialThanksTitle"] = "Special Thanks",
         ["SpecialThanks"] = "Special thanks to James M***, who brought the project back into focus and made this rework finally get started.",
         ["CreditsFeedback"] = "Leave feedback or requests for help at any time.",
         ["PrereleaseWarningTitle"] = "Prerelease Version",
         ["PrereleaseWarningMessage"] = "This is a prerelease version. Bugs can occur. If you find bugs, please contact me on Discord: nintendo_switch.",
+        ["ReleaseCandidateWarningTitle"] = "Release Candidate",
+        ["ReleaseCandidateWarningMessage"] = "This is a release candidate. It should be close to a stable release, but bugs can still occur. If you find issues, please report them on GitHub or contact me on Discord: nintendo_switch.",
         ["DontShowAgain"] = "Do not show again"
     };
 
@@ -3556,6 +4574,7 @@ public sealed partial class MainWindow : Window
         ["SavedCoursesTab"] = "Gespeicherte Level",
         ["CemuTab"] = "CEMU",
         ["SettingsTab"] = "Einstellungen",
+        ["ChangeNotesTab"] = "Aenderungen",
         ["CreditsTab"] = "Credits",
         ["Back"] = "Zurueck",
         ["SearchCourses"] = "Level suchen",
@@ -3570,6 +4589,8 @@ public sealed partial class MainWindow : Window
         ["SaveInLevelPack"] = "In Level-Pack speichern",
         ["LevelPackName"] = "Level-Pack-Name",
         ["DownloadAllResults"] = "Alle Ergebnisse laden",
+        ["DownloadSelected"] = "Auswahl laden",
+        ["DownloadSelectedCount"] = "Auswahl laden ({0})",
         ["LoadMore"] = "Mehr laden",
         ["SelectedCourse"] = "Ausgewaehltes Level",
         ["SelectedLevel"] = "Ausgewaehltes Level",
@@ -3591,7 +4612,13 @@ public sealed partial class MainWindow : Window
         ["RefreshData"] = "Daten aktualisieren",
         ["OpenLevelFolder"] = "Level-Ordner oeffnen",
         ["OpenFolder"] = "Ordner oeffnen",
+        ["MultiSelect"] = "Mehrfachauswahl",
+        ["ExitMultiSelect"] = "Mehrfachauswahl beenden",
+        ["SelectAll"] = "Alle auswaehlen",
+        ["MoveToLevelPack"] = "In Level-Pack verschieben...",
+        ["NoLevelPack"] = "Kein Level-Pack",
         ["DeleteSelected"] = "Auswahl loeschen",
+        ["DeleteSelectedCount"] = "Auswahl loeschen ({0})",
         ["Delete"] = "Loeschen",
         ["Replace"] = "Ersetzen",
         ["Cancel"] = "Abbrechen",
@@ -3621,7 +4648,14 @@ public sealed partial class MainWindow : Window
         ["ReplaceCemuLevelTitle"] = "CEMU-Level ersetzen",
         ["ReplaceCemuLevelWarning"] = "'{0}' im CEMU-Save durch '{1}' ersetzen?\n\nVorher wird ein Backup des aktuellen CEMU-Level-Ordners erstellt.",
         ["Settings"] = "Einstellungen",
+        ["SettingsDescription"] = "Passe App-Verhalten und Wartungsoptionen an.",
+        ["GeneralSettings"] = "Allgemein",
+        ["DownloadSettings"] = "Downloads",
+        ["AdvancedSettings"] = "Erweitert",
         ["Language"] = "Sprache",
+        ["ReleaseChannel"] = "Release-Kanal",
+        ["ReleaseChannelStable"] = "Releases",
+        ["ReleaseChannelPrerelease"] = "Pre-Releases",
         ["HideViewerInfo"] = "Viewer-Info ausblenden",
         ["DebugMode"] = "Debug-Modus",
         ["LevelViewer"] = "Level Viewer",
@@ -3634,10 +4668,26 @@ public sealed partial class MainWindow : Window
         ["SaveSettings"] = "Einstellungen speichern",
         ["ResetSettings"] = "Einstellungen zuruecksetzen",
         ["RefreshAllDownloadedData"] = "Alle geladenen Leveldaten aktualisieren",
+        ["ChangeNotes"] = "Aenderungen",
+        ["ChangeNotesDescription"] = "Release Notes von GitHub, neueste zuerst.",
+        ["ShowPrereleaseChangeNotes"] = "Pre-Releases anzeigen",
+        ["ChangeNotesLoading"] = "Aenderungen werden geladen...",
+        ["ChangeNotesLoaded"] = "{0} von {1} Release Notes werden angezeigt.",
+        ["ChangeNotesEmpty"] = "Keine Aenderungen geladen.",
+        ["ChangeNotesLoadFailed"] = "Aenderungen konnten nicht geladen werden: {0}",
         ["ApiChecking"] = "API: Pruefe",
         ["ApiOnline"] = "API: Online",
         ["ApiOffline"] = "API: Offline",
+        ["ArchiveChecking"] = "Archive.org: Pruefe",
+        ["ArchiveOnline"] = "Archive.org: Online",
+        ["ArchiveOffline"] = "Archive.org: Offline",
         ["UpdateAvailable"] = "Update verfuegbar",
+        ["InstallUpdate"] = "Update installieren",
+        ["OpenReleasePage"] = "Release-Seite oeffnen",
+        ["DownloadingUpdate"] = "Update {0} wird geladen...",
+        ["UpdateHashMismatch"] = "Das geladene Update stimmt nicht mit dem erwarteten SHA-256-Hash ueberein.",
+        ["UpdateExecutableMissing"] = "Die laufende Programmdatei konnte nicht ermittelt werden.",
+        ["UpdateRestarting"] = "Update geladen. Neustart zur Installation...",
         ["Version"] = "Version",
         ["SettingsSaved"] = "Einstellungen gespeichert.",
         ["SettingsReset"] = "Einstellungen zurueckgesetzt.",
@@ -3648,14 +4698,36 @@ public sealed partial class MainWindow : Window
         ["CreditsNintendo"] = "Super Mario Maker, Mario und alle zugehoerigen Nintendo-Assets gehoeren Nintendo.",
         ["CreditsAbout"] = "Credits",
         ["ToolCreator"] = "Creator of this Tool",
+        ["SupportTitle"] = "Projekt unterstuetzen",
+        ["SupportDescription"] = "Wenn du bei Serverkosten oder Development Progress helfen moechtest, kannst du das Projekt auf Ko-fi unterstuetzen.",
+        ["SupportNoBenefits"] = "Support ist komplett freiwillig und schaltet keine Extra-Benefits frei.",
+        ["OpenKofi"] = "Ko-fi oeffnen",
         ["CourseViewerCredit"] = "Course Viewer fuer die Level-Anzeige",
         ["SpecialThanksTitle"] = "Special Thanks",
         ["SpecialThanks"] = "Special Thanks an James M***, der das Projekt wieder in den Fokus gerueckt hat und wodurch dieser Rework endlich losging.",
         ["CreditsFeedback"] = "Feedback oder Hilfeanfragen sind jederzeit willkommen.",
         ["PrereleaseWarningTitle"] = "Prerelease-Version",
         ["PrereleaseWarningMessage"] = "Dies ist eine Prerelease-Version. Es koennen Bugs auftreten. Wenn du Bugs findest, melde dich gerne bei mir auf Discord: nintendo_switch.",
+        ["ReleaseCandidateWarningTitle"] = "Release Candidate",
+        ["ReleaseCandidateWarningMessage"] = "Dies ist ein Release Candidate. Er sollte nahe an einer stabilen Version sein, aber es koennen weiterhin Bugs auftreten. Wenn du Fehler findest, melde sie bitte auf GitHub oder kontaktiere mich auf Discord: nintendo_switch.",
         ["DontShowAgain"] = "Nicht erneut anzeigen"
     };
+
+    private sealed record ReleaseUpdateInfo(
+        string? TagName,
+        string? HtmlUrl,
+        string? AssetName,
+        string? AssetDownloadUrl,
+        string? Sha256);
+
+    private sealed class ReleaseNoteEntry
+    {
+        public string Title { get; init; } = "";
+        public string Body { get; init; } = "";
+        public bool IsPrerelease { get; init; }
+        public DateTimeOffset PublishedAt { get; init; }
+        public string PublishedText { get; init; } = "";
+    }
 
     private sealed class DownloadState
     {

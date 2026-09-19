@@ -1,5 +1,6 @@
 using Avalonia;
 using System.Runtime.InteropServices;
+using SMMDownloader.Avalonia.Services;
 
 namespace SMMDownloader.Avalonia;
 
@@ -10,6 +11,11 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (UpdateInstaller.TryHandleUpdateArgs(args))
+        {
+            return;
+        }
+
         if (OperatingSystem.IsWindows())
         {
             SetCurrentProcessExplicitAppUserModelID(AppUserModelId);

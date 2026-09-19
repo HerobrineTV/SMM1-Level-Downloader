@@ -11,6 +11,8 @@ public sealed class LevelInfo : INotifyPropertyChanged
 {
     private bool _isDownloaded;
     private bool _isDownloading;
+    private bool _isMultiSelected;
+    private bool _isMultiSelectMode;
     private string _downloadProgressText = "";
     private IImage? _creatorMiiImage;
     private IImage? _worldRecordMiiImage;
@@ -115,6 +117,33 @@ public sealed class LevelInfo : INotifyPropertyChanged
     }
 
     [JsonIgnore]
+    public bool IsMultiSelected
+    {
+        get => _isMultiSelected;
+        set
+        {
+            if (SetField(ref _isMultiSelected, value))
+            {
+                OnPropertyChanged(nameof(RowBackground));
+                OnPropertyChanged(nameof(RowBorderBrush));
+            }
+        }
+    }
+
+    [JsonIgnore]
+    public bool IsMultiSelectMode
+    {
+        get => _isMultiSelectMode;
+        set
+        {
+            if (SetField(ref _isMultiSelectMode, value))
+            {
+                OnPropertyChanged(nameof(ShowMultiSelectCheckBox));
+            }
+        }
+    }
+
+    [JsonIgnore]
     public string DownloadProgressText
     {
         get => _downloadProgressText;
@@ -129,6 +158,15 @@ public sealed class LevelInfo : INotifyPropertyChanged
 
     [JsonIgnore]
     public bool CanDownload => !IsDownloaded && !IsDownloading;
+
+    [JsonIgnore]
+    public bool ShowMultiSelectCheckBox => IsMultiSelectMode;
+
+    [JsonIgnore]
+    public IBrush RowBackground => IsMultiSelected ? new SolidColorBrush(Color.FromRgb(255, 216, 106)) : Brushes.Transparent;
+
+    [JsonIgnore]
+    public IBrush RowBorderBrush => IsMultiSelected ? new SolidColorBrush(Color.FromRgb(143, 79, 23)) : Brushes.Transparent;
 
     [JsonIgnore]
     public string DownloadButtonText => IsDownloaded ? "Downloaded" : IsDownloading ? "Downloading" : "Download";
