@@ -40,6 +40,9 @@ public sealed class AppSettings
     [JsonPropertyName("hidePrereleaseWarning")]
     public bool HidePrereleaseWarning { get; set; }
 
+    [JsonPropertyName("releaseChannel")]
+    public string ReleaseChannel { get; set; } = "stable";
+
     [JsonPropertyName("debug")]
     public DebugSettings Debug { get; set; } = new();
 

@@ -6,6 +6,7 @@ namespace SMMDownloader.Avalonia.Services;
 
 public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
 {
+    private static readonly TimeSpan WaybackAttemptTimeout = TimeSpan.FromSeconds(15);
     private static readonly byte[] AshHeader = "ASH0"u8.ToArray();
     private static readonly string[] PartBaseNames = ["thumbnail0", "course_data", "course_data_sub", "thumbnail1"];
     private static readonly string[] OutputNames = ["thumbnail0.tnl", "course_data.cdt", "course_data_sub.cdt", "thumbnail1.tnl"];
@@ -193,6 +194,64 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
         store.SaveDownloaded(downloaded);
     }
 
+    public void MoveToPack(LevelInfo level, string? targetPackName)
+    {
+        targetPackName = string.IsNullOrWhiteSpace(targetPackName) ? null : targetPackName.Trim();
+        var sourcePackName = string.IsNullOrWhiteSpace(level.Pack) ? null : level.Pack.Trim();
+        var packs = store.LoadLevelPacks();
+        if (!string.IsNullOrWhiteSpace(targetPackName) && !packs.TryGetValue(targetPackName, out _))
+        {
+            throw new InvalidOperationException($"Level pack '{targetPackName}' does not exist.");
+        }
+
+        var sourceDirectory = ResolveLevelFolder(level, packs);
+        var targetDirectory = ResolveMoveTargetFolder(level, targetPackName, packs);
+        var sameDirectory = string.Equals(
+            Path.GetFullPath(sourceDirectory),
+            Path.GetFullPath(targetDirectory),
+            StringComparison.OrdinalIgnoreCase);
+
+        if (!sameDirectory)
+        {
+            if (!Directory.Exists(sourceDirectory))
+            {
+                throw new DirectoryNotFoundException($"Level folder was not found: {sourceDirectory}");
+            }
+
+            if (Directory.Exists(targetDirectory))
+            {
+                throw new InvalidOperationException("The level already exists in the target folder.");
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(targetDirectory) ?? paths.DownloadCacheDirectory);
+            Directory.Move(sourceDirectory, targetDirectory);
+        }
+
+        var downloaded = store.LoadDownloaded();
+        var sourceKey = string.IsNullOrWhiteSpace(sourcePackName)
+            ? level.LevelId.ToString()
+            : $"{level.LevelId}_{sourcePackName}";
+        var targetKey = string.IsNullOrWhiteSpace(targetPackName)
+            ? level.LevelId.ToString()
+            : $"{level.LevelId}_{targetPackName}";
+        downloaded.Remove(sourceKey);
+        downloaded.Remove(targetKey);
+        foreach (var key in downloaded
+                     .Where(item => item.Value.LevelId == level.LevelId &&
+                                    (string.Equals(item.Value.Pack ?? "", sourcePackName ?? "", StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(item.Value.Pack ?? "", targetPackName ?? "", StringComparison.OrdinalIgnoreCase)))
+                     .Select(item => item.Key)
+                     .ToList())
+        {
+            downloaded.Remove(key);
+        }
+
+        level.Pack = targetPackName;
+        level.Folder = targetDirectory;
+        downloaded[targetKey] = level;
+        store.SaveDownloaded(downloaded);
+    }
+
     public async Task ResetOfficialCoursesAsync(IProgress<string> status, CancellationToken cancellationToken)
     {
         var source = Path.Combine(paths.OfficialCoursesDirectory, "OriginalFiles");
@@ -224,15 +283,34 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
 
     private async Task<string?> FetchArchiveUrlWithRetriesAsync(string originalUrl, CancellationToken cancellationToken)
     {
-        for (var attempt = 0; attempt < 5; attempt++)
+        Exception? lastException = null;
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            var result = await FetchArchiveUrlAsync(originalUrl, cancellationToken);
-            if (result != null)
+            try
             {
-                return result;
+                var result = await FetchArchiveUrlAsync(originalUrl, cancellationToken);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                lastException = new TimeoutException($"Wayback Machine URL lookup timed out after {WaybackAttemptTimeout.TotalSeconds:0} seconds.");
+            }
+            catch (HttpRequestException ex)
+            {
+                lastException = ex;
             }
 
             await Task.Delay(1000, cancellationToken);
+        }
+
+        if (lastException != null)
+        {
+            throw new InvalidOperationException(
+                $"Could not fetch a Wayback Machine URL for {originalUrl}. Last error: {lastException.Message}",
+                lastException);
         }
 
         return null;
@@ -240,15 +318,38 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
 
     private async Task<string?> FetchArchiveUrlAsync(string originalUrl, CancellationToken cancellationToken)
     {
+        Exception? sparklineException = null;
+        try
+        {
+            var sparklineResult = await FetchArchiveUrlFromSparklineAsync(originalUrl, cancellationToken);
+            if (sparklineResult != null)
+            {
+                return sparklineResult;
+            }
+        }
+        catch (Exception ex) when (IsRetryableWaybackException(ex, cancellationToken))
+        {
+            sparklineException = ex;
+        }
+
+        try
+        {
+            return await FetchArchiveUrlFromAvailabilityAsync(originalUrl, cancellationToken);
+        }
+        catch (Exception ex) when (IsRetryableWaybackException(ex, cancellationToken))
+        {
+            throw sparklineException ?? ex;
+        }
+    }
+
+    private async Task<string?> FetchArchiveUrlFromSparklineAsync(string originalUrl, CancellationToken cancellationToken)
+    {
         var encoded = Uri.EscapeDataString(originalUrl);
         var apiUrl = $"https://web.archive.org/__wb/sparkline?output=json&url={encoded}&collection=web";
         using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
-        request.Headers.TryAddWithoutValidation("Accept", "*/*");
-        request.Headers.TryAddWithoutValidation("Accept-Language", "de,en-US;q=0.7,en;q=0.3");
+        AddWaybackHeaders(request);
         request.Headers.TryAddWithoutValidation("Referer", $"https://web.archive.org/web/20240000000000*/{encoded}");
-        request.Headers.TryAddWithoutValidation("Pragma", "no-cache");
-        request.Headers.TryAddWithoutValidation("Cache-Control", "no-cache");
-        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendWaybackRequestAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -262,7 +363,60 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
         var timestamp = firstTs.GetString();
         return string.IsNullOrWhiteSpace(timestamp)
             ? null
-            : $"https://web.archive.org/web/{timestamp}if_/{originalUrl}";
+            : BuildWaybackDownloadUrl(timestamp, originalUrl);
+    }
+
+    private async Task<string?> FetchArchiveUrlFromAvailabilityAsync(string originalUrl, CancellationToken cancellationToken)
+    {
+        var encoded = Uri.EscapeDataString(originalUrl);
+        var apiUrl = $"https://archive.org/wayback/available?url={encoded}";
+        using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+        AddWaybackHeaders(request);
+        request.Headers.TryAddWithoutValidation("Referer", $"https://web.archive.org/web/*/{encoded}");
+        using var response = await SendWaybackRequestAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        if (!document.RootElement.TryGetProperty("archived_snapshots", out var snapshots) ||
+            !snapshots.TryGetProperty("closest", out var closest) ||
+            !closest.TryGetProperty("available", out var available) ||
+            available.ValueKind != JsonValueKind.True ||
+            !closest.TryGetProperty("timestamp", out var timestampElement))
+        {
+            return null;
+        }
+
+        var timestamp = timestampElement.GetString();
+        return string.IsNullOrWhiteSpace(timestamp)
+            ? null
+            : BuildWaybackDownloadUrl(timestamp, originalUrl);
+    }
+
+    private async Task<HttpResponseMessage> SendWaybackRequestAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(WaybackAttemptTimeout);
+        return await _httpClient.SendAsync(request, timeoutCts.Token);
+    }
+
+    private static void AddWaybackHeaders(HttpRequestMessage request)
+    {
+        request.Headers.TryAddWithoutValidation("Accept", "*/*");
+        request.Headers.TryAddWithoutValidation("Accept-Language", "de,en-US;q=0.7,en;q=0.3");
+        request.Headers.TryAddWithoutValidation("Pragma", "no-cache");
+        request.Headers.TryAddWithoutValidation("Cache-Control", "no-cache");
+    }
+
+    private static string BuildWaybackDownloadUrl(string timestamp, string originalUrl)
+    {
+        return $"https://web.archive.org/web/{timestamp}if_/{originalUrl}";
+    }
+
+    private static bool IsRetryableWaybackException(Exception ex, CancellationToken cancellationToken)
+    {
+        return !cancellationToken.IsCancellationRequested &&
+               (ex is OperationCanceledException or HttpRequestException);
     }
 
     private async Task DownloadFileAsync(string url, string outputPath, CancellationToken cancellationToken)
@@ -366,6 +520,17 @@ public sealed class LevelDownloadService(ProjectPaths paths, JsonStore store)
         return Directory.Exists(namedFolder)
             ? namedFolder
             : Path.Combine(packRoot, level.LevelId.ToString());
+    }
+
+    private string ResolveMoveTargetFolder(LevelInfo level, string? targetPackName, Dictionary<string, string> packs)
+    {
+        if (string.IsNullOrWhiteSpace(targetPackName))
+        {
+            return Path.Combine(paths.DownloadCacheDirectory, level.LevelId.ToString());
+        }
+
+        var packFolder = packs[targetPackName];
+        return Path.Combine(paths.LevelPacksDirectory, packFolder, GetCourseFolderName(level));
     }
 
     private static long TryReadLevelIdFromFolder(string directory)

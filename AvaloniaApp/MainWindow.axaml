@@ -254,18 +254,33 @@
                     BorderThickness="2"
                     CornerRadius="5"
                     Padding="10,5">
-              <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
-                <Border x:Name="ApiStatusDot"
-                        Width="10"
-                        Height="10"
-                        Background="#A86725"
-                        CornerRadius="5"
-                        VerticalAlignment="Center" />
-                <TextBlock x:Name="ApiStatusText"
-                           Text="API: Checking"
-                           Foreground="#2B1605"
-                           FontWeight="SemiBold"
-                           VerticalAlignment="Center" />
+              <StackPanel Spacing="4" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Border x:Name="ApiStatusDot"
+                          Width="10"
+                          Height="10"
+                          Background="#A86725"
+                          CornerRadius="5"
+                          VerticalAlignment="Center" />
+                  <TextBlock x:Name="ApiStatusText"
+                             Text="API: Checking"
+                             Foreground="#2B1605"
+                             FontWeight="SemiBold"
+                             VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="7">
+                  <Border x:Name="ArchiveStatusDot"
+                          Width="10"
+                          Height="10"
+                          Background="#A86725"
+                          CornerRadius="5"
+                          VerticalAlignment="Center" />
+                  <TextBlock x:Name="ArchiveStatusText"
+                             Text="Archive.org: Checking"
+                             Foreground="#2B1605"
+                             FontWeight="SemiBold"
+                             VerticalAlignment="Center" />
+                </StackPanel>
               </StackPanel>
             </Border>
           </StackPanel>
@@ -299,12 +314,15 @@
               <WrapPanel>
                 <CheckBox x:Name="DownloadToPackCheckBox" Content="Save in Level Pack" />
                 <AutoCompleteBox x:Name="PackNameTextBox"
-                                 Width="220"
+                                 Width="260"
+                                 Height="36"
                                  Watermark="Level Pack Name"
                                  FilterMode="Contains"
                                  MinimumPrefixLength="0"
                                  TextChanged="PackNameTextBox_OnTextChanged"
                                  SelectionChanged="PackNameTextBox_OnSelectionChanged" />
+                <Button x:Name="MultiSelectDownloadButton" Content="Multi Select" Click="MultiSelectDownloadButton_OnClick" />
+                <Button x:Name="SelectAllDownloadButton" Content="Select All" IsVisible="False" Click="SelectAllDownloadButton_OnClick" />
                 <Button x:Name="DownloadAllButton" Content="Download All Results" Click="DownloadAllButton_OnClick" />
               </WrapPanel>
             </StackPanel>
@@ -317,8 +335,19 @@
                        ScrollViewer.ScrollChanged="SearchResultsListBox_OnScrollChanged">
                 <ListBox.DataTemplates>
                   <DataTemplate DataType="models:LevelInfo">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="9" Margin="0,5">
+                    <Border Background="{Binding RowBackground}"
+                            BorderBrush="{Binding RowBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="5"
+                            Margin="0,5">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="9" PointerPressed="SearchResultLevel_OnPointerPressed">
+                      <CheckBox IsChecked="{Binding IsMultiSelected}"
+                                IsVisible="{Binding ShowMultiSelectCheckBox}"
+                                VerticalAlignment="Center"
+                                Click="SearchResultMultiSelectCheckBox_OnClick" />
                       <Border Width="72"
+                              Grid.Column="1"
                               Height="42"
                               Background="#E9D58A"
                               BorderBrush="#8F4F17"
@@ -330,7 +359,7 @@
                               IsVisible="{Binding HasThumbnail}">
                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                       </Border>
-                      <StackPanel Grid.Column="1">
+                      <StackPanel Grid.Column="2">
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#241301" />
                         <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="10" Margin="0,3,0,0">
                           <StackPanel Orientation="Horizontal" Spacing="8">
@@ -402,11 +431,12 @@
                         </Grid>
                         <TextBlock Text="{Binding SearchResultStatus}" FontSize="12" Foreground="#1A7A3A" />
                       </StackPanel>
-                      <Button Grid.Column="2"
+                      <Button Grid.Column="3"
                               Content="{Binding DownloadButtonText}"
                               IsEnabled="{Binding CanDownload}"
                               Click="DownloadLevelButton_OnClick" />
                     </Grid>
+                    </Border>
                   </DataTemplate>
                   <DataTemplate DataType="local:LoadMoreSearchResultsItem">
                     <Border Padding="0,12,0,4">
@@ -520,6 +550,13 @@
             <TextBox x:Name="SavedSearchTextBox" Width="260" Height="36" Margin="0,0,8,0" Watermark="Filter saved courses" TextChanged="SavedSearchTextBox_OnTextChanged" />
             <Button x:Name="RefreshSavedButton" Content="Refresh" Click="RefreshSavedButton_OnClick" />
             <Button x:Name="OpenSavedFolderButton" Content="Open Folder" Click="OpenSavedFolderButton_OnClick" />
+            <Button x:Name="MultiSelectSavedButton" Content="Multi Select" Click="MultiSelectSavedButton_OnClick" />
+            <Button x:Name="SelectAllSavedButton" Content="Select All" IsVisible="False" Click="SelectAllSavedButton_OnClick" />
+            <ComboBox x:Name="SavedMovePackComboBox"
+                      Width="220"
+                      Height="36"
+                      IsVisible="False"
+                      SelectionChanged="SavedMovePackComboBox_OnSelectionChanged" />
             <Button x:Name="DeleteSavedButton" Content="Delete Selected" Click="DeleteSavedButton_OnClick" />
             <Button x:Name="RemoveSelectedPackButton" Content="Remove Course Pack Folder" IsVisible="False" Click="RemoveSelectedPackButton_OnClick" />
             <Button x:Name="ResetOfficialButton" Content="Reset Official Courses" Click="ResetOfficialButton_OnClick" />
@@ -529,8 +566,20 @@
               <TreeView x:Name="SavedLevelsTreeView" SelectionChanged="SavedLevelsTreeView_OnSelectionChanged">
                 <TreeView.DataTemplates>
                   <TreeDataTemplate DataType="models:SavedLevelNode" ItemsSource="{Binding Children}">
-                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="{Binding RowMargin}" PointerPressed="SavedLevelNode_OnPointerPressed">
+                    <Border Background="{Binding RowBackground}"
+                            BorderBrush="{Binding RowBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="5"
+                            Margin="{Binding RowMargin}"
+                            Tapped="SavedLevelNode_OnTapped">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8" PointerPressed="SavedLevelNode_OnPointerPressed">
+                      <CheckBox IsChecked="{Binding IsMultiSelected}"
+                                IsVisible="{Binding ShowMultiSelectCheckBox}"
+                                VerticalAlignment="Center"
+                                Click="SavedNodeMultiSelectCheckBox_OnClick" />
                       <Border Width="72"
+                              Grid.Column="1"
                               Height="42"
                               Background="#E9D58A"
                               BorderBrush="#8F4F17"
@@ -541,6 +590,7 @@
                         <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
                       </Border>
                       <Border Width="42"
+                              Grid.Column="1"
                               Height="32"
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
@@ -557,11 +607,11 @@
                               StrokeThickness="1.4"
                               Data="M2 6 L8 6 L10 8 L22 8 L22 19 L2 19 Z" />
                       </Border>
-                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                      <StackPanel Grid.Column="2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="#241301" />
                         <TextBlock Text="{Binding ShortInfo}" FontSize="12" Classes="muted" />
                       </StackPanel>
-                      <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding ShowStats}">
+                      <StackPanel Grid.Column="3" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding ShowStats}">
                         <StackPanel Orientation="Horizontal" Spacing="4">
                           <Border Classes="statChip">
                             <TextBlock FontSize="12" Foreground="#2B1605">
@@ -597,7 +647,7 @@
                           </Border>
                         </StackPanel>
                       </StackPanel>
-                      <Button Grid.Column="2"
+                      <Button Grid.Column="3"
                               Width="26"
                               Height="26"
                               Padding="0"
@@ -615,6 +665,7 @@
                               StrokeLineCap="Round" />
                       </Button>
                     </Grid>
+                    </Border>
                   </TreeDataTemplate>
                 </TreeView.DataTemplates>
               </TreeView>
@@ -856,50 +907,130 @@
       </TabItem>
 
       <TabItem x:Name="SettingsTab" Header="Settings">
-        <Border Classes="panel" Margin="0,12,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock x:Name="SettingsTitle" Text="Settings" FontSize="18" FontWeight="SemiBold" />
-            <TextBlock x:Name="LanguageLabel" Text="Language" FontWeight="SemiBold" />
-            <ComboBox x:Name="LanguageComboBox" Width="220" SelectionChanged="LanguageComboBox_OnSelectionChanged">
-              <ComboBoxItem Content="English" Tag="en" />
-              <ComboBoxItem Content="Deutsch" Tag="de" />
-            </ComboBox>
-            <CheckBox x:Name="HideViewerInfoCheckBox"
-                      Content="Hide Viewer Info"
-                      Checked="HideViewerInfoCheckBox_OnChanged"
-                      Unchecked="HideViewerInfoCheckBox_OnChanged" />
-            <CheckBox x:Name="UseProxyCheckBox" Content="Use Proxy for Downloads" />
-            <Button x:Name="OpenProxyFileButton" Content="Open Proxy File" Click="OpenProxyFileButton_OnClick" HorizontalAlignment="Left" />
-            <TextBlock x:Name="DebugSettingsTitle" Text="Debug Mode" FontWeight="SemiBold" Margin="0,8,0,0" />
-            <StackPanel Spacing="8" Margin="12,0,0,0">
-              <TextBlock x:Name="DebugLevelViewerTitle" Text="Level Viewer" FontWeight="SemiBold" />
-              <StackPanel Spacing="8" Margin="12,0,0,0">
-                <CheckBox x:Name="DebugLevelViewerCheckBox"
-                          Content="Debug Tiles"
-                          Checked="DebugSettingsCheckBox_OnChanged"
-                          Unchecked="DebugSettingsCheckBox_OnChanged" />
-                <CheckBox x:Name="DebugTileRegionsCheckBox"
-                          Content="Debug Tile Regions"
-                          Checked="DebugSettingsCheckBox_OnChanged"
-                          Unchecked="DebugSettingsCheckBox_OnChanged" />
-                <CheckBox x:Name="ShowGridCheckBox"
-                          Content="Show Grid"
-                          IsChecked="True"
-                          Checked="DebugSettingsCheckBox_OnChanged"
-                          Unchecked="DebugSettingsCheckBox_OnChanged" />
+        <ScrollViewer Margin="0,12,0,0"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Spacing="14" MaxWidth="840">
+            <Border Classes="panel">
+              <StackPanel Spacing="6">
+                <TextBlock x:Name="SettingsTitle" Text="Settings" Classes="sectionTitle" />
+                <TextBlock x:Name="SettingsDescriptionText"
+                           Text="Adjust application behavior and maintenance options."
+                           Classes="muted"
+                           TextWrapping="Wrap" />
               </StackPanel>
-            </StackPanel>
-            <TextBlock x:Name="ApiEndpointLabel" Text="API Endpoint" FontWeight="SemiBold" />
-            <TextBox x:Name="ApiLinkTextBox" />
-            <WrapPanel>
-              <Button x:Name="SaveSettingsButton" Content="Save Settings" Click="SaveSettingsButton_OnClick" />
-              <Button x:Name="ResetSettingsButton" Content="Reset Settings" Click="ResetSettingsButton_OnClick" />
-              <Button x:Name="RefreshAllDownloadedDataButton"
-                      Content="Refresh All Downloaded Course Data"
-                      Click="RefreshAllDownloadedDataButton_OnClick" />
-            </WrapPanel>
+            </Border>
+
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock x:Name="GeneralSettingsTitle"
+                           Text="General"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#2B1605" />
+                <Grid ColumnDefinitions="*,*"
+                      RowDefinitions="Auto,Auto"
+                      ColumnSpacing="16"
+                      RowSpacing="8">
+                  <TextBlock x:Name="LanguageLabel"
+                             Text="Language"
+                             FontWeight="SemiBold"
+                             Foreground="#2B1605" />
+                  <TextBlock x:Name="ReleaseChannelLabel"
+                             Grid.Column="1"
+                             Text="Release Channel"
+                             FontWeight="SemiBold"
+                             Foreground="#2B1605" />
+                  <ComboBox x:Name="LanguageComboBox"
+                            Grid.Row="1"
+                            MinWidth="220"
+                            SelectionChanged="LanguageComboBox_OnSelectionChanged">
+                    <ComboBoxItem Content="English" Tag="en" />
+                    <ComboBoxItem Content="Deutsch" Tag="de" />
+                  </ComboBox>
+                  <ComboBox x:Name="ReleaseChannelComboBox"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            MinWidth="220"
+                            SelectionChanged="ReleaseChannelComboBox_OnSelectionChanged">
+                    <ComboBoxItem Content="Releases" Tag="stable" />
+                    <ComboBoxItem Content="Pre-Releases" Tag="prerelease" />
+                  </ComboBox>
+                </Grid>
+                <CheckBox x:Name="HideViewerInfoCheckBox"
+                          Content="Hide Viewer Info"
+                          Checked="HideViewerInfoCheckBox_OnChanged"
+                          Unchecked="HideViewerInfoCheckBox_OnChanged" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock x:Name="DownloadSettingsTitle"
+                           Text="Downloads"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#2B1605" />
+                <CheckBox x:Name="UseProxyCheckBox" Content="Use Proxy for Downloads" />
+                <Button x:Name="OpenProxyFileButton"
+                        Content="Open Proxy File"
+                        Click="OpenProxyFileButton_OnClick"
+                        HorizontalAlignment="Left" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock x:Name="DebugSettingsTitle"
+                           Text="Debug Mode"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#2B1605" />
+                <TextBlock x:Name="DebugLevelViewerTitle"
+                           Text="Level Viewer"
+                           FontWeight="SemiBold"
+                           Foreground="#2B1605" />
+                <WrapPanel>
+                  <CheckBox x:Name="DebugLevelViewerCheckBox"
+                            Content="Debug Tiles"
+                            Checked="DebugSettingsCheckBox_OnChanged"
+                            Unchecked="DebugSettingsCheckBox_OnChanged" />
+                  <CheckBox x:Name="DebugTileRegionsCheckBox"
+                            Content="Debug Tile Regions"
+                            Checked="DebugSettingsCheckBox_OnChanged"
+                            Unchecked="DebugSettingsCheckBox_OnChanged" />
+                  <CheckBox x:Name="ShowGridCheckBox"
+                            Content="Show Grid"
+                            IsChecked="True"
+                            Checked="DebugSettingsCheckBox_OnChanged"
+                            Unchecked="DebugSettingsCheckBox_OnChanged" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
+
+            <Border Classes="panel">
+              <StackPanel Spacing="12">
+                <TextBlock x:Name="AdvancedSettingsTitle"
+                           Text="Advanced"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#2B1605" />
+                <TextBlock x:Name="ApiEndpointLabel"
+                           Text="API Endpoint"
+                           FontWeight="SemiBold"
+                           Foreground="#2B1605" />
+                <TextBox x:Name="ApiLinkTextBox" />
+                <WrapPanel>
+                  <Button x:Name="SaveSettingsButton" Content="Save Settings" Click="SaveSettingsButton_OnClick" />
+                  <Button x:Name="ResetSettingsButton" Content="Reset Settings" Click="ResetSettingsButton_OnClick" />
+                  <Button x:Name="RefreshAllDownloadedDataButton"
+                          Content="Refresh All Downloaded Course Data"
+                          Click="RefreshAllDownloadedDataButton_OnClick" />
+                </WrapPanel>
+              </StackPanel>
+            </Border>
           </StackPanel>
-        </Border>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem x:Name="CreditsTab" Header="Credits" DockPanel.Dock="Right">
@@ -934,33 +1065,36 @@
                            FontSize="16"
                            FontWeight="Bold"
                            Foreground="#2B1605" />
-                <Border Background="#FFF8D6"
-                        BorderBrush="#A86725"
-                        BorderThickness="1"
-                        CornerRadius="5"
-                        Padding="12">
-                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                    <Border Width="48"
-                            Height="48"
-                            Background="#F9C74F"
-                            BorderBrush="#8F4F17"
-                            BorderThickness="2"
-                            CornerRadius="5"
-                            ClipToBounds="True">
-                      <Image x:Name="HerobrineAvatarImage"
-                             Stretch="UniformToFill"
-                             RenderOptions.BitmapInterpolationMode="HighQuality" />
-                    </Border>
-                    <StackPanel Grid.Column="1" Spacing="6">
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                  <Border Background="#FFF8D6"
+                          BorderBrush="#A86725"
+                          BorderThickness="1"
+                          CornerRadius="5"
+                          Padding="12">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                      <Border Width="96"
+                              Height="96"
+                              Background="#F9C74F"
+                              BorderBrush="#8F4F17"
+                              BorderThickness="2"
+                              CornerRadius="6"
+                              ClipToBounds="True"
+                              HorizontalAlignment="Center">
+                        <Image x:Name="HerobrineAvatarImage"
+                               Stretch="UniformToFill"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                      </Border>
                       <TextBlock x:Name="HerobrineRoleText"
                                  Text="Leading Developer"
                                  FontSize="11"
-                                 Classes="muted" />
+                                 Classes="muted"
+                                 HorizontalAlignment="Center" />
                       <TextBlock Text="HerobrineTVv"
                                  FontSize="16"
                                  FontWeight="Bold"
-                                 Foreground="#2B1605" />
-                      <WrapPanel>
+                                 Foreground="#2B1605"
+                                 HorizontalAlignment="Center" />
+                      <WrapPanel HorizontalAlignment="Center">
                         <Button x:Name="HerobrineGithubButton"
                                 Classes="socialButton"
                                 ToolTip.Tip="GitHub"
@@ -987,36 +1121,40 @@
                         </Button>
                       </WrapPanel>
                     </StackPanel>
-                  </Grid>
-                </Border>
+                  </Border>
 
-                <Border Background="#FFF8D6"
-                        BorderBrush="#A86725"
-                        BorderThickness="1"
-                        CornerRadius="5"
-                        Padding="12">
-                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                    <Border Width="48"
-                            Height="48"
-                            Background="#E94B35"
-                            BorderBrush="#7B2018"
-                            BorderThickness="2"
-                            CornerRadius="5"
-                            ClipToBounds="True">
-                      <Image x:Name="SnoozbusterAvatarImage"
-                             Stretch="UniformToFill"
-                             RenderOptions.BitmapInterpolationMode="HighQuality" />
-                    </Border>
-                    <StackPanel Grid.Column="1" Spacing="6">
+                  <Border Grid.Column="1"
+                          Background="#FFF8D6"
+                          BorderBrush="#A86725"
+                          BorderThickness="1"
+                          CornerRadius="5"
+                          Padding="12">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                      <Border Width="96"
+                              Height="96"
+                              Background="#E94B35"
+                              BorderBrush="#7B2018"
+                              BorderThickness="2"
+                              CornerRadius="6"
+                              ClipToBounds="True"
+                              HorizontalAlignment="Center">
+                        <Image x:Name="SnoozbusterAvatarImage"
+                               Stretch="UniformToFill"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                      </Border>
+                      <TextBlock x:Name="SnoozbusterCreditText"
+                                 Text="Course Viewer for the Course Display"
+                                 FontSize="11"
+                                 Classes="muted"
+                                 TextWrapping="Wrap"
+                                 TextAlignment="Center"
+                                 HorizontalAlignment="Center" />
                       <TextBlock Text="Snoozbuster"
                                  FontSize="16"
                                  FontWeight="Bold"
-                                 Foreground="#2B1605" />
-                      <TextBlock x:Name="SnoozbusterCreditText"
-                                 Text="Course Viewer for the Course Display"
-                                 Classes="muted"
-                                 TextWrapping="Wrap" />
-                      <WrapPanel>
+                                 Foreground="#2B1605"
+                                 HorizontalAlignment="Center" />
+                      <WrapPanel HorizontalAlignment="Center">
                         <Button x:Name="SnoozbusterGithubButton"
                                 Classes="socialButton"
                                 ToolTip.Tip="GitHub"
@@ -1027,36 +1165,40 @@
                         </Button>
                       </WrapPanel>
                     </StackPanel>
-                  </Grid>
-                </Border>
+                  </Border>
 
-                <Border Background="#FFF8D6"
-                        BorderBrush="#A86725"
-                        BorderThickness="1"
-                        CornerRadius="5"
-                        Padding="12">
-                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                    <Border Width="48"
-                            Height="48"
-                            Background="#2D7DD2"
-                            BorderBrush="#173F6E"
-                            BorderThickness="2"
-                            CornerRadius="5"
-                            ClipToBounds="True">
-                      <Image x:Name="LeoMauroAvatarImage"
-                             Stretch="UniformToFill"
-                             RenderOptions.BitmapInterpolationMode="HighQuality" />
-                    </Border>
-                    <StackPanel Grid.Column="1" Spacing="6">
+                  <Border Grid.Column="2"
+                          Background="#FFF8D6"
+                          BorderBrush="#A86725"
+                          BorderThickness="1"
+                          CornerRadius="5"
+                          Padding="12">
+                    <StackPanel Spacing="8" HorizontalAlignment="Center">
+                      <Border Width="96"
+                              Height="96"
+                              Background="#2D7DD2"
+                              BorderBrush="#173F6E"
+                              BorderThickness="2"
+                              CornerRadius="6"
+                              ClipToBounds="True"
+                              HorizontalAlignment="Center">
+                        <Image x:Name="LeoMauroAvatarImage"
+                               Stretch="UniformToFill"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                      </Border>
+                      <TextBlock x:Name="LeoMauroCreditText"
+                                 Text="Course Viewer for the Course Display"
+                                 FontSize="11"
+                                 Classes="muted"
+                                 TextWrapping="Wrap"
+                                 TextAlignment="Center"
+                                 HorizontalAlignment="Center" />
                       <TextBlock Text="LeoMauro"
                                  FontSize="16"
                                  FontWeight="Bold"
-                                 Foreground="#2B1605" />
-                      <TextBlock x:Name="LeoMauroCreditText"
-                                 Text="Course Viewer for the Course Display"
-                                 Classes="muted"
-                                 TextWrapping="Wrap" />
-                      <WrapPanel>
+                                 Foreground="#2B1605"
+                                 HorizontalAlignment="Center" />
+                      <WrapPanel HorizontalAlignment="Center">
                         <Button x:Name="LeoMauroGithubButton"
                                 Classes="socialButton"
                                 ToolTip.Tip="GitHub"
@@ -1067,8 +1209,8 @@
                         </Button>
                       </WrapPanel>
                     </StackPanel>
-                  </Grid>
-                </Border>
+                  </Border>
+                </Grid>
               </StackPanel>
 
               <Border Background="#FFF8D6"
@@ -1129,6 +1271,80 @@
             </StackPanel>
           </ScrollViewer>
         </Border>
+      </TabItem>
+
+      <TabItem x:Name="ChangeNotesTab" Header="Change Notes" DockPanel.Dock="Right">
+        <Grid RowDefinitions="Auto,*" Margin="0,12,0,0">
+          <Border Classes="panel" Grid.Row="0">
+            <StackPanel Spacing="10">
+              <TextBlock x:Name="ChangeNotesTitle" Text="Change Notes" Classes="sectionTitle" />
+              <TextBlock x:Name="ChangeNotesDescriptionText"
+                         Text="Release notes from GitHub, newest to oldest."
+                         Classes="muted"
+                         TextWrapping="Wrap" />
+              <WrapPanel>
+                <CheckBox x:Name="ShowPrereleaseChangeNotesCheckBox"
+                          Content="Show Pre-Releases"
+                          Checked="ShowPrereleaseChangeNotesCheckBox_OnChanged"
+                          Unchecked="ShowPrereleaseChangeNotesCheckBox_OnChanged" />
+                <Button x:Name="RefreshChangeNotesButton"
+                        Content="Refresh"
+                        Click="RefreshChangeNotesButton_OnClick" />
+              </WrapPanel>
+              <TextBlock x:Name="ChangeNotesStatusText"
+                         Text="Loading change notes..."
+                         Foreground="#2B1605"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="panel" Grid.Row="1" Margin="0,12,0,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <ItemsControl x:Name="ChangeNotesItemsControl">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Background="#FFF8D6"
+                            BorderBrush="#A86725"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            Padding="12"
+                            Margin="0,0,0,12">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                          <TextBlock Text="{Binding Title}"
+                                     FontSize="16"
+                                     FontWeight="Bold"
+                                     Foreground="#2B1605"
+                                     TextWrapping="Wrap" />
+                          <Border Grid.Column="1"
+                                  IsVisible="{Binding IsPrerelease}"
+                                  Background="#E94B35"
+                                  BorderBrush="#7B2018"
+                                  BorderThickness="1"
+                                  CornerRadius="5"
+                                  Padding="6,2"
+                                  VerticalAlignment="Top">
+                            <TextBlock Text="Pre-Release"
+                                       Foreground="#FFF8D6"
+                                       FontSize="11"
+                                       FontWeight="Bold" />
+                          </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding PublishedText}"
+                                   Classes="muted"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Body}"
+                                   Foreground="#2B1605"
+                                   TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </Grid>
       </TabItem>
     </TabControl>
     <Border x:Name="ProfilePage"

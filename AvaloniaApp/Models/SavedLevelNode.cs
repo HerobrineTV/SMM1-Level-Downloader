@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 
 namespace SMMDownloader.Avalonia.Models;
@@ -9,6 +10,8 @@ namespace SMMDownloader.Avalonia.Models;
 public sealed class SavedLevelNode : INotifyPropertyChanged
 {
     private bool _isSelected;
+    private bool _isMultiSelected;
+    private bool _isMultiSelectMode;
     private bool _statsHidden;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -44,6 +47,39 @@ public sealed class SavedLevelNode : INotifyPropertyChanged
         }
     }
 
+    public bool IsMultiSelected
+    {
+        get => _isMultiSelected;
+        set
+        {
+            if (_isMultiSelected == value)
+            {
+                return;
+            }
+
+            _isMultiSelected = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RowBackground));
+            OnPropertyChanged(nameof(RowBorderBrush));
+        }
+    }
+
+    public bool IsMultiSelectMode
+    {
+        get => _isMultiSelectMode;
+        set
+        {
+            if (_isMultiSelectMode == value)
+            {
+                return;
+            }
+
+            _isMultiSelectMode = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ShowMultiSelectCheckBox));
+        }
+    }
+
     public bool StatsHidden
     {
         get => _statsHidden;
@@ -61,6 +97,10 @@ public sealed class SavedLevelNode : INotifyPropertyChanged
     }
 
     public bool ShowStats => Level != null && !StatsHidden;
+    public bool CanMultiSelect => Level != null;
+    public bool ShowMultiSelectCheckBox => IsMultiSelectMode && CanMultiSelect;
+    public IBrush RowBackground => IsMultiSelected ? new SolidColorBrush(Color.FromRgb(255, 216, 106)) : Brushes.Transparent;
+    public IBrush RowBorderBrush => IsMultiSelected ? new SolidColorBrush(Color.FromRgb(143, 79, 23)) : Brushes.Transparent;
     public string CodeText => Level?.DisplayCode ?? "";
     public string ClearRateText => Level?.ClearRateText ?? "";
     public string AttemptsText => Level?.TotalAttemptsText ?? "";
